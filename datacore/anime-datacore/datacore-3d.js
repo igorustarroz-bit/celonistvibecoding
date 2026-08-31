@@ -126,6 +126,45 @@
   scene.add(bgQuad);
   var glassMeshes = [];   // meshes de cristal: en el pre-pase usan su material simple
 
+  // BLUR del backdrop (frost, como el GaussianBlurPass del Xylophone):
+  // dos pasadas separables a cuarto de resolución
+  var blurRT1 = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+  var blurRT2 = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+  var blurScene = new THREE.Scene();
+  var blurCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var blurMat = new THREE.ShaderMaterial({
+    uniforms: {
+      tDiffuse: { value: null },
+      uDir: { value: new THREE.Vector2(1, 0) },
+      uTexel: { value: new THREE.Vector2(1 / 512, 1 / 512) },
+      uRadius: { value: 1.2 }
+    },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: [
+      'uniform sampler2D tDiffuse;',
+      'uniform vec2 uDir;',
+      'uniform vec2 uTexel;',
+      'uniform float uRadius;',
+      'varying vec2 vUv;',
+      'void main() {',
+      '  vec2 st = uDir * uTexel * uRadius;',
+      '  vec3 c = texture2D(tDiffuse, vUv).rgb * 0.227027;',
+      '  c += (texture2D(tDiffuse, vUv + st * 1.0).rgb + texture2D(tDiffuse, vUv - st * 1.0).rgb) * 0.1945946;',
+      '  c += (texture2D(tDiffuse, vUv + st * 2.0).rgb + texture2D(tDiffuse, vUv - st * 2.0).rgb) * 0.1216216;',
+      '  c += (texture2D(tDiffuse, vUv + st * 3.0).rgb + texture2D(tDiffuse, vUv - st * 3.0).rgb) * 0.054054;',
+      '  c += (texture2D(tDiffuse, vUv + st * 4.0).rgb + texture2D(tDiffuse, vUv - st * 4.0).rgb) * 0.016216;',
+      '  gl_FragColor = vec4(c, 1.0);',
+      '}'
+    ].join('\n')
+  });
+  blurScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blurMat));
+  function blurPass(src, dst, dx, dy) {
+    blurMat.uniforms.tDiffuse.value = src.texture;
+    blurMat.uniforms.uDir.value.set(dx, dy);
+    renderer.setRenderTarget(dst);
+    renderer.render(blurScene, blurCam);
+  }
+
   var GLASS_VERT = [
     'varying vec3 vN;',
     'varying vec3 vWN;',
@@ -141,6 +180,8 @@
 
   var GLASS_FRAG = [
     'uniform sampler2D uBackdrop;',
+    'uniform sampler2D uBackdropBlur;',
+    'uniform float uFrost;',
     'uniform vec3 uBody;',
     'uniform float uTransmission;',
     'uniform float uRefract;',
@@ -161,7 +202,7 @@
     '  float up = clamp(normalize(vWN).y, 0.0, 1.0);',
     // refracción en espacio de pantalla (Xylophone): desplaza la lectura por la normal
     '  vec2 buv = vScreenUv + N.xy * uRefract;',
-    '  vec3 trans = texture2D(uBackdrop, buv).rgb;',
+    '  vec3 trans = mix(texture2D(uBackdrop, buv).rgb, texture2D(uBackdropBlur, buv).rgb, uFrost);',
     // zonas de la pieza: tapa plana (topness=1) / bisel y laterales (0)
     '  float topness = smoothstep(0.55, 0.95, up);',
     // laterales/bisel: cristal lechoso (mezcla con el backdrop)
@@ -197,6 +238,8 @@
       fragmentShader: GLASS_FRAG,
       uniforms: {
         uBackdrop: { value: backRT.texture },
+        uBackdropBlur: { value: blurRT2.texture },
+        uFrost: { value: 0.6 },
         uBody: { value: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05) },
         uTransmission: { value: 0.75 },
         uRefract: { value: 0.13 + 0.06 * seed },
@@ -507,6 +550,9 @@
       composer.setSize(W, H);
     }
     backRT.setSize(Math.round(W * dpr * 0.6), Math.round(H * dpr * 0.6));
+    var bw = Math.max(2, Math.round(W * dpr * 0.25)), bh = Math.max(2, Math.round(H * dpr * 0.25));
+    blurRT1.setSize(bw, bh); blurRT2.setSize(bw, bh);
+    blurMat.uniforms.uTexel.value.set(1 / bw, 1 / bh);
   }
   window.addEventListener('resize', resize);
 
@@ -616,6 +662,9 @@
     renderer.setClearColor(0x000000, 1);
     renderer.clear();
     renderer.render(scene, camera);
+    // frost: difumina el backdrop en dos pasadas separables
+    blurPass(backRT, blurRT1, 1, 0);
+    blurPass(blurRT1, blurRT2, 0, 1);
     renderer.setRenderTarget(null);
     for (gi = 0; gi < glassMeshes.length; gi++) {
       glassMeshes[gi].material = glassMeshes[gi].userData.mainMat;
@@ -662,10 +711,13 @@
 
   /* ---------- MANDOS EN VIVO (edítalos en la consola): window.DATACORE ---------- */
   var TUNE = window.DATACORE = {
-    tint:        { r: 0.90, g: 0.97, b: 1.16 }, // tinte global del cristal (azulado)
-    transmission: 0.62,   // cuánto backdrop se ve a través (base)
-    transmissionSpread: 0.18, // extra al explotar
-    refract:     1.0,     // multiplicador de la refracción
+    // defaults calibrados por Igor (2026-08-31)
+    tint:        { r: 0.76, g: 0.96, b: 1.20 }, // tinte global del cristal (azulado)
+    transmission: 0.66,   // cuánto backdrop se ve a través (base)
+    transmissionSpread: 0.22, // extra al explotar
+    refract:     0.10,    // multiplicador de la refracción
+    frost:       0.60,    // blur de la refracción (0 nítido → 1 esmerilado)
+    frostRadius: 1.20,    // radio del blur
     fresnel:     0.85,    // blanco lechoso de los cantos
     topClear:    0.85,    // 1 = tapa totalmente transparente
     topDarken:   0.90,    // brillo de lo que se ve a través de la tapa
@@ -673,9 +725,9 @@
     skyTop:      '#eef4ff', // color fresnel arriba
     skyHorizon:  '#8e9aad', // color fresnel horizonte
     iri:         0.10,    // iridiscencia (arcoíris)
-    body:        1.0,     // brillo del cuerpo (tapas)
+    body:        0.87,    // brillo del cuerpo (tapas)
     rim:         1.0,     // multiplicador de los filos de luz
-    pre:         1.0,     // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
+    pre:         0.88,    // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
     backdrop:    '#e6ecf5', // tinte del fondo de estudio (multiplica su textura)
     bloom:       { strength: 0.38, radius: 0.5, threshold: 0.55 },
     help: function () {
@@ -697,6 +749,7 @@
       u.uTransmission.value = trans;
       u.uRefract.value = ud.baseRefract * TUNE.refract;
       u.uFres.value = TUNE.fresnel;
+      u.uFrost.value = TUNE.frost;
       u.uTopClear.value = TUNE.topClear;
       u.uTopDarken.value = TUNE.topDarken;
       u.uEdgeWhite.value = TUNE.edgeWhite;
@@ -719,6 +772,7 @@
       }
     }
     bgQuad.material.color.set(TUNE.backdrop);
+    blurMat.uniforms.uRadius.value = TUNE.frostRadius;
     if (bloomPass) {
       bloomPass.strength = TUNE.bloom.strength;
       bloomPass.radius = TUNE.bloom.radius;

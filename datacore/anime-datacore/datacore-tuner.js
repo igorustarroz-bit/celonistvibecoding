@@ -99,6 +99,8 @@
     slider('transmisión', 'transmission', 0, 1);
     slider('+ al explotar', 'transmissionSpread', 0, 0.5);
     slider('refracción', 'refract', 0, 3);
+    slider('blur (frost)', 'frost', 0, 1);
+    slider('radio blur', 'frostRadius', 0, 4);
     slider('cuerpo (tapas)', 'body', 0, 3);
     slider('a través (pre)', 'pre', 0, 3);
 

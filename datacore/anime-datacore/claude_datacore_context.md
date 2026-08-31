@@ -151,6 +151,13 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- FROST + DEFAULTS DE IGOR (v9): blur gaussiano separable del backdrop a
+  cuarto de resolución (blurRT1/2, 9 taps, dos pasadas tras el pre-pase);
+  el shader mezcla nítido/difuminado con uFrost. Mandos: frost (0.60) y
+  frostRadius (1.20). Los DEFAULTS de DATACORE son ya los calibrados por
+  Igor (2026-08-31): tint {0.76,0.96,1.20}, transmission 0.66/+0.22,
+  refract 0.10 (casi sin desplazamiento — el cristal vive del frost),
+  body 0.87, pre 0.88, resto sin cambios.
 - TAPAS TRANSPARENTES (v8, petición directa de Igor): el shader separa la
   pieza en zonas por normal-mundo: topness = smoothstep(0.55,0.95,up). La TAPA
   es transparencia real — `seeThru = trans·uTopDarken + uBody·0.12` — y el

@@ -151,6 +151,22 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v12 (lote de peticiones de Igor): (1) figura +10% (A×1.10). (2) Contorno de
+  capa = CINTA de malla ~2px (makeOutline genera ribbon con normales 2D;
+  Line de 1px no puede engordar en WebGL). (3) CAPA INFERIOR FIEL AL STILL:
+  4 placas poligonales definidas en coords de pantalla (a,b)·1.471→(u,v) con
+  roundedPolyShape (r 0.05): Sur = escudo chevrón, Norte = chevrón con MUESCA
+  en V, Este/Oeste = hexágonos alargados con punta. (4) FUSIÓN CONCÉNTRICA
+  como el vídeo: al colapsar, el top se abre en anillo CUADRADO exterior
+  (visibilidad por distancia Chebyshev tile.d∈{0.2,0.6,1.0}, hideBelow=
+  0.75·(1−spread), topScale=1+0.24·inv aplicado a posición+escala de tiles,
+  NO al grupo — el outline no debe escalar) y la media se anida (midScale=
+  1−0.30·inv). (5) Onda del morph medio ahora VISIBLE: 0.30·sin(wave·2π−
+  (u+v)·2.2) con pendiente 1.2. (6) Bob de capas con FASE COMÚN (flotación
+  coordinada). (7) HOVER (raycaster, throttle 60ms, cooldowns): capa superior
+  = volteo del tile (startFlip extraído, ambiente cada 900ms), capa media =
+  pulso cuadrado→círculo (tile.hoverP anima 0→1→0), capa inferior = elevación
+  suave de la placa (mesh.position.y, baseY). edgeWhite default 0.44.
 - ETIQUETAS EN OVERLAY (v11): los sprites de etiqueta viven en la CAPA 1 de
   three (sp.layers.set(1), toneMapped:false). La cámara renderiza la capa 0 en
   composer/prepass/bloom (las etiquetas quedan fuera de todos los efectos) y,

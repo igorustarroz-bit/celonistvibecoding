@@ -369,13 +369,26 @@
   }
 
   function makeOutline(extent) {
-    var pts = [];
-    var rr = roundedRectShape(extent, extent, [0.10, 0.10, 0.10, 0.10]).getPoints(48);
-    for (var i = 0; i < rr.length; i++) pts.push(new THREE.Vector3(rr[i].x, 0, rr[i].y));
-    pts.push(pts[0].clone());
-    var geo = new THREE.BufferGeometry().setFromPoints(pts);
-    return new THREE.Line(geo, new THREE.LineBasicMaterial({
-      color: 0xffffff, transparent: true, opacity: 0.45
+    // cinta plana (~2px) en vez de Line de 1px (WebGL ignora linewidth)
+    var pts = roundedRectShape(extent, extent, [0.10, 0.10, 0.10, 0.10]).getPoints(64);
+    var w = 0.012, n = pts.length, pos = [], idx = [];
+    for (var i = 0; i <= n; i++) {
+      var p = pts[i % n], pr = pts[(i - 1 + n) % n], nx2 = pts[(i + 1) % n];
+      var tx = nx2.x - pr.x, ty = nx2.y - pr.y;
+      var L = Math.hypot(tx, ty) || 1;
+      var nx = -ty / L * w / 2, ny = tx / L * w / 2;
+      pos.push(p.x + nx, 0, p.y + ny, p.x - nx, 0, p.y - ny);
+    }
+    for (var k = 0; k < n; k++) {
+      var a = k * 2, b = k * 2 + 1, c = k * 2 + 2, d = k * 2 + 3;
+      idx.push(a, b, c, b, d, c);
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.45,
+      side: THREE.DoubleSide, toneMapped: false
     }));
   }
 
@@ -414,11 +427,14 @@
         mesh.position.set(u, cy, v);
         addRim(mesh, 0.20 + 0.28 * seed);
         group.add(mesh);
-        tiles.push({
+        // (hoverInfo se asigna tras crear el objeto tile, abajo)
+        var tileObj = {
           mesh: mesh, u: u, v: v, seed: seed, key: keyName, cy: cy,
-          d: (Math.abs(u) + Math.abs(v)) / (2 * TOP_EXT),   // 0..1 anillo
-          jit: rnd() * 0.08, flip: null, ap: 1
-        });
+          d: Math.max(Math.abs(u), Math.abs(v)) / (TOP_EXT - topCell / 2), // anillo CUADRADO (Chebyshev): 0.2/0.6/1.0
+          jit: rnd() * 0.08, flip: null, ap: 1, cool: 0
+        };
+        mesh.userData.hoverInfo = { kind: 'top', tile: tileObj };
+        tiles.push(tileObj);
       }
     }
     var sprite = makeLabelSprite('PROCESS QUERY ENGINE');
@@ -447,7 +463,9 @@
         mesh.position.set(u, morphGeos[0].userData.cy, v);
         addRim(mesh, 0.16 + 0.26 * seed);
         group.add(mesh);
-        tiles.push({ mesh: mesh, u: u, v: v, seed: seed, morph: ix / (MID_N - 1), cy: morphGeos[0].userData.cy });
+        var mTile = { mesh: mesh, u: u, v: v, seed: seed, morph: ix / (MID_N - 1), cy: morphGeos[0].userData.cy, hoverP: 0, hovering: false };
+        mesh.userData.hoverInfo = { kind: 'mid', tile: mTile };
+        tiles.push(mTile);
       }
     }
     var sprite = makeLabelSprite('DATA TRANSFORMATION');
@@ -456,20 +474,56 @@
   }
   var midLayer = buildMidLayer();
 
-  /* ---------- capa inferior: 4 hexágonos + placa central ---------- */
+  /* ---------- capa inferior: 4 placas fieles al still ----------
+     Medidas tomadas del still (coords de pantalla normalizadas a=-1..1, b=-1..1
+     sobre el diamante): N y S son CHEVRONES que siguen los bordes del diamante
+     (la N con muesca en V en su vértice); E y O son hexágonos alargados. */
+  function roundedPolyShape(pts, r) {
+    var s = new THREE.Shape(), n = pts.length;
+    function lerp(p, q, t) { return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]; }
+    for (var i = 0; i < n; i++) {
+      var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n];
+      var l1 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+      var l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      var a = lerp(p1, p0, Math.min(0.49, r / l1));
+      var b = lerp(p1, p2, Math.min(0.49, r / l2));
+      if (i === 0) s.moveTo(a[0], a[1]); else s.lineTo(a[0], a[1]);
+      s.quadraticCurveTo(p1[0], p1[1], b[0], b[1]);
+    }
+    s.closePath();
+    return s;
+  }
+  // (a,b) pantalla-normalizada -> (u,v) plano
+  var AB = 1.471, SQH = Math.SQRT1_2;
+  function ab2uv(pts) {
+    return pts.map(function (p) {
+      var A2 = p[0] * AB, B2 = p[1] * AB;
+      return [(A2 + B2) * SQH, (B2 - A2) * SQH];
+    });
+  }
+  var PLATES = [
+    // Sur: escudo (chevrón hacia abajo)
+    [[-0.45, 0.28], [0.45, 0.28], [0.63, 0.50], [0.02, 0.92], [-0.02, 0.92], [-0.63, 0.50]],
+    // Norte: chevrón con MUESCA en V en el vértice
+    [[-0.63, -0.50], [-0.145, -0.90], [0.0, -0.72], [0.145, -0.90], [0.63, -0.50], [0.45, -0.28], [-0.45, -0.28]],
+    // Oeste: hexágono alargado con punta hacia fuera
+    [[-0.84, 0.01], [-0.63, -0.385], [-0.34, -0.385], [-0.20, 0.01], [-0.34, 0.415], [-0.63, 0.415]],
+    // Este (espejo del oeste)
+    [[0.84, 0.01], [0.63, 0.415], [0.34, 0.415], [0.20, 0.01], [0.34, -0.385], [0.63, -0.385]]
+  ];
   function buildHexLayer() {
     var group = new THREE.Group();
-    var SQ = Math.SQRT1_2;
-    var hexes = [
-      { a: 0, b: -0.60, R: 0.40, sx: 1.05 }, { a: 0, b: 0.62, R: 0.40, sx: 1.05 },
-      { a: -0.63, b: 0.01, R: 0.46, sx: 1.15 }, { a: 0.63, b: 0.01, R: 0.46, sx: 1.15 }
-    ];
-    hexes.forEach(function (hx) {
-      var geo = extrude(hexShape(hx.R, hx.sx, 1), HEX_H, BEV);
-      var mesh = registerGlass(new THREE.Mesh(geo, glassMat(0.30, 0.5 + hx.a * 0.55)));
-      mesh.position.set((hx.a + hx.b) * SQ, 0, (hx.b - hx.a) * SQ);
+    var plates = [];
+    PLATES.forEach(function (ab, i) {
+      var uv = ab2uv(ab);
+      var shape = roundedPolyShape(uv, 0.05);
+      var geo = extrude(shape, HEX_H, BEV);
+      var mesh = registerGlass(new THREE.Mesh(geo, glassMat(0.30 + i * 0.08, 0.5 + ab[0][0] * -0.3)));
       addRim(mesh, 0.32);
+      mesh.userData.hoverInfo = { kind: 'hex' };
+      mesh.userData.baseY = 0;
       group.add(mesh);
+      plates.push(mesh);
     });
     var plate = new THREE.Mesh(
       extrude(roundedRectShape(0.34, 0.26, [0.05, 0.05, 0.05, 0.05]), PLATE_H, BEV), plateMat);
@@ -477,7 +531,7 @@
     group.add(plate);
     var sprite = makeLabelSprite('DATA INTEGRATION');
     group.add(sprite);
-    return { group: group, sprite: sprite };
+    return { group: group, sprite: sprite, plates: plates };
   }
   var hexLayer = buildHexLayer();
 
@@ -511,7 +565,28 @@
   }
 
   /* ---------- volteos de tiles (capa superior), como en el vídeo ---------- */
-  function spawnFlip() {
+  function startFlip(tile) {
+    if (reduced || tile.flip || !tile.mesh.visible || tile.ap < 0.99) return false;
+    var an = window.anime;
+    if (!an || !an.animate) return false;
+    var others = SHAPE_KEYS.filter(function (k) { return k !== tile.key; });
+    tile.flip = {
+      p: 0, axis: Math.random() < 0.5 ? 'x' : 'z', dir: Math.random() < 0.5 ? 1 : -1,
+      swapped: false, lastDot: null,
+      target: others[(Math.random() * others.length) | 0]
+    };
+    an.animate(tile.flip, {
+      p: 1, duration: 1050, ease: 'inOutSine',
+      onComplete: function () {
+        tile.mesh.rotation.set(0, 0, 0);
+        swapGeo(tile.mesh, topGeos[tile.flip.target]);
+        tile.key = tile.flip.target;
+        tile.flip = null;
+      }
+    });
+    return true;
+  }
+  function spawnFlip() {   // ambiente: volteos esporádicos
     if (reduced || state.spread < 0.75) return;
     var active = 0, pool = [];
     for (var i = 0; i < topLayer.tiles.length; i++) {
@@ -520,29 +595,61 @@
       else if (t.mesh.visible && t.ap > 0.99) pool.push(t);
     }
     if (active >= 2 || !pool.length) return;
-    var tile = pool[(Math.random() * pool.length) | 0];
-    var others = SHAPE_KEYS.filter(function (k) { return k !== tile.key; });
-    tile.flip = {
-      p: 0, axis: Math.random() < 0.5 ? 'x' : 'z', dir: Math.random() < 0.5 ? 1 : -1,
-      swapped: false, lastDot: null,
-      target: others[(Math.random() * others.length) | 0]   // forma final del volteo
-    };
-    var an = window.anime;
-    if (an && an.animate) {
-      an.animate(tile.flip, {
-        p: 1, duration: 1050, ease: 'inOutSine',
-        onComplete: function () {
-          // aterrizada a 180° se ve MIRROR[target]; en rotación 0 con la geometría
-          // target es exactamente la misma silueta => sin salto
-          tile.mesh.rotation.set(0, 0, 0);
-          swapGeo(tile.mesh, topGeos[tile.flip.target]);
-          tile.key = tile.flip.target;
-          tile.flip = null;
-        }
-      });
-    } else { tile.flip = null; }
+    startFlip(pool[(Math.random() * pool.length) | 0]);
   }
-  if (!reduced) setInterval(spawnFlip, 520);
+  if (!reduced) setInterval(spawnFlip, 900);
+
+  /* ---------- interacción hover: volteo / morph / elevación ---------- */
+  var raycaster = new THREE.Raycaster();
+  var _ndc = new THREE.Vector2();
+  var _lastRay = 0;
+  function hoverMorph(tile) {
+    if (reduced || tile.hovering) return;
+    var an = window.anime;
+    if (!an) return;
+    tile.hovering = true;
+    an.animate(tile, {
+      hoverP: 1, duration: 320, ease: 'outQuad',
+      onComplete: function () {
+        an.animate(tile, { hoverP: 0, duration: 900, ease: 'inOutQuad',
+          onComplete: function () { tile.hovering = false; } });
+      }
+    });
+  }
+  function hoverLift(mesh) {
+    if (reduced || mesh.userData.lifting) return;
+    var an = window.anime;
+    if (!an) return;
+    mesh.userData.lifting = true;
+    an.animate(mesh.position, {
+      y: mesh.userData.baseY + 0.11, duration: 360, ease: 'outQuad',
+      onComplete: function () {
+        an.animate(mesh.position, { y: mesh.userData.baseY, duration: 750, ease: 'inOutQuad',
+          onComplete: function () { mesh.userData.lifting = false; } });
+      }
+    });
+  }
+  window.addEventListener('pointermove', function (e) {
+    if (reduced) return;
+    var now = performance.now();
+    if (now - _lastRay < 60) return;
+    _lastRay = now;
+    var r = canvas.getBoundingClientRect();
+    if (!r.width || e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    _ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(_ndc, camera);
+    var hits = raycaster.intersectObjects(glassMeshes, false);
+    if (!hits.length) return;
+    var info = hits[0].object.userData.hoverInfo;
+    if (!info) return;
+    if (info.kind === 'top') {
+      if (now > (info.tile.cool || 0) && startFlip(info.tile)) info.tile.cool = now + 1400;
+    } else if (info.kind === 'mid') {
+      hoverMorph(info.tile);
+    } else if (info.kind === 'hex') {
+      hoverLift(hits[0].object);
+    }
+  }, { passive: true });
 
   /* ---------- sizing ---------- */
   var W = 0, H = 0, A = 0;
@@ -553,7 +660,7 @@
     var dpr = Math.min(window.devicePixelRatio || 1, 1.75);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
-    A = Math.min(W * 0.17, H / 5.4);
+    A = Math.min(W * 0.17, H / 5.4) * 1.10;   // +10% (petición de Igor)
     var PPW = A * Math.SQRT2;              // px por unidad de mundo
     camera.left = -W / PPW / 2; camera.right = W / PPW / 2;
     camera.top = H / PPW / 2; camera.bottom = -H / PPW / 2;
@@ -596,12 +703,16 @@
     root.rotation.x = mouse.cy * 0.05;
 
     var sep = (0.34 + (1.28 - 0.34) * state.spread) * SEPK;
-    // la capa superior crece 4×4→6×6 con el spread (como el vídeo)
-    var reach = 0.62 + 0.52 * state.spread;
+    // FUSIÓN como el vídeo: al colapsar, la capa superior se abre en anillo
+    // (los tiles interiores desaparecen), la media se encoge y anida dentro
+    var inv = 1 - state.spread;
+    var hideBelow = 0.75 * inv;         // en compacto solo queda el anillo exterior
+    var topScale = 1 + 0.24 * inv;      // el anillo superior se abre
+    var midScale = 1 - 0.30 * inv;      // la retícula media se encoge y anida
 
     for (var li = 0; li < 3; li++) {
       var L = layers[li], def = L.def;
-      var bob = reduced ? 0 : Math.sin(t * 0.6 + li * 1.9) * 0.014 * state.spread;
+      var bob = reduced ? 0 : Math.sin(t * 0.6) * (0.009 + 0.003 * li) * state.spread; // fase común: flotación coordinada
       def.group.position.y = (li - 1) * sep + bob;
 
       var alpha = L.labelAlways ? 1 : state.label;
@@ -614,12 +725,14 @@
       if (L.isTop) {
         for (var i = 0; i < def.tiles.length; i++) {
           var tile = def.tiles[i];
-          // pop de escala al cruzar el radio visible (crecimiento del grid)
-          var ap = Math.max(0, Math.min(1, (reach - tile.d - tile.jit) / 0.10));
+          // pop de escala al cruzar el umbral (anillo en compacto → grid completo)
+          var ap = Math.max(0, Math.min(1, (tile.d + tile.jit * 0.3 - hideBelow) / 0.15));
           tile.ap = ap;
           tile.mesh.visible = ap > 0.01;
           if (!tile.mesh.visible) continue;
-          var sc = 0.55 + 0.45 * ap;
+          tile.mesh.position.x = tile.u * topScale;
+          tile.mesh.position.z = tile.v * topScale;
+          var sc = (0.55 + 0.45 * ap) * topScale;
           var lift = 0;
           if (tile.flip) {
             var f = tile.flip;
@@ -647,10 +760,14 @@
       } else if (L.isMorph) {
         for (var j = 0; j < def.tiles.length; j++) {
           var mt = def.tiles[j];
-          var sweep = reduced ? 0 : 0.18 * Math.sin(state.wave * Math.PI * 2 - mt.morph * 2.2);
-          var p = Math.max(0, Math.min(1, (mt.morph - 0.5) * 1.9 + 0.5 + sweep));
+          // onda viajera visible cuadrado→círculo + pulso al pasar el ratón
+          var sweep = reduced ? 0 : 0.30 * Math.sin(state.wave * Math.PI * 2 - (mt.u + mt.v) * 2.2);
+          var p = Math.max(0, Math.min(1, (mt.morph - 0.5) * 1.2 + 0.5 + sweep + mt.hoverP));
           var idx = Math.round(p * (MORPH_STEPS - 1));
           if (mt.mesh.geometry !== morphGeos[idx]) swapGeo(mt.mesh, morphGeos[idx]);
+          mt.mesh.position.x = mt.u * midScale;
+          mt.mesh.position.z = mt.v * midScale;
+          mt.mesh.scale.setScalar(midScale);
         }
       }
       L.outline.material.opacity = 0.30 + 0.25 * state.spread;
@@ -750,7 +867,7 @@
     fresnel:     0.44,    // blanco lechoso de los cantos
     topClear:    0.92,    // 1 = tapa totalmente transparente
     topDarken:   0.43,    // brillo de lo que se ve a través de la tapa
-    edgeWhite:   0.53,    // blanco extra SOLO en el anillo del bisel
+    edgeWhite:   0.44,    // blanco extra SOLO en el anillo del bisel
     skyTop:      '#eef4ff', // color fresnel arriba
     skyHorizon:  '#8e9aad', // color fresnel horizonte
     iri:         0.08,    // iridiscencia (arcoíris)

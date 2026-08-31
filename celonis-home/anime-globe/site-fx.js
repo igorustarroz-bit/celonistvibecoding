@@ -57,7 +57,11 @@
       'details.accordion-item summary::-webkit-details-marker{display:none}',
       '.carousel-slides-wrapper > ul{transition:translate .55s cubic-bezier(.22,.61,.36,1)}',
       '.carousel-navigations-wrapper button[disabled]{opacity:.35;pointer-events:none}',
-      '.carousel-line.active{opacity:1}'
+      '.carousel-line.active{opacity:1}',
+      /* el snapshot rompe el <p> que envolvia el chip de label dentro del
+         acordeon de Solutions (p > div): en el original ese chip solo se ve
+         en el area de contenido, no en la lista de items */
+      '@media (min-width:1200px){.solutions .accordion-item .labels-container{display:none}}'
     ].join('\n');
     var st = document.createElement('style');
     st.id = 'site-fx-css';
@@ -65,163 +69,334 @@
     document.head.appendChild(st);
   }
 
-  /* ---------- 1. titular: ciclo de frases char-by-char ---------- */
-  function headline() {
-    var phrases = Array.prototype.slice.call(document.querySelectorAll('h1 .highlights'));
-    if (!phrases.length) return;
-    var HOLD = 3400, SWAP = 700;
-    function chars(p) { return p.querySelectorAll('.char, .char-space'); }
-    phrases.forEach(function (p) {
-      p.style.opacity = '0';
-      p.style.visibility = 'hidden';
-      chars(p).forEach(function (c, k) {
-        // el CSS base pone transition:none en los .char: forzar la transición
-        // por letra con !important, conservando el delay escalonado original
-        var delay = c.style.transitionDelay || (k * 0.02 + 's');
-        c.style.setProperty('transition', 'transform .55s cubic-bezier(.3,.86,.38,1) ' + delay, 'important');
-        c.style.setProperty('display', 'inline-block');
-        c.style.transform = 'translate(0,180px)';
-      });
+  /* ---------- 1+2. hero: titular char-by-char + cubos verdes, sincronizados ----------
+     Reimplementación fiel del comportamiento del site vivo (que usa GSAP):
+     - chars: 0.3s, ease power2.out (~cubic-bezier(.215,.61,.355,1)), stagger
+       0.02s por letra; entrada desde lineHeight*2.25, salida hasta -lineHeight*2.
+       El out de la frase actual y el in de la siguiente van EN PARALELO.
+     - bucle: el siguiente swap arranca 2s después de terminar el anterior.
+     - cubos: giran -90° en el MISMO instante en que arranca cada swap del
+       titular; el 2º cubo va 0.3s por detrás (.rotation-ready → transition-delay).
+       4 slots por cubo; el contenido entrante se coloca en el slot que va a
+       entrar (clases rotate-none/once/twice/thrice + .show/.hide en las caras).
+     - entrada: la primera cara de cada cubo hace pop (scale 0→1, 0.3s) a la
+       vez que entran las letras de la primera frase. */
+  var HERO_DUR = 300, HERO_STAG = 20, HERO_HOLD = 2000;
+  var HERO_EASE = 'cubic-bezier(.215,.61,.355,1)'; /* ~ gsap power2.out */
+
+  /* stats del fragmento square-value del site (los 7, en el orden original) */
+  var HERO_STATS = [
+    ['Increase in invoices processed through AI-powered automation', '66%'],
+    ['Reduction in order processing time', '44%'],
+    ['Reduction in excess inventory', '20%'],
+    ['Reduction in loan application processing time', '15%'],
+    ['Process automation opportunities discovered and implemented', '1,100+'],
+    ['Increase in on-time delivery', '70%'],
+    ['Total value realized by Celonis customers', '$6.5bn']
+  ];
+
+  function buildStatFace(label, value) {
+    var d = document.createElement('div');
+    d.setAttribute('data-type', 'text');
+    var t = document.createElement('p');
+    t.className = 'dark-square title';
+    t.textContent = label;
+    var v = document.createElement('p');
+    v.setAttribute('aria-label', value);
+    var ww = document.createElement('span');
+    ww.className = 'word-wrap-square';
+    ww.setAttribute('aria-hidden', 'true');
+    var cw = document.createElement('span');
+    cw.className = 'char-wrapper';
+    value.split('').forEach(function (ch, k) {
+      var c = document.createElement('span');
+      c.className = 'char-square';
+      c.style.transitionDelay = (k * 0.02) + 's';
+      c.textContent = ch;
+      cw.appendChild(c);
     });
-    var i = 0;
-    function show(p) {
-      p.style.visibility = 'visible';
-      p.style.opacity = '1';
-      void p.offsetWidth; // reflow para que la transición arranque
-      chars(p).forEach(function (c) { c.style.transform = 'translate(0,0)'; });
-    }
-    function hide(p, done) {
-      chars(p).forEach(function (c) { c.style.transform = 'translate(0,-170px)'; });
-      setTimeout(function () {
-        p.style.opacity = '0';
-        p.style.visibility = 'hidden';
-        chars(p).forEach(function (c) { c.style.transform = 'translate(0,180px)'; });
-        done();
-      }, SWAP);
-    }
-    show(phrases[0]);
-    setInterval(function () {
-      var cur = phrases[i];
-      i = (i + 1) % phrases.length;
-      hide(cur, function () { show(phrases[i]); });
-    }, HOLD + SWAP);
+    ww.appendChild(cw);
+    v.appendChild(ww);
+    d.appendChild(t);
+    d.appendChild(v);
+    return d;
   }
 
-  /* ---------- 2. cuadrado verde del hero: cubo 3D girando (como el original) ----------
-     square-value.js real: el .square-block es un cubo (preserve-3d, caras a
-     rotateX(0/90/180/-90)+translateZ); girar = decrementar --rotate 90° en el
-     wrapper (transición CSS de 1s) + clase de estado rotate-none/once/twice/thrice
-     en el bloque (controla visibility de la pareja de caras saliente/entrante)
-     + .show en la cara que entra y .hide en la que sale (animan los chars). */
-  function squareValue() {
-    var wrapper = document.querySelector('.square-wrapper');
-    if (!wrapper) return;
-    var block = wrapper.querySelector('.square-block');
-    if (!block) return;
-    var faces = Array.prototype.slice.call(block.children);
-    if (faces.length < 2) return;
-    var angle = parseFloat((wrapper.style.getPropertyValue('--rotate') || '0').replace('deg', '')) || 0;
-    var ROT = ['rotate-none', 'rotate-once', 'rotate-twice', 'rotate-thrice'];
-    var pos = ((Math.round(-angle / 90) % faces.length) + faces.length) % faces.length; // cara frontal según el ángulo guardado
-    function applyClasses(prevFront, front) {
-      ROT.forEach(function (c) { block.classList.remove(c); });
-      block.classList.add(ROT[front % 4]);
-      faces.forEach(function (f, i) {
-        f.classList.remove('show', 'hide');
-        if (i === front) f.classList.add('show');
-        else if (i === prevFront) f.classList.add('hide');
+  function setupCubes() {
+    var frag = document.querySelector('.home-hero .fragment-wrapper') || document.querySelector('.fragment-wrapper');
+    if (!frag) return null;
+    var blocks = Array.prototype.slice.call(frag.querySelectorAll('.square-block'));
+    if (!blocks.length) return null;
+    var wrappers = blocks.map(function (b) { return b.parentElement; });
+    var contents = blocks.map(function (b) {
+      var faces = Array.prototype.slice.call(b.children).filter(function (f) {
+        return f.children.length || (f.textContent || '').replace(/\s+/g, '');
+      });
+      var seen = {}, out = [];
+      faces.forEach(function (f) { // el snapshot puede duplicar caras
+        var key = f.innerHTML;
+        if (!seen[key]) { seen[key] = 1; out.push(f); }
+      });
+      if (out.length && out[0].getAttribute('data-type') === 'text') {
+        return HERO_STATS.map(function (s) { return buildStatFace(s[0], s[1]); });
+      }
+      return out;
+    });
+    var pos = 1, angle = 0;
+    var idx = blocks.map(function () { return 0; });
+    blocks.forEach(function (b, bi) {
+      b.classList.remove('rotate-once', 'rotate-twice', 'rotate-thrice');
+      var first = contents[bi][0];
+      first.classList.remove('show', 'hide', 'entered', 'initial');
+      while (b.firstChild) b.removeChild(b.firstChild);
+      b.appendChild(first);
+      for (var k = 0; k < 3; k++) b.appendChild(document.createElement('div'));
+      wrappers[bi].style.setProperty('--rotate', '0deg');
+      wrappers[bi].classList.remove('rotation-ready');
+      first.style.opacity = '0';
+      first.style.transform = 'scale(0)'; /* estado previo a la entrada */
+    });
+    function rotate() {
+      angle -= 90;
+      pos = (pos % 4) + 1;
+      blocks.forEach(function (b, bi) {
+        var list = contents[bi];
+        idx[bi] = (idx[bi] + 1) % list.length;
+        var incoming = list[idx[bi]];
+        incoming.classList.remove('hide', 'show', 'entered', 'initial');
+        var slot = b.children[pos - 1];
+        if (slot && slot !== incoming) {
+          if (incoming.parentElement === b) b.replaceChild(document.createElement('div'), incoming);
+          b.replaceChild(incoming, slot);
+        }
+        var n = b.children;
+        if (pos === 2) { b.classList.add('rotate-once'); b.classList.remove('rotate-none'); n[0].classList.add('hide'); if (n[1]) n[1].classList.add('show'); }
+        else if (pos === 3) { b.classList.add('rotate-twice'); b.classList.remove('rotate-once'); n[1].classList.add('hide'); if (n[2]) n[2].classList.add('show'); }
+        else if (pos === 4) { b.classList.add('rotate-thrice'); b.classList.remove('rotate-twice'); n[2].classList.add('hide'); if (n[3]) n[3].classList.add('show'); }
+        else { b.classList.remove('rotate-thrice'); n[3].classList.add('hide'); if (n[0]) n[0].classList.add('show'); }
+        wrappers[bi].style.setProperty('--rotate', angle + 'deg');
       });
     }
-    wrapper.classList.add('rotation-ready');
-    applyClasses((pos + faces.length - 1) % faces.length, pos);
-    setInterval(function () {
-      var prev = pos;
-      pos = (pos + 1) % faces.length;
-      angle -= 90;
-      wrapper.style.setProperty('--rotate', angle + 'deg');
-      applyClasses(prev, pos);
-    }, 4000);
+    function enter() {
+      blocks.forEach(function (b, bi) {
+        var first = b.children[0];
+        first.style.transition = 'transform .3s linear, opacity .3s linear';
+        void first.offsetWidth;
+        first.style.opacity = '1';
+        first.style.transform = 'scale(1)';
+        setTimeout(function () {
+          first.style.transition = '';
+          first.style.opacity = '';
+          first.style.transform = '';
+          first.classList.add('show');
+          if (bi === 1) wrappers[bi].classList.add('rotation-ready'); /* el 2º cubo gira 0.3s después */
+        }, 350);
+      });
+    }
+    return { rotate: rotate, enter: enter };
   }
 
-  /* ---------- 3. Solutions: acordeón <details> con barra de progreso y auto-avance ----------
-     Estructura real (solutions.css / solutions.js del site vivo):
-       details.accordion-item[data-index] (temas, solo uno abierto) con
-       .accordion-progress (barra 1px, scaleX 0→1 en 12s linear al añadir .active)
-       + paneles [data-accordion][data-index] (laterales y .accordion-content-area)
-       que se muestran con .show, + ul de tabs (móvil) con li.selected.        */
+  function hero() {
+    var phrases = Array.prototype.slice.call(document.querySelectorAll('h1 .highlights'));
+    var cubes = setupCubes();
+    if (!phrases.length) { if (cubes) cubes.enter(); return; }
+    function charsOf(p) { return Array.prototype.slice.call(p.querySelectorAll('.char')); }
+    function metrics(p) {
+      var lh = parseFloat(getComputedStyle(p).lineHeight) || 84;
+      return { inY: lh * 2.25, outY: lh * -2 };
+    }
+    function transitionFor(k) {
+      return 'transform ' + HERO_DUR + 'ms ' + HERO_EASE + ' ' + (k * HERO_STAG) + 'ms';
+    }
+    function prep(p) {
+      var m = metrics(p);
+      p.style.opacity = '1';        /* la visibilidad la lleva visibility */
+      p.style.visibility = 'hidden';
+      charsOf(p).forEach(function (c, k) {
+        c.style.setProperty('display', 'inline-block');
+        /* el CSS base pone transition:none en los .char: forzar con !important */
+        c.style.setProperty('transition', transitionFor(k), 'important');
+        c.style.transform = 'translateY(' + m.inY + 'px)';
+      });
+    }
+    function resetChars(p) { /* recoloca abajo sin animar */
+      var m = metrics(p);
+      charsOf(p).forEach(function (c, k) {
+        c.style.setProperty('transition', 'none', 'important');
+        c.style.transform = 'translateY(' + m.inY + 'px)';
+        void c.offsetWidth;
+        c.style.setProperty('transition', transitionFor(k), 'important');
+      });
+    }
+    function swapDur(p) { return HERO_DUR + HERO_STAG * Math.max(0, charsOf(p).length - 1); }
+    function animIn(p) {
+      p.style.visibility = 'visible';
+      void p.offsetWidth;
+      charsOf(p).forEach(function (c) { c.style.transform = 'translateY(0px)'; });
+    }
+    function animOut(p) {
+      var m = metrics(p);
+      charsOf(p).forEach(function (c) { c.style.transform = 'translateY(' + m.outY + 'px)'; });
+    }
+    phrases.forEach(prep);
+    var i = 0, timer = null;
+    function heroVisible() {
+      var h = document.querySelector('.home-hero');
+      if (document.hidden) return false;
+      if (!h) return true;
+      var r = h.getBoundingClientRect();
+      return r.bottom > 0 && r.top < window.innerHeight;
+    }
+    function schedule(ms) { clearTimeout(timer); timer = setTimeout(tick, ms); }
+    function tick() {
+      if (!heroVisible()) { schedule(500); return; } /* pausa fuera de viewport */
+      var cur = phrases[i], next = phrases[(i + 1) % phrases.length];
+      var d = Math.max(swapDur(cur), swapDur(next));
+      if (cubes) cubes.rotate(); /* los cubos giran con cada swap del titular */
+      if (phrases.length > 1) {
+        animOut(cur);  /* salida y entrada en paralelo, como el original */
+        animIn(next);
+        (function (p) {
+          setTimeout(function () { p.style.visibility = 'hidden'; resetChars(p); }, d + HERO_STAG);
+        })(cur);
+        i = (i + 1) % phrases.length;
+      }
+      schedule(HERO_HOLD + d);
+    }
+    /* entrada: primera frase + pop de los cubos a la vez ('firstChars') */
+    animIn(phrases[0]);
+    if (cubes) cubes.enter();
+    schedule(HERO_HOLD + swapDur(phrases[0]));
+  }
+
+  /* ---------- 3. Solutions: acordeón fiel a animated-accordion.js del site ----------
+     - desktop (>=1200px): solo un <details> abierto; los paneles
+       [data-accordion][data-index] se sincronizan con .show; hay UNA sola
+       barra .accordion-progress y vive en el item abierto (se crea al abrir,
+       se elimina al cerrar); .active llega ~100ms después → transition
+       transform 12s linear (scaleX 0→1).
+     - auto-avance cada 12s (rAF); pausa en hover del panel lateral y cuando
+       el bloque sale del viewport; click en el item abierto para el timer.
+     - móvil (<1200px): todos los items abiertos; las pestañas hacen scroll
+       horizontal del carrusel de items. */
   function solutions() {
     var wrap = document.querySelector('.solutions-wrapper');
     if (!wrap) return;
-    var details = Array.prototype.slice.call(wrap.querySelectorAll('details.accordion-item'));
+    var block = wrap.querySelector('.solutions') || wrap;
+    var acc = wrap.querySelector('.accordion--solutions') || block;
+    var details = Array.prototype.slice.call(acc.querySelectorAll('details.accordion-item'));
     if (!details.length) return;
     var panels = Array.prototype.slice.call(wrap.querySelectorAll('[data-accordion][data-index]'));
-    var tabs = Array.prototype.slice.call(wrap.querySelectorAll(':scope > div:first-child ul li'));
+    var tabsUL = wrap.querySelector(':scope > div:first-child ul');
+    var tabs = tabsUL ? Array.prototype.slice.call(tabsUL.querySelectorAll('li')) : [];
+    var sideEl = block.querySelector(':scope > div:first-child');
     var WAIT = 12000;
+    function isDesktop() { return window.matchMedia('(min-width: 1200px)').matches; }
 
-    // cada tema necesita su barra de progreso (la copia estática solo conserva una)
-    details.forEach(function (d) {
-      if (!d.querySelector('.accordion-progress')) {
-        var b = document.createElement('div');
-        b.className = 'accordion-progress';
-        d.appendChild(b);
-      }
-    });
+    /* el snapshot puede traer barras sueltas: fuera */
+    Array.prototype.forEach.call(wrap.querySelectorAll('.accordion-progress'), function (b) { b.remove(); });
 
-    var hovered = false;
-    wrap.addEventListener('mouseenter', function () { hovered = true; });
-    wrap.addEventListener('mouseleave', function () { hovered = false; });
+    var current = details.findIndex(function (d) { return d.hasAttribute('open'); });
+    if (current < 0) current = 0;
 
-    function bar(d) { return d.querySelector('.accordion-progress'); }
-    function resetBar(d) {
-      var b = bar(d);
-      if (!b) return;
-      b.style.transition = 'none';
-      b.classList.remove('active');
-      void b.offsetWidth; // reflow: vuelve a scaleX(0) sin animar
-      b.style.transition = '';
+    function removeProgress(d) {
+      Array.prototype.forEach.call(d.querySelectorAll('.accordion-progress'), function (b) { b.remove(); });
     }
-
-    var timer = null, current = -1;
-    function schedule() {
-      clearTimeout(timer);
-      timer = setTimeout(function tick() {
-        if (hovered) { timer = setTimeout(tick, 500); return; } // pausa en hover
-        select((current + 1) % details.length);
-      }, WAIT);
+    function addProgress(d, activate) {
+      removeProgress(d);
+      var b = document.createElement('div');
+      b.className = 'accordion-progress';
+      d.appendChild(b);
+      if (activate) setTimeout(function () { b.classList.add('active'); }, 100);
+      return b;
     }
-    function select(i) {
-      current = i;
+    function applyOpen(i) {
       details.forEach(function (d, j) {
-        if (j === i) d.setAttribute('open', '');
-        else { d.removeAttribute('open'); resetBar(d); }
+        if (isDesktop()) {
+          if (j === i) d.setAttribute('open', '');
+          else { d.removeAttribute('open'); removeProgress(d); }
+        } else d.setAttribute('open', '');
       });
       panels.forEach(function (pn) {
         pn.classList.toggle('show', +pn.getAttribute('data-index') === i);
       });
       tabs.forEach(function (t, j) { t.classList.toggle('selected', j === i); });
-      var d = details[i];
-      resetBar(d);
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () { var b = bar(d); if (b) b.classList.add('active'); });
-      });
-      schedule();
+    }
+
+    var rafId = null, t0 = 0, inView = false;
+    function loop(now) {
+      if (now - t0 >= WAIT) { select((current + 1) % details.length, true); t0 = now; }
+      rafId = requestAnimationFrame(loop);
+    }
+    function start() {
+      if (!isDesktop() || rafId) return;
+      t0 = performance.now();
+      rafId = requestAnimationFrame(loop);
+      var b = details[current].querySelector('.accordion-progress') || addProgress(details[current], false);
+      requestAnimationFrame(function () { b.classList.add('active'); });
+    }
+    function stop() {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      var b = details[current].querySelector('.accordion-progress');
+      if (b) b.classList.remove('active');
+    }
+    function select(i, auto) {
+      removeProgress(details[current]);
+      current = i;
+      applyOpen(i);
+      if (isDesktop()) {
+        addProgress(details[i], true);
+        t0 = performance.now();
+        if (!auto) { /* click manual: reinicia el timer */
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+          if (inView) start();
+        }
+      }
     }
 
     details.forEach(function (d, j) {
       var s = d.querySelector('summary');
       if (!s) return;
       s.addEventListener('click', function (e) {
-        e.preventDefault(); // gestionamos la exclusividad nosotros
-        select(j);
+        if (!isDesktop()) return; /* móvil: todos abiertos, sin toggle */
+        e.preventDefault();
+        if (d.open) { stop(); return; } /* como el original */
+        select(j, false);
       });
     });
+    if (sideEl) {
+      sideEl.addEventListener('mouseenter', function () { if (isDesktop()) stop(); });
+      sideEl.addEventListener('mouseleave', function () { if (isDesktop()) start(); });
+    }
     tabs.forEach(function (t, j) {
       t.style.cursor = 'pointer';
-      t.addEventListener('click', function () { select(j); });
+      t.addEventListener('click', function () {
+        if (isDesktop()) { select(j, false); return; }
+        var w = details[0].getBoundingClientRect().width || 1;
+        acc.scrollTo({ left: w * j, behavior: 'smooth' });
+        tabs.forEach(function (x, k) { x.classList.toggle('selected', k === j); });
+      });
     });
+    acc.addEventListener('scroll', function () {
+      if (isDesktop()) return;
+      var w = details[0].getBoundingClientRect().width || 1;
+      var n = Math.round(acc.scrollLeft / w);
+      tabs.forEach(function (x, k) { x.classList.toggle('selected', k === n); });
+    }, { passive: true });
 
-    var initial = details.findIndex(function (d) { return d.hasAttribute('open'); });
-    select(initial < 0 ? 0 : initial);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          inView = en.isIntersecting;
+          if (en.isIntersecting) start(); else stop();
+        });
+      }, { rootMargin: '100px' }).observe(wrap);
+    } else { inView = true; start(); }
+
+    window.addEventListener('resize', function () { applyOpen(current); });
+
+    applyOpen(current);
+    addProgress(details[current], false); /* .active llega al entrar en viewport */
   }
 
   /* ---------- 4. Success stories: carrusel con flechas ---------- */
@@ -319,8 +494,7 @@
     fixIcons();
     ensureBlockCSS();
     injectCSS();
-    headline();
-    squareValue();
+    hero();
     solutions();
     storiesCarousel();
     gridReveal();

@@ -22,9 +22,9 @@
     inertiaMaxMs: 3200,      // longest glide after a flick
     inertiaMinMs: 350,       // shortest glide
     flickMinVel: 0.00008,    // rad/ms below which a release just resumes auto-spin
-    oceanBase: 0.30,         // ocean dash brightness (kept low: open water is mostly tiny dots)
-    landBase: 0.09,          // land dash brightness (dark silhouette)
-    coastBoost: 0.85,        // extra brightness for ocean cells hugging the coastline
+    landBase: 0.30,          // land dash brightness (continents are the lit side)
+    oceanBase: 0.09,         // ocean dash brightness (dark, near-invisible dots)
+    coastBoost: 0.85,        // extra brightness for land cells hugging the coastline
     lightDir: [-0.30, 0.62, 0.72],
     entranceMs: 1800,
     // blur / bloom (to match the soft focus of the original video)
@@ -106,14 +106,15 @@
         var land = landAt(lon, lat);
         var base;
         if (land) {
-          base = CFG.landBase * (0.6 + 0.8 * rand());
-        } else {
-          // open water: dim, sparse feel; sparkle only occasionally
+          // continents: lit, with brighter fringe along the coastline
           var v = rand();
-          base = CFG.oceanBase * (0.45 + 1.2 * v * v);
+          base = CFG.landBase * (0.45 + 1.2 * v * v);
           var d = coastDist(lon, lat);
           if (d <= COAST_MAX) base += CFG.coastBoost * Math.pow(1 - (d - 1) / COAST_MAX, 2) * (0.6 + 0.5 * rand());
           base *= 0.9 + 0.2 * blotch(lon, lat);
+        } else {
+          // open water: dark, sparse near-dots
+          base = CFG.oceanBase * (0.6 + 0.8 * rand());
         }
         // dash direction: north tangent rotated dashAngleDeg toward east ("/" slashes)
         var aRot = CFG.dashAngleDeg * Math.PI / 180;
@@ -251,7 +252,7 @@
         if (cang > cosA0) {
           var f = (cang - cosA0) * invA;        // 0 at edge → 1 at center
           var fs = f * f * (3 - 2 * f) * spot.on; // light: smoothstep gradient (100% → 0)
-          alpha += CFG.spotStrength * fs * (P[o + 7] ? CFG.spotLandFactor : 1);
+          alpha += CFG.spotStrength * fs * (P[o + 7] ? 1 : CFG.spotLandFactor); // dark water barely reveals
           // lift: needle profile — sharp spike at the center easing into the base
           var mag = CFG.spotBulge * Math.pow(f, CFG.spotNeedlePow) * spot.on;
           var lift = 1 + mag;

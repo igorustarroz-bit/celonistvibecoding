@@ -376,6 +376,36 @@
     mouse.y = Math.max(-1, Math.min(1, inY)) * 0.6;
   }, { passive: true });
 
+  /* ---------- cursor personalizado (mismo crosshair que el globo) ---------- */
+  var CURSOR = {
+    color: '#000000',    // trazo (negro, como quedó aprobado en el experimento 1)
+    outline: '#ffffff',  // borde alrededor del trazo ('' = sin borde)
+    outlinePx: 1.5,      // grosor del borde a cada lado (CSS px)
+    sizePx: 28,          // tamaño del crosshair (CSS px)
+    strokePx: 3          // grosor del trazo (CSS px)
+  };
+  var FINE_POINTER = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  function crossCursorCss() {
+    // crosshair de mira: 4 brazos con hueco central (sin punto) — portado de globe.js
+    var sz = CURSOR.sizePx, half = sz / 2, sw = CURSOR.strokePx, col = CURSOR.color;
+    var o = CURSOR.outline ? CURSOR.outlinePx : 0;
+    var a0 = sz * 0.04 + o;
+    var a1 = half - sw / 2 - 3 * o;
+    function arms(g) {
+      return 'M' + half + ' ' + (a0 - g) + 'V' + (a1 + g) +
+        ' M' + half + ' ' + (sz - a0 + g) + 'V' + (sz - a1 - g) +
+        ' M' + (a0 - g) + ' ' + half + 'H' + (a1 + g) +
+        ' M' + (sz - a0 + g) + ' ' + half + 'H' + (sz - a1 - g);
+    }
+    var outline = CURSOR.outline
+      ? '<path d="' + arms(o) + '" stroke="' + CURSOR.outline + '" stroke-width="' + (sw + 2 * o) + '"/>'
+      : '';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz + '">' +
+      outline + '<path d="' + arms(0) + '" stroke="' + col + '" stroke-width="' + sw + '"/></svg>';
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + Math.floor(half) + ' ' + Math.floor(half) + ', crosshair';
+  }
+  if (FINE_POINTER) canvas.style.cursor = crossCursorCss();
+
   /* ---------- go ---------- */
   resize();
   startTimeline();

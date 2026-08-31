@@ -189,7 +189,7 @@
           s.classList.toggle('active', j === i);
           s.setAttribute('aria-hidden', j === i ? 'false' : 'true');
         });
-        lines.forEach(function (l, j) { l.classList.toggle('active', j <= i); });
+        lines.forEach(function (l, j) { l.classList.toggle('active', j === i); }); // como el site: solo la línea actual
         if (i === 0) prev.setAttribute('disabled', 'disabled'); else prev.removeAttribute('disabled');
         if (i >= slides.length - 1) next.setAttribute('disabled', 'disabled'); else next.removeAttribute('disabled');
       }

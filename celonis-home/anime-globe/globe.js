@@ -6,12 +6,13 @@
 
   // ---------- Config ----------
   var CFG = {
-    latStepDeg: 0.8,         // latitude row spacing (degrees) — also sets dash density per row
+    latStepDeg: 1.44,        // latitude row spacing (degrees) — measured on the original video (~1.42–1.46°)
+    lonStepDeg: 1.08,        // arc spacing between dashes along a row (degrees) — measured ~1.08° on the video
     radiusRatio: 0.4775,     // sphere radius / canvas size
     dashLenDeg: 0.85,        // max dash length on the sphere surface (degrees of arc)
     dashAngleDeg: 40,        // dash tilt on the surface: 0 = along meridians, 40 ≈ "/" slashes
     dotFloor: 0.22,          // min dash length fraction (dim water renders as near-dots)
-    dashWidthRatio: 0.0015,  // dash stroke width / canvas size
+    dashWidthRatio: 0.0021,  // dash stroke width / canvas size (~4px at 1702, like the video)
     tiltDeg: 21,             // axis tilt toward viewer
     rollDeg: 7,              // slow lateral wobble amplitude
     spinPeriodMs: 21600,     // full revolution (~100°/6s like the video)
@@ -22,7 +23,7 @@
     inertiaMaxMs: 3200,      // longest glide after a flick
     inertiaMinMs: 350,       // shortest glide
     flickMinVel: 0.00008,    // rad/ms below which a release just resumes auto-spin
-    landBase: 0.30,          // land dash brightness (continents are the lit side)
+    landBase: 0.55,          // land dash brightness (continents are the lit side) — subido de 0.30, elegido por Igor
     oceanBase: 0.09,         // ocean dash brightness (dark, near-invisible dots)
     coastBoost: 0.85,        // extra brightness for land cells hugging the coastline
     lightDir: [-0.30, 0.62, 0.72],
@@ -40,7 +41,11 @@
     spotLandFactor: 0.1,     // how much the dark land dashes light up (vs ocean)
     spotBulge: 0.045,        // lift along the sphere normal at the cap center (fraction of R)
     spotNeedlePow: 400,      // lift profile exponent: high = needle (sharp peak, curved base); 1 = cone; ~0.5 = bubble
-    spotFadeMs: 250          // fade in/out when the cursor enters/leaves (also settles the lift back)
+    spotFadeMs: 250,         // fade in/out when the cursor enters/leaves (also settles the lift back)
+    // custom cursor (desktop / fine pointer only): Celonis-green cross
+    cursorColor: '#5cfe50',  // --fnd-color-background-accent-green del site
+    cursorSizePx: 28,        // crosshair size (CSS px)
+    cursorStrokePx: 3        // crosshair stroke width (CSS px)
   };
 
   // ---------- Land mask ----------
@@ -91,7 +96,8 @@
   // concentric compression toward the poles that give the original its look.
   // Each particle: unit position p, dash direction d, baseAlpha, land flag.
   var P = [];   // flat: px,py,pz, dx,dy,dz, base, land
-  (function build() {
+  function buildParticles() {
+    P.length = 0;
     var step = CFG.latStepDeg;
     var rand = mulberry32(1337);
     for (var lat = -90 + step / 2; lat < 90; lat += step) {
@@ -99,7 +105,7 @@
       var cphi = Math.cos(phi);
       // uniform arc spacing per row (fewer dashes toward the poles), no random
       // offset: neighbouring rows stay near-aligned → the original's moiré look
-      var n = Math.max(1, Math.round(360 / step * cphi));
+      var n = Math.max(1, Math.round(360 / CFG.lonStepDeg * cphi));
       for (var k = 0; k < n; k++) {
         var lon = -180 + (k + 0.5) * 360 / n;
         var lam = lon * Math.PI / 180;
@@ -127,7 +133,8 @@
         P.push(px, py, pz, dx3, dy3, dz3, base, land);
       }
     }
-  })();
+  }
+  buildParticles();
   var COUNT = P.length / 8;
 
   function mulberry32(a) {
@@ -362,7 +369,23 @@
   }
 
   canvas.style.touchAction = 'pan-y'; // horizontal drag spins the globe, vertical swipe still scrolls the page
-  canvas.style.cursor = 'grab';
+  // Celonis-green cross cursor (desktop only; touch keeps the default)
+  function crossCursorCss() {
+    // crosshair de mira: 4 brazos con hueco central (sin punto), como la referencia de Igor
+    var sz = CFG.cursorSizePx, half = sz / 2, sw = CFG.cursorStrokePx, col = CFG.cursorColor;
+    var a0 = sz * 0.04, a1 = sz * 0.36; // brazo: extremo exterior -> interior (hueco central ~28% del tamaño)
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz + '">' +
+      '<path d="M' + half + ' ' + a0 + 'V' + a1 +
+      ' M' + half + ' ' + (sz - a0) + 'V' + (sz - a1) +
+      ' M' + a0 + ' ' + half + 'H' + a1 +
+      ' M' + (sz - a0) + ' ' + half + 'H' + (sz - a1) +
+      '" stroke="' + col + '" stroke-width="' + sw + '"/></svg>';
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + Math.floor(half) + ' ' + Math.floor(half) + ', crosshair';
+  }
+  function applyCursor() {
+    canvas.style.cursor = FINE_POINTER ? crossCursorCss() : 'grab';
+  }
+  applyCursor();
 
   canvas.addEventListener('pointerdown', function (e) {
     if (dragging) return;
@@ -372,7 +395,7 @@
     hist.length = 0; pushSample(performance.now());
     if (inertiaAnim) { inertiaAnim.pause(); inertiaAnim = null; }
     spinAnim.pause();
-    canvas.style.cursor = 'grabbing';
+    applyCursor();
   });
 
   canvas.addEventListener('pointermove', function (e) {
@@ -409,7 +432,7 @@
   function endDrag(e, withInertia) {
     if (!dragging || (e && e.pointerId !== dragId)) return;
     dragging = false; dragId = null;
-    canvas.style.cursor = 'grab';
+    applyCursor();
     var v0 = withInertia ? releaseVelocity(performance.now()) : 0;
     if (window.__earth) window.__earth.lastFlick = v0;
     startInertia(v0);
@@ -442,5 +465,5 @@
   }
 
   // expose for tuning in devtools (flick(v) spins the globe programmatically, v in rad/ms, e.g. 0.004)
-  window.__earth = { cfg: CFG, state: state, redraw: draw, spinAnim: spinAnim, flick: function (v) { spinAnim.pause(); startInertia(v); } };
+  window.__earth = { cfg: CFG, state: state, redraw: draw, spinAnim: spinAnim, flick: function (v) { spinAnim.pause(); startInertia(v); }, rebuild: function () { buildParticles(); draw(); }, applyCursor: applyCursor };
 })();

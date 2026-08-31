@@ -29,11 +29,19 @@ Sustituye al `<video>` por un `<canvas id="earth-canvas">` dentro de `<p class="
 Filas de latitud constante, como el vídeo original:
 
 ```
-paso = latStepDeg = 0.8°
-para lat = -90+paso/2 … 90, en incrementos de paso:
-  n = max(1, round(360/paso · cos(lat)))      // espaciado de arco uniforme
+pasoLat = latStepDeg = 1.44°       // filas
+pasoLon = lonStepDeg = 1.08°       // arco entre marcas dentro de la fila
+para lat = -90+pasoLat/2 … 90, en incrementos de pasoLat:
+  n = max(1, round(360/pasoLon · cos(lat)))   // espaciado de arco uniforme
   para k = 0 … n-1:  lon = -180 + (k+0.5)·360/n
 ```
+
+Valores MEDIDOS sobre el vídeo original (2026-08-31, frames t=2s y t=6s,
+autocorrelación de bandas centrales; disco del vídeo R≈850px de 1702):
+filas cada 21.1–21.7px → 1.42–1.46°; paso en fila 16px → 1.08°. La retícula
+es anisótropa (más densa a lo largo de la fila que entre filas, ratio 3:4).
+Antes usábamos 0.8° en ambos ejes (~58k marcas); ahora ~26k marcas.
+Frames de referencia en `tools/ref-frames/`.
 
 SIN offset aleatorio por fila: las columnas quedan casi alineadas entre filas
 vecinas y eso produce el moiré característico del original. La convergencia en
@@ -93,7 +101,8 @@ Culling: se descartan puntos con z_vista < 0.015. Pantalla:
    inversa al vídeo original)
 
 Brillo base por marca (semilla fija mulberry32(1337) para reproducibilidad):
-- Tierra: `0.30 · (0.45 + 1.2·v²)` con v = rand() → varianza fuerte.
+- Tierra: `0.55 · (0.45 + 1.2·v²)` con v = rand() → varianza fuerte. (landBase
+  0.30→0.55 el 2026-08-31, elegido por Igor probando 0.36/0.42/0.55.)
   - Franja costera (celdas de tierra a ≤5 celdas del agua, distancia Chebyshev
     en la máscara): `+ 0.85 · (1 − (d−1)/5)² · (0.6 + 0.5·rand())`.
   - Moteado: `× (0.9 + 0.2·blotch(lon,lat))` con blotch = ruido senoidal barato.
@@ -155,24 +164,28 @@ Scroll (`scroll-fx.js`; réplica del home-hero.js real del site, scrub lineal 1:
 ## 10. CFG final (aprobado por Igor, 2026-08-31)
 
 ```
-latStepDeg 0.8 · dashLenDeg 0.85 · dashAngleDeg 40 · dotFloor 0.22
-dashWidthRatio 0.0015 · radiusRatio 0.4775 · tiltDeg 21 · rollDeg 7
+latStepDeg 1.44 · lonStepDeg 1.08 · dashLenDeg 0.85 · dashAngleDeg 40 · dotFloor 0.22
+dashWidthRatio 0.0021 · radiusRatio 0.4775 · tiltDeg 21 · rollDeg 7
 spinPeriodMs 21600 · wobblePeriodMs 26000 · entranceMs 1800
-landBase 0.30 · oceanBase 0.09 · coastBoost 0.85 (COAST_MAX 5 celdas)
+landBase 0.55 · oceanBase 0.09 · coastBoost 0.85 (COAST_MAX 5 celdas)
 softBlurPx 0.6 · bloomStrength 0.55 · bloomWidth 3.4 · bloomFrom 0.5
 spotAngleDeg 23 · spotStrength 0.3 · spotLandFactor 0.1 · spotBulge 0.045
 spotNeedlePow 400 · spotFadeMs 250
 dragPitchMin −25 · dragPitchMax 40 · inertiaMinMs 350 · inertiaMaxMs 3200
 flickMinVel 0.00008
+cursorColor #5cfe50 · cursorSizePx 28 · cursorStrokePx 3
 ```
 
-Todo expuesto en `window.__earth` (cfg, state, redraw, spinAnim, flick(v)).
-Los parámetros de construcción (latStepDeg, dashAngleDeg, dotFloor, landBase,
-oceanBase, coastBoost) requieren recargar; el resto actúa en vivo.
+Todo expuesto en `window.__earth` (cfg, state, redraw, spinAnim, flick(v),
+rebuild(), applyCursor()). Los parámetros de construcción (latStepDeg,
+lonStepDeg, dashAngleDeg, dotFloor, landBase, oceanBase, coastBoost) se
+retocan en vivo con `__earth.cfg.X = v; __earth.rebuild()` (regenera las
+~26k marcas, semilla fija → mismo patrón); los del cursor con
+`__earth.applyCursor()`; el resto actúa solo.
 
 ## 11. Rendimiento
 
-~58k marcas totales (~29k visibles). draw() ≈ 4–9 ms en CPU pura (sin GPU);
+~26k marcas totales (~13k visibles) con la retícula 1.44/1.08. draw() ≈ 2–5 ms en CPU pura (sin GPU);
 en un portátil moderno va sobrado a 60fps. Claves: nada de sqrt en los hot
 paths donde se pudo evitar, buckets de alfa (14 strokes por frame, no 29k),
 bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
@@ -182,9 +195,21 @@ bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
 - Tierra clara / mar oscuro: decisión de Igor (el vídeo original es al revés).
 - Slashes "/" y agua como puntitos: decisión de Igor.
 - Malla de filas del original > Fibonacci/jitter: decisión de Igor.
+- 2026-08-31: densidad corregida a la del vídeo original medida en frames
+  (lat 1.44° / lon 1.08°, antes 0.8°/0.8°) y grosor de trazo 0.0021 (~4px
+  a 1702, como el vídeo). Verificado por autocorrelación sobre un render
+  headless: 1.41°/1.06°. Petición de Igor ("la retícula original tenía
+  menos elementos").
 - Islas árticas como agua, Groenlandia como tierra: decisión de Igor (filtro por área).
 - Foco pequeño con aguja f^400: valores elegidos por Igor probando en consola.
 - Reposo desktop −500px fijo: valor elegido por Igor.
+- 2026-08-31: cursor personalizado sobre el canvas en desktop (pointer fino):
+  crosshair de mira SVG en verde Celonis #5cfe50 (--fnd-color-background-
+  accent-green del site) — 4 brazos con hueco central (~28% del tamaño) y SIN
+  punto central (referencia visual elegida por Igor, que pidió quitar el
+  punto). Brazos: de 0.04·s a 0.36·s desde cada borde. Hotspot centrado,
+  fallback `crosshair`; en táctil no se toca. Se mantiene el mismo cursor
+  durante el arrastre (sin grab/grabbing).
 - Bug histórico 1: usar variables antes de declararlas dentro de draw() → NaN
   silencioso (el hoisting de `var` no inicializa). Calcular yOffset al principio.
 - Bug histórico 2: rasterizador del antimeridiano (ver §2).

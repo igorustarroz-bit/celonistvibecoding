@@ -92,15 +92,22 @@
   (function build() {
     var N = Math.round(41253 / (CFG.latStepDeg * CFG.latStepDeg)); // ~1 point per latStep² degrees
     var GA = Math.PI * (3 - Math.sqrt(5)); // golden angle
+    var spacing = Math.sqrt(4 * Math.PI / N); // mean angular distance between points (rad)
     var rand = mulberry32(1337);
     for (var i = 0; i < N; i++) {
-      var py = 1 - 2 * (i + 0.5) / N;          // y in (-1, 1), uniform
-      var rxy = Math.sqrt(Math.max(0, 1 - py * py));
+      var py0 = 1 - 2 * (i + 0.5) / N;         // y in (-1, 1), uniform
       var theta = i * GA;
-      var px = rxy * Math.sin(theta), pz = rxy * Math.cos(theta);
-      var phi = Math.asin(py);
-      var lam = Math.atan2(px, pz);
+      var phi = Math.asin(py0);
+      var lam = Math.atan2(Math.sin(theta), Math.cos(theta));
+      // organic jitter (~2/3 of the spacing): breaks the spiral-arm alignment
+      // that otherwise shows as swirls around the poles
+      phi += (rand() - 0.5) * spacing * 0.66;
+      lam += (rand() - 0.5) * spacing * 0.66 / Math.max(0.25, Math.cos(phi));
+      if (phi > 1.5707) phi = 1.5707; else if (phi < -1.5707) phi = -1.5707;
+      var cphi = Math.cos(phi);
+      var px = cphi * Math.sin(lam), py = Math.sin(phi), pz = cphi * Math.cos(lam);
       var lat = phi * 180 / Math.PI, lon = lam * 180 / Math.PI;
+      if (lon > 180) lon -= 360; else if (lon < -180) lon += 360;
       // north tangent (d/dphi)
       var tx = -Math.sin(phi) * Math.sin(lam), ty = Math.cos(phi), tz = -Math.sin(phi) * Math.cos(lam);
       {

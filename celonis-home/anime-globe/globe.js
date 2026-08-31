@@ -43,7 +43,9 @@
     spotNeedlePow: 400,      // lift profile exponent: high = needle (sharp peak, curved base); 1 = cone; ~0.5 = bubble
     spotFadeMs: 250,         // fade in/out when the cursor enters/leaves (also settles the lift back)
     // custom cursor (desktop / fine pointer only): Celonis-green cross
-    cursorColor: '#5cfe50',  // --fnd-color-background-accent-green del site
+    cursorColor: '#000000',  // color del trazo (prueba: negro; el verde del site es #5cfe50)
+    cursorOutline: '#ffffff',// color del borde alrededor del trazo ('' = sin borde)
+    cursorOutlinePx: 1.5,    // grosor del borde a cada lado (CSS px)
     cursorSizePx: 28,        // crosshair size (CSS px)
     cursorStrokePx: 3        // crosshair stroke width (CSS px)
   };
@@ -373,13 +375,25 @@
   function crossCursorCss() {
     // crosshair de mira: 4 brazos con hueco central (sin punto), como la referencia de Igor
     var sz = CFG.cursorSizePx, half = sz / 2, sw = CFG.cursorStrokePx, col = CFG.cursorColor;
-    var a0 = sz * 0.04, a1 = sz * 0.36; // brazo: extremo exterior -> interior (hueco central ~28% del tamaño)
+    var o = CFG.cursorOutline ? CFG.cursorOutlinePx : 0;
+    var a0 = sz * 0.04 + o; // brazo: extremo exterior
+    // extremo interior: el blanco de cada brazo acaba en a1+o, y el blanco lateral
+    // de los brazos perpendiculares empieza en half-(sw/2+o); entre ambos se deja
+    // una separación igual al grosor del borde (o)
+    var a1 = half - sw / 2 - 3 * o;
+    function arms(g) { // los 4 brazos, alargados g en cada punta (g=o para el borde, 0 para el trazo)
+      return 'M' + half + ' ' + (a0 - g) + 'V' + (a1 + g) +
+        ' M' + half + ' ' + (sz - a0 + g) + 'V' + (sz - a1 - g) +
+        ' M' + (a0 - g) + ' ' + half + 'H' + (a1 + g) +
+        ' M' + (sz - a0 + g) + ' ' + half + 'H' + (sz - a1 - g);
+    }
+    var d = arms(0);
+    // borde: el mismo path debajo, más grueso y con las puntas alargadas
+    var outline = CFG.cursorOutline
+      ? '<path d="' + arms(o) + '" stroke="' + CFG.cursorOutline + '" stroke-width="' + (sw + 2 * o) + '"/>'
+      : '';
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + sz + '" height="' + sz + '">' +
-      '<path d="M' + half + ' ' + a0 + 'V' + a1 +
-      ' M' + half + ' ' + (sz - a0) + 'V' + (sz - a1) +
-      ' M' + a0 + ' ' + half + 'H' + a1 +
-      ' M' + (sz - a0) + ' ' + half + 'H' + (sz - a1) +
-      '" stroke="' + col + '" stroke-width="' + sw + '"/></svg>';
+      outline + '<path d="' + d + '" stroke="' + col + '" stroke-width="' + sw + '"/></svg>';
     return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + Math.floor(half) + ' ' + Math.floor(half) + ', crosshair';
   }
   function applyCursor() {

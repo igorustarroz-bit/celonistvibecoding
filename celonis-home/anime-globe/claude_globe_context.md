@@ -173,7 +173,8 @@ spotAngleDeg 23 · spotStrength 0.3 · spotLandFactor 0.1 · spotBulge 0.045
 spotNeedlePow 400 · spotFadeMs 250
 dragPitchMin −25 · dragPitchMax 40 · inertiaMinMs 350 · inertiaMaxMs 3200
 flickMinVel 0.00008
-cursorColor #5cfe50 · cursorSizePx 28 · cursorStrokePx 3
+cursorColor #000000 · cursorOutline #ffffff · cursorOutlinePx 1.5
+cursorSizePx 28 · cursorStrokePx 3
 ```
 
 Todo expuesto en `window.__earth` (cfg, state, redraw, spinAnim, flick(v),
@@ -204,12 +205,17 @@ bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
 - Foco pequeño con aguja f^400: valores elegidos por Igor probando en consola.
 - Reposo desktop −500px fijo: valor elegido por Igor.
 - 2026-08-31: cursor personalizado sobre el canvas en desktop (pointer fino):
-  crosshair de mira SVG en verde Celonis #5cfe50 (--fnd-color-background-
-  accent-green del site) — 4 brazos con hueco central (~28% del tamaño) y SIN
-  punto central (referencia visual elegida por Igor, que pidió quitar el
-  punto). Brazos: de 0.04·s a 0.36·s desde cada borde. Hotspot centrado,
-  fallback `crosshair`; en táctil no se toca. Se mantiene el mismo cursor
-  durante el arrastre (sin grab/grabbing).
+  crosshair de mira SVG — 4 brazos SIN punto central (referencia visual
+  elegida por Igor, que pidió quitar el punto). Tras probar el verde Celonis
+  #5cfe50 sólido, Igor eligió NEGRO con BORDE BLANCO de 1.5px que envuelve
+  cada brazo entero (visible sobre fondo negro y sobre zonas brillantes).
+  Geometría (s=tamaño, sw=trazo, o=borde): brazo exterior en 0.04·s+o;
+  interior en a1 = s/2 − sw/2 − 3o, de modo que la separación entre el blanco
+  de un brazo y el de los perpendiculares es exactamente o (petición de Igor;
+  primero pidió 1px y luego "la misma distancia que mida el borde").
+  Hotspot centrado, fallback `crosshair`; en táctil no se toca. Mismo cursor
+  durante el arrastre (sin grab/grabbing). Para volver al verde sin borde:
+  cursorColor '#5cfe50', cursorOutline ''.
 - Bug histórico 1: usar variables antes de declararlas dentro de draw() → NaN
   silencioso (el hoisting de `var` no inicializa). Calcular yOffset al principio.
 - Bug histórico 2: rasterizador del antimeridiano (ver §2).

@@ -85,24 +85,25 @@
   }
 
   // ---------- Build particles ----------
-  // Each particle: unit position p, unit north-tangent t, baseAlpha, jitter
-  var P = [];   // flat: px,py,pz, tx,ty,tz, base, land
+  // Fibonacci-sphere distribution: uniform density everywhere, no latitude rings
+  // (a lat/lon grid produces unnatural concentric circles around the poles).
+  // Each particle: unit position p, dash direction d, baseAlpha, land flag.
+  var P = [];   // flat: px,py,pz, dx,dy,dz, base, land
   (function build() {
-    var latStep = CFG.latStepDeg;
+    var N = Math.round(41253 / (CFG.latStepDeg * CFG.latStepDeg)); // ~1 point per latStep² degrees
+    var GA = Math.PI * (3 - Math.sqrt(5)); // golden angle
     var rand = mulberry32(1337);
-    for (var lat = -90 + latStep / 2; lat < 90; lat += latStep) {
-      var phi = lat * Math.PI / 180;
-      var cosPhi = Math.cos(phi);
-      var n = Math.max(1, Math.round(360 / latStep * cosPhi));
-      var lonOff = rand() * 360;
-      for (var k = 0; k < n; k++) {
-        var lon = -180 + (k + 0.5) * 360 / n + lonOff;
-        if (lon > 180) lon -= 360;
-        var lam = lon * Math.PI / 180;
-        // position (y up, z toward viewer at lon 0)
-        var px = cosPhi * Math.sin(lam), py = Math.sin(phi), pz = cosPhi * Math.cos(lam);
-        // north tangent (d/dphi)
-        var tx = -Math.sin(phi) * Math.sin(lam), ty = Math.cos(phi), tz = -Math.sin(phi) * Math.cos(lam);
+    for (var i = 0; i < N; i++) {
+      var py = 1 - 2 * (i + 0.5) / N;          // y in (-1, 1), uniform
+      var rxy = Math.sqrt(Math.max(0, 1 - py * py));
+      var theta = i * GA;
+      var px = rxy * Math.sin(theta), pz = rxy * Math.cos(theta);
+      var phi = Math.asin(py);
+      var lam = Math.atan2(px, pz);
+      var lat = phi * 180 / Math.PI, lon = lam * 180 / Math.PI;
+      // north tangent (d/dphi)
+      var tx = -Math.sin(phi) * Math.sin(lam), ty = Math.cos(phi), tz = -Math.sin(phi) * Math.cos(lam);
+      {
         var land = landAt(lon, lat);
         var base;
         if (land) {

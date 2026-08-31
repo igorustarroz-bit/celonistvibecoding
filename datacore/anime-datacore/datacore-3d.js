@@ -78,6 +78,58 @@
   key.position.set(-3, 6, 2);
   scene.add(key);
   scene.add(new THREE.AmbientLight(0xffffff, 0.05));
+  // punto de luz bajo la pila: ilumina biseles y caras inferiores desde abajo
+  var underLight = new THREE.PointLight(0xf4f7ff, 1.1, 9, 1.6);
+  underLight.position.set(0, -2.4, 0);
+  scene.add(underLight);
+
+  /* ---------- haz de luz vertical que atraviesa la pila (billboard) ---------- */
+  function makeBeamTexture() {
+    // gaussiana horizontal (bordes suaves, sin silueta de tubo) + fundido vertical
+    // en ambos extremos + fringes espectrales tenues a los lados (dispersión)
+    var Wt = 256, Ht = 256;
+    var c = document.createElement('canvas'); c.width = Wt; c.height = Ht;
+    var g = c.getContext('2d');
+    var img = g.createImageData(Wt, Ht);
+    var RB = [[255, 70, 70], [255, 200, 60], [90, 255, 140], [90, 170, 255], [180, 90, 255]];
+    for (var y = 0; y < Ht; y++) {
+      var v = y / (Ht - 1);
+      // envolvente vertical: 0 arriba, máximo hacia abajo, 0 en el borde inferior
+      var env = Math.sin(Math.PI * Math.pow(1 - v, 0.65)) * (0.25 + 0.75 * v);
+      env *= Math.min(1, (1 - v) / 0.14);           // fundido inferior
+      env *= Math.min(1, v / 0.22);                 // fundido superior
+      for (var x = 0; x < Wt; x++) {
+        var u = (x / (Wt - 1)) * 2 - 1;            // -1..1
+        var core = Math.exp(-(u * u) / 0.10);      // núcleo blanco
+        var halo = Math.exp(-(u * u) / 0.45) * 0.4;
+        var a = (core + halo) * env * Math.pow(Math.max(0, 1 - u * u), 1.5); // 0 en los laterales
+        var r = 255, gg = 255, b = 255;
+        var au = Math.abs(u);
+        if (au > 0.30 && au < 0.85) {              // fringes de arcoíris
+          var band = RB[Math.min(4, Math.floor((au - 0.30) / 0.11))];
+          var fa = Math.exp(-Math.pow((au - 0.55) / 0.25, 2)) * 0.5;
+          r = 255 * (1 - fa) + band[0] * fa;
+          gg = 255 * (1 - fa) + band[1] * fa;
+          b = 255 * (1 - fa) + band[2] * fa;
+        }
+        var i4 = (y * Wt + x) * 4;
+        img.data[i4] = r; img.data[i4 + 1] = gg; img.data[i4 + 2] = b;
+        img.data[i4 + 3] = Math.min(255, a * 255);
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return new THREE.CanvasTexture(c);
+  }
+  var beam = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.15, 3.6),
+    new THREE.MeshBasicMaterial({
+      map: makeBeamTexture(), transparent: true, opacity: 0.12,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+      toneMapped: false
+    })
+  );
+  beam.renderOrder = -1;   // se dibuja antes: el cristal se funde por encima
+  root.add(beam);
 
   /* ---------- materiales: cristal ahumado casi negro, bisel brillante ---------- */
   var glassMats = [];   // para modular transmission con el spread
@@ -93,8 +145,11 @@
       ior: 1.5,
       attenuationColor: new THREE.Color(0x0a0d14),
       attenuationDistance: 0.55,
-      clearcoat: 1.0,             // capa pulida encima del frost
+      clearcoat: 1.0,             // capa pulida
       clearcoatRoughness: 0.06,
+      iridescence: 0.35,          // película fina → arcoíris sutiles al girar la luz
+      iridescenceIOR: 1.3,
+      iridescenceThicknessRange: [120, 480],
       envMapIntensity: 1.75,
       specularIntensity: 1.0,
       transparent: true,
@@ -344,7 +399,7 @@
     }
     if (active >= 2 || !pool.length) return;
     var tile = pool[(Math.random() * pool.length) | 0];
-    tile.flip = { p: 0, axis: Math.random() < 0.5 ? 'x' : 'z', dir: Math.random() < 0.5 ? 1 : -1, swapped: false };
+    tile.flip = { p: 0, axis: Math.random() < 0.5 ? 'x' : 'z', dir: Math.random() < 0.5 ? 1 : -1, swapped: false, lastDot: null };
     var an = window.anime;
     if (an && an.animate) {
       an.animate(tile.flip, {
@@ -396,6 +451,7 @@
   /* ---------- render loop ---------- */
   var t0 = performance.now();
   var SEPK = 1 / (Math.cos(31.3 * Math.PI / 180) * Math.SQRT2);
+  var VIEW = camera.position.clone().normalize();
   function render(now) {
     var t = (now - t0) / 1000;
     mouse.cx += (mouse.x - mouse.cx) * 0.055;
@@ -432,14 +488,22 @@
           if (tile.flip) {
             var f = tile.flip;
             lift = Math.sin(f.p * Math.PI) * 0.16;
-            if (!f.swapped && f.p >= 0.5) {
-              // a medio giro, revela otra forma (como el vídeo)
+            var ang = f.p * Math.PI * f.dir;
+            // el cambio de forma ocurre EXACTAMENTE cuando la cara queda de canto
+            // respecto a la cámara: cruce por cero de dot(normal girada, vista)
+            var nDotV;
+            if (f.axis === 'x') nDotV = Math.cos(ang) * VIEW.y + Math.sin(ang) * VIEW.z;
+            else nDotV = Math.cos(ang) * VIEW.y - Math.sin(ang) * VIEW.x;
+            if (!f.swapped && f.lastDot !== null && f.lastDot > 0 !== nDotV > 0) {
               var others = SHAPE_KEYS.filter(function (k) { return k !== tile.key; });
               tile.key = others[(Math.random() * others.length) | 0];
               swapGeo(tile.mesh, topGeos[tile.key]);
               f.swapped = true;
             }
-            tile.mesh.rotation[f.axis === 'x' ? 'x' : 'z'] = f.p * Math.PI * f.dir;
+            f.lastDot = nDotV;
+            tile.mesh.rotation[f.axis === 'x' ? 'x' : 'z'] = ang;
+            // encoge en mitad del giro: el swap pasa con la pieza pequeña y de canto
+            sc *= 1 - 0.22 * Math.sin(f.p * Math.PI);
           }
           tile.mesh.scale.set(sc, sc, sc);
           tile.mesh.position.y = tile.cy + lift;
@@ -455,6 +519,13 @@
       }
       L.outline.material.opacity = 0.30 + 0.25 * state.spread;
     }
+    // haz de luz: más presente con la pila explosionada, con respiración sutil
+    beam.material.opacity = (0.20 + 0.45 * state.spread) * (1 + (reduced ? 0 : 0.10 * Math.sin(t * 1.7)));
+    beam.scale.set(0.8 + 0.35 * state.spread, 0.62 + 0.38 * state.spread, 1);
+    beam.quaternion.copy(root.quaternion).invert().multiply(camera.quaternion);
+
+    underLight.intensity = 0.5 + 0.8 * state.spread;
+
     // cristal: compacto = ahumado casi opaco; explosionado = transmisivo (evita el colapsado lechoso)
     var trans = 0.10 + 0.22 * state.spread;
     for (var mi = 0; mi < glassMats.length; mi++) glassMats[mi].transmission = trans;

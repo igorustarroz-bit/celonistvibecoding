@@ -35,7 +35,7 @@
 
   /* ---------- CSS de bloques que el site vivo cargaba por JS ---------- */
   function ensureBlockCSS() {
-    ['Enterprise-AI-powered-by-Celonis_files/carousel.css'].forEach(function (href) {
+    ['original/carousel.css'].forEach(function (href) {
       var already = Array.prototype.some.call(document.querySelectorAll('link[rel="stylesheet"]'), function (l) {
         return (l.getAttribute('href') || '').indexOf(href.split('/').pop()) !== -1;
       });

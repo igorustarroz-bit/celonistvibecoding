@@ -10,7 +10,7 @@ posibles.
 
 Réplica interactiva del mundo 3D en blanco y negro del hero de celonis.com
 (originalmente el vídeo `https://www.celonis.com/src/assets/videos/commercial-earth-hero.mp4`,
-1702×1702 @60fps, 13.9s — hay una copia en `../Enterprise-AI-powered-by-Celonis_files/`).
+1702×1702 @60fps, 13.9s — hay una copia en `../original/`).
 Sustituye al `<video>` por un `<canvas id="earth-canvas">` dentro de `<p class="world">`.
 
 ## Ficheros de esta carpeta

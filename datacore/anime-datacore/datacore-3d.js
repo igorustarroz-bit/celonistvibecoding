@@ -83,77 +83,96 @@
   underLight.position.set(0, -2.4, 0);
   scene.add(underLight);
 
-  /* ---------- haz de luz vertical que atraviesa la pila (billboard) ---------- */
-  function makeBeamTexture() {
-    // gaussiana horizontal (bordes suaves, sin silueta de tubo) + fundido vertical
-    // en ambos extremos + fringes espectrales tenues a los lados (dispersión)
-    var Wt = 256, Ht = 256;
-    var c = document.createElement('canvas'); c.width = Wt; c.height = Ht;
-    var g = c.getContext('2d');
-    var img = g.createImageData(Wt, Ht);
-    var RB = [[255, 70, 70], [255, 200, 60], [90, 255, 140], [90, 170, 255], [180, 90, 255]];
-    for (var y = 0; y < Ht; y++) {
-      var v = y / (Ht - 1);
-      // envolvente vertical: 0 arriba, máximo hacia abajo, 0 en el borde inferior
-      var env = Math.sin(Math.PI * Math.pow(1 - v, 0.65)) * (0.25 + 0.75 * v);
-      env *= Math.min(1, (1 - v) / 0.14);           // fundido inferior
-      env *= Math.min(1, v / 0.22);                 // fundido superior
-      for (var x = 0; x < Wt; x++) {
-        var u = (x / (Wt - 1)) * 2 - 1;            // -1..1
-        var core = Math.exp(-(u * u) / 0.10);      // núcleo blanco
-        var halo = Math.exp(-(u * u) / 0.45) * 0.4;
-        var a = (core + halo) * env * Math.pow(Math.max(0, 1 - u * u), 1.5); // 0 en los laterales
-        var r = 255, gg = 255, b = 255;
-        var au = Math.abs(u);
-        if (au > 0.30 && au < 0.85) {              // fringes de arcoíris
-          var band = RB[Math.min(4, Math.floor((au - 0.30) / 0.11))];
-          var fa = Math.exp(-Math.pow((au - 0.55) / 0.25, 2)) * 0.5;
-          r = 255 * (1 - fa) + band[0] * fa;
-          gg = 255 * (1 - fa) + band[1] * fa;
-          b = 255 * (1 - fa) + band[2] * fa;
-        }
-        var i4 = (y * Wt + x) * 4;
-        img.data[i4] = r; img.data[i4 + 1] = gg; img.data[i4 + 2] = b;
-        img.data[i4 + 3] = Math.min(255, a * 255);
-      }
-    }
-    g.putImageData(img, 0, 0);
-    return new THREE.CanvasTexture(c);
-  }
-  var beam = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.15, 3.6),
-    new THREE.MeshBasicMaterial({
-      map: makeBeamTexture(), transparent: true, opacity: 0.12,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-      toneMapped: false
-    })
-  );
-  beam.renderOrder = -1;   // se dibuja antes: el cristal se funde por encima
-  root.add(beam);
 
-  /* ---------- materiales: cristal ahumado casi negro, bisel brillante ---------- */
-  var glassMats = [];   // para modular transmission con el spread
+  /* ---------- material de cristal al estilo Codrops "Xylophone" ----------
+     El cristal NO refracta la escena real (fondo negro = nada que refractar):
+     lee un BACKDROP claro y pre-difuminado con refracción en espacio de
+     pantalla (uv + normal.xy·fuerza), Fresnel hacia un cielo de 3 paradas y
+     una paleta coseno como iridiscencia de película fina. Todo en shader. */
+  function makeBackdropTexture() {
+    // "fondo de estudio" lechoso: gradiente + blobs suaves (nace ya difuminado)
+    var c = document.createElement('canvas'); c.width = 512; c.height = 512;
+    var g = c.getContext('2d');
+    var grad = g.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0, '#585e66'); grad.addColorStop(0.45, '#3c4148');
+    grad.addColorStop(0.8, '#23262b'); grad.addColorStop(1, '#141619');
+    g.fillStyle = grad; g.fillRect(0, 0, 512, 512);
+    function blob(x, y, r, col, a) {
+      var rg = g.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, 'rgba(' + col + ',' + a + ')');
+      rg.addColorStop(1, 'rgba(' + col + ',0)');
+      g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+    }
+    blob(170, 150, 200, '235,240,246', 0.75);  // foco principal
+    blob(410, 330, 180, '220,226,233', 0.30);  // relleno
+    blob(256, 470, 260, '10,11,13', 0.8);      // pie oscuro
+    var tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }
+  var backdropTex = makeBackdropTexture();
+
+  var GLASS_VERT = [
+    'varying vec3 vN;',
+    'varying vec3 vWN;',
+    'varying vec2 vScreenUv;',
+    'void main() {',
+    '  vN = normalize(normalMatrix * normal);',
+    '  vWN = normalize(mat3(modelMatrix) * normal);',
+    '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+    '  gl_Position = projectionMatrix * mv;',
+    '  vScreenUv = gl_Position.xy / gl_Position.w * 0.5 + 0.5;', // orto: w=1
+    '}'
+  ].join('\n');
+
+  var GLASS_FRAG = [
+    'uniform sampler2D uBackdrop;',
+    'uniform vec3 uBody;',
+    'uniform float uTransmission;',
+    'uniform float uRefract;',
+    'uniform float uSeed;',
+    'uniform float uIri;',
+    'varying vec3 vN;',
+    'varying vec3 vWN;',
+    'varying vec2 vScreenUv;',
+    'void main() {',
+    '  vec3 N = normalize(vN);',
+    '  float up = clamp(normalize(vWN).y, 0.0, 1.0);',
+    // refracción en espacio de pantalla (Xylophone): desplaza la lectura por la normal
+    '  vec2 buv = vScreenUv + N.xy * uRefract;',
+    '  vec3 trans = texture2D(uBackdrop, buv).rgb;',
+    // cuerpo -> lechoso: mezcla con el backdrop difuminado
+    '  vec3 col = mix(uBody, trans, uTransmission * mix(1.0, 0.22, up * up));',  // tapas oscuras, laterales/biseles lechosos
+    // Fresnel hacia "cielo" de 3 paradas (sin HDR, como el tutorial)
+    '  float ndv = abs(N.z);',                       // cámara orto: vista = +z (view space)
+    '  float fres = pow(1.0 - ndv, 3.0);',
+    '  vec3 sky = mix(vec3(0.62,0.65,0.70), vec3(1.0), clamp(N.y * 0.5 + 0.5, 0.0, 1.0));',
+    '  col = mix(col, sky, fres * 0.85);',
+    // iridiscencia: paleta coseno con fase dependiente de la normal (grosor falso)
+    '  float ph = N.x * 1.7 + N.y * 2.3 + N.z * 1.1 + uSeed * 6.2831;',
+    '  vec3 iri = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67)) + ph * 3.0);',
+    '  col += iri * fres * uIri;',
+    // el composer trabaja en lineal y la pasada gamma final hace linear->sRGB:
+    // autoría en sRGB, conversión aquí
+    '  gl_FragColor = vec4(pow(col, vec3(2.2)), 1.0);',
+    '}'
+  ].join('\n');
+
+  var glassMats = [];
   function glassMat(seed, g) {
     var gg = g === undefined ? 0.5 : g;
-    var tint = 0.04 + 0.055 * seed + 0.045 * gg;
-    var m = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05),
-      metalness: 0.0,
-      roughness: 0.09,            // pulido: el vídeo es cristal ahumado, no esmerilado
-      transmission: 0.25,         // se anima con el spread en el render loop
-      thickness: 0.22,
-      ior: 1.5,
-      attenuationColor: new THREE.Color(0x0a0d14),
-      attenuationDistance: 0.55,
-      clearcoat: 1.0,             // capa pulida
-      clearcoatRoughness: 0.06,
-      iridescence: 0.35,          // película fina → arcoíris sutiles al girar la luz
-      iridescenceIOR: 1.3,
-      iridescenceThicknessRange: [120, 480],
-      envMapIntensity: 1.75,
-      specularIntensity: 1.0,
-      transparent: true,
-      opacity: 1
+    var tint = 0.10 + 0.10 * seed + 0.08 * gg;
+    var m = new THREE.ShaderMaterial({
+      vertexShader: GLASS_VERT,
+      fragmentShader: GLASS_FRAG,
+      uniforms: {
+        uBackdrop: { value: backdropTex },
+        uBody: { value: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05) },
+        uTransmission: { value: 0.75 },
+        uRefract: { value: 0.10 + 0.05 * seed },
+        uSeed: { value: seed },
+        uIri: { value: 0.10 }
+      }
     });
     glassMats.push(m);
     return m;
@@ -269,6 +288,8 @@
     circ:  [1, 1, 1, 1]
   };
   var SHAPE_KEYS = ['sq', 'leafA', 'leafB', 'circ'];
+  // forma que se VE al estar girada 180° sobre X o Z (espejo del shape)
+  var MIRROR = { sq: 'sq', circ: 'circ', leafA: 'leafB', leafB: 'leafA' };
   var topGeos = {};
   SHAPE_KEYS.forEach(function (k) {
     var abs = SHAPES[k].map(function (x) { return x * topHalf; });
@@ -399,13 +420,22 @@
     }
     if (active >= 2 || !pool.length) return;
     var tile = pool[(Math.random() * pool.length) | 0];
-    tile.flip = { p: 0, axis: Math.random() < 0.5 ? 'x' : 'z', dir: Math.random() < 0.5 ? 1 : -1, swapped: false, lastDot: null };
+    var others = SHAPE_KEYS.filter(function (k) { return k !== tile.key; });
+    tile.flip = {
+      p: 0, axis: Math.random() < 0.5 ? 'x' : 'z', dir: Math.random() < 0.5 ? 1 : -1,
+      swapped: false, lastDot: null,
+      target: others[(Math.random() * others.length) | 0]   // forma final del volteo
+    };
     var an = window.anime;
     if (an && an.animate) {
       an.animate(tile.flip, {
         p: 1, duration: 1050, ease: 'inOutSine',
         onComplete: function () {
+          // aterrizada a 180° se ve MIRROR[target]; en rotación 0 con la geometría
+          // target es exactamente la misma silueta => sin salto
           tile.mesh.rotation.set(0, 0, 0);
+          swapGeo(tile.mesh, topGeos[tile.flip.target]);
+          tile.key = tile.flip.target;
           tile.flip = null;
         }
       });
@@ -440,7 +470,7 @@
     renderer.setClearColor(0x000000, 1);   // la sección es negra: fondo opaco para el composer
     composer = new THREE.EffectComposer(renderer);
     composer.addPass(new THREE.RenderPass(scene, camera));
-    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.42, 0.55, 0.32);
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.38, 0.5, 0.55);
     composer.addPass(bloomPass);
     // el composer trabaja en lineal: conversión sRGB al final
     if (THREE.ShaderPass && THREE.GammaCorrectionShader) {
@@ -495,9 +525,9 @@
             if (f.axis === 'x') nDotV = Math.cos(ang) * VIEW.y + Math.sin(ang) * VIEW.z;
             else nDotV = Math.cos(ang) * VIEW.y - Math.sin(ang) * VIEW.x;
             if (!f.swapped && f.lastDot !== null && f.lastDot > 0 !== nDotV > 0) {
-              var others = SHAPE_KEYS.filter(function (k) { return k !== tile.key; });
-              tile.key = others[(Math.random() * others.length) | 0];
-              swapGeo(tile.mesh, topGeos[tile.key]);
+              // de canto respecto a la cámara: montamos el ESPEJO del destino,
+              // que girado 180° se verá como el destino real
+              swapGeo(tile.mesh, topGeos[MIRROR[f.target]]);
               f.swapped = true;
             }
             f.lastDot = nDotV;
@@ -519,16 +549,11 @@
       }
       L.outline.material.opacity = 0.30 + 0.25 * state.spread;
     }
-    // haz de luz: más presente con la pila explosionada, con respiración sutil
-    beam.material.opacity = (0.20 + 0.45 * state.spread) * (1 + (reduced ? 0 : 0.10 * Math.sin(t * 1.7)));
-    beam.scale.set(0.8 + 0.35 * state.spread, 0.62 + 0.38 * state.spread, 1);
-    beam.quaternion.copy(root.quaternion).invert().multiply(camera.quaternion);
-
     underLight.intensity = 0.5 + 0.8 * state.spread;
 
-    // cristal: compacto = ahumado casi opaco; explosionado = transmisivo (evita el colapsado lechoso)
-    var trans = 0.10 + 0.22 * state.spread;
-    for (var mi = 0; mi < glassMats.length; mi++) glassMats[mi].transmission = trans;
+    // cristal: algo más transmisivo con la pila explosionada
+    var trans = 0.62 + 0.18 * state.spread;
+    for (var mi = 0; mi < glassMats.length; mi++) glassMats[mi].uniforms.uTransmission.value = trans;
 
     if (composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);

@@ -150,24 +150,33 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
-- LUZ DESDE ABAJO (v4): PointLight (0xf4f7ff) en (0,−2.4,0), intensidad
-  0.5+0.8·spread — ilumina biseles y caras inferiores. Y un HAZ vertical que
-  atraviesa la pila: billboard PlaneGeometry 1.15×3.6 (quaternion = inv(root)·
-  camera cada frame), MeshBasicMaterial aditivo toneMapped:false, textura
-  procedural 256² por píxel: núcleo gaussiano exp(−u²/0.10) + halo /0.45·0.4,
-  envolvente vertical sin(π·(1−v)^0.65)·(0.25+0.75v) CON fundidos explícitos a
-  cero en los 4 bordes (inferior /0.14, superior /0.22, laterales (1−u²)^1.5 —
-  sin ellos se ve el rectángulo del plano), y fringes espectrales (arcoíris de
-  dispersión) en |u| 0.30–0.85. Opacity (0.20+0.45·spread)·(1+0.10 sin 1.7t).
-  PROBADO Y DESCARTADO: cilindro open-ended para el haz — los laterales
-  acumulan alpha y parece un tubo sólido, no luz.
-- IRIDISCENCIA (arcoíris de película fina, r147 la soporta): iridescence 0.35,
-  iridescenceIOR 1.3, iridescenceThicknessRange [120,480] en el cristal.
-- VOLTEOS v2: el cambio de forma ya NO ocurre en p=0.5 fijo (se veía el salto);
-  ocurre en el cruce por cero de dot(normal girada, dirección de vista) — la
-  cara exactamente de canto respecto a la CÁMARA (VIEW = camera.position
-  normalizada; axis x: cosθ·Vy+sinθ·Vz, axis z: cosθ·Vy−sinθ·Vx) — y además la
-  pieza se encoge ×(1−0.22·sin(pπ)) durante el giro.
+- GLASS v5 — SOLUCIÓN DEL XYLOPHONE AL 100% (la definitiva): el cristal es un
+  `ShaderMaterial` propio, NO MeshPhysicalMaterial. La transmisión física no
+  funcionaba: con fondo negro no hay nada que refractar (por eso se veía opaco
+  y gomoso). En su lugar, como el tutorial: (1) BACKDROP procedural claro y
+  pre-difuminado (canvas 512²: gradiente medio-oscuro + blobs suaves) leído con
+  REFRACCIÓN EN ESPACIO DE PANTALLA: `buv = vScreenUv + N.xy·uRefract`
+  (uRefract 0.10–0.15 por seed); (2) mezcla `col = mix(uBody, trans,
+  uTransmission·mix(1.0, 0.22, up²))` donde up = normal-mundo Y — CLAVE: las
+  tapas planas quedan oscuras (cuerpo) y biseles/laterales lechosos, como el
+  vídeo; (3) FRESNEL hacia cielo de 3 paradas (sin HDR): `pow(1−|N.z|,3)·0.85`;
+  (4) IRIDISCENCIA como paleta coseno con fase por normal (uIri 0.10);
+  (5) salida `pow(col, 2.2)` porque el composer trabaja en lineal y la pasada
+  gamma final convierte a sRGB. uTransmission = 0.62+0.18·spread.
+  El backdrop debe ser de TONOS MEDIOS: con zonas blancas grandes la pila sale
+  quemada (el screen-uv mapea el backdrop directamente a la pantalla).
+- Luz puntual inferior (PointLight 0xf4f7ff en (0,−2.4,0), 0.5+0.8·spread) —
+  solo afecta ya a plateMat (el cristal es ShaderMaterial). PROBADO Y RETIRADO
+  a petición de Igor: un haz volumétrico visible (billboard aditivo) — "no
+  afecta a los materiales, queda fatal". No reintentar haces visibles.
+- Bloom recalibrado para el cristal claro: UnrealBloomPass(0.38, 0.5, 0.55).
+- VOLTEOS v3 (sin salto ni al girar NI AL CATERRIZAR): girar 180° sobre X o Z
+  ESPEJA la forma (leafA↔leafB; sq y circ invariantes → mapa MIRROR). El flip
+  elige `target`; en el cruce de canto respecto a la cámara (cruce por cero de
+  dot(normal girada, VIEW)) monta MIRROR[target]; al completar, rotación→0 y
+  geometría→target (silueta píxel-idéntica en ese instante). Además la pieza
+  se encoge ×(1−0.22·sin(pπ)) durante el giro. El fallo anterior: aterrizaba a
+  180° mostrando el espejo y el reset a 0 daba el salto.
 - Etiquetas: sprites con textura canvas (pill), altura 0.085 unidades de mundo
   (≈ mismas px que la variante A), depthTest off.
 - Los dos index llevan un enlace fijo abajo-derecha para alternar A↔B.

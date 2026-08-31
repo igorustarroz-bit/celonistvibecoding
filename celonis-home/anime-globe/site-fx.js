@@ -213,11 +213,14 @@
     function reveal(block) {
       block.classList.add('cards-in-viewport');
       Array.prototype.forEach.call(block.children, function (c) { c.classList.add('cards-in-viewport'); });
-      // estilos inline: ganan siempre a la regla que los ocultaba; la
-      // transition-delay inline de cada tarjeta escalona la entrada sola
-      block.querySelectorAll('.card-grid-item').forEach(function (item) {
-        item.style.opacity = '1';
-        item.style.transform = 'translateY(0)';
+      // transición propia con !important: la del CSS original usa una variable
+      // de easing indefinida en la copia y se queda "running" sin progresar
+      block.querySelectorAll('.card-grid-item').forEach(function (item, k) {
+        item.style.setProperty('transition', 'opacity .35s ease, transform .55s ease', 'important');
+        setTimeout(function () {
+          item.style.setProperty('opacity', '1', 'important');
+          item.style.setProperty('transform', 'translateY(0)', 'important');
+        }, 60 + k * 130);
       });
     }
     var pending = Array.prototype.slice.call(document.querySelectorAll('.cards.grid'));

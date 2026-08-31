@@ -147,6 +147,9 @@
     'uniform float uSeed;',
     'uniform float uIri;',
     'uniform float uFres;',
+    'uniform float uTopClear;',
+    'uniform float uTopDarken;',
+    'uniform float uEdgeWhite;',
     'uniform vec3 uSkyTop;',
     'uniform vec3 uSkyHz;',
     'uniform vec3 uTint;',
@@ -159,13 +162,21 @@
     // refracción en espacio de pantalla (Xylophone): desplaza la lectura por la normal
     '  vec2 buv = vScreenUv + N.xy * uRefract;',
     '  vec3 trans = texture2D(uBackdrop, buv).rgb;',
-    // cuerpo -> lechoso: mezcla con el backdrop difuminado
-    '  vec3 col = mix(uBody, trans, uTransmission * mix(1.0, 0.35, up * up));',  // tapas más oscuras, laterales/biseles transparentes
-    // Fresnel hacia "cielo" de 3 paradas (sin HDR, como el tutorial)
-    '  float ndv = abs(N.z);',                       // cámara orto: vista = +z (view space)
+    // zonas de la pieza: tapa plana (topness=1) / bisel y laterales (0)
+    '  float topness = smoothstep(0.55, 0.95, up);',
+    // laterales/bisel: cristal lechoso (mezcla con el backdrop)
+    '  vec3 milky = mix(uBody, trans, uTransmission);',
+    // TAPA: transparencia real — se ve lo de detrás, apenas teñido
+    '  vec3 seeThru = trans * uTopDarken + uBody * 0.12;',
+    '  vec3 col = mix(milky, seeThru, topness * uTopClear);',
+    // Fresnel hacia "cielo" (atenuado en la tapa para que quede limpia)
+    '  float ndv = abs(N.z);',
     '  float fres = pow(1.0 - ndv, 3.0);',
     '  vec3 sky = mix(uSkyHz, uSkyTop, clamp(N.y * 0.5 + 0.5, 0.0, 1.0));',
-    '  col = mix(col, sky, fres * uFres);',
+    '  col = mix(col, sky, fres * uFres * (1.0 - 0.7 * topness * uTopClear));',
+    // blanco del cristal SOLO en el anillo del bisel y arranque de laterales
+    '  float bevel = smoothstep(0.02, 0.45, up) * (1.0 - topness);',
+    '  col += sky * bevel * uEdgeWhite;',
     // iridiscencia: paleta coseno con fase dependiente de la normal (grosor falso)
     '  float ph = N.x * 1.7 + N.y * 2.3 + N.z * 1.1 + uSeed * 6.2831;',
     '  vec3 iri = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67)) + ph * 3.0);',
@@ -188,17 +199,20 @@
         uBackdrop: { value: backRT.texture },
         uBody: { value: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05) },
         uTransmission: { value: 0.75 },
-        uRefract: { value: 0.10 + 0.05 * seed },
+        uRefract: { value: 0.13 + 0.06 * seed },
         uSeed: { value: seed },
         uIri: { value: 0.10 },
         uFres: { value: 0.85 },
+        uTopClear: { value: 0.85 },
+        uTopDarken: { value: 0.9 },
+        uEdgeWhite: { value: 0.35 },
         uSkyTop: { value: new THREE.Color('#eef4ff') },
         uSkyHz: { value: new THREE.Color('#8e9aad') },
         uTint: { value: new THREE.Color(1, 1, 1) }
       }
     });
     glassMats.push(m);
-    m.userData.baseRefract = 0.10 + 0.05 * seed;
+    m.userData.baseRefract = 0.13 + 0.06 * seed;
     m.userData.baseBody = new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05);
     // gemelo simple para el pre-pase (lo que se ve A TRAVÉS del cristal)
     m.userData.preMat = new THREE.MeshBasicMaterial({
@@ -653,6 +667,9 @@
     transmissionSpread: 0.18, // extra al explotar
     refract:     1.0,     // multiplicador de la refracción
     fresnel:     0.85,    // blanco lechoso de los cantos
+    topClear:    0.85,    // 1 = tapa totalmente transparente
+    topDarken:   0.90,    // brillo de lo que se ve a través de la tapa
+    edgeWhite:   0.35,    // blanco extra SOLO en el anillo del bisel
     skyTop:      '#eef4ff', // color fresnel arriba
     skyHorizon:  '#8e9aad', // color fresnel horizonte
     iri:         0.10,    // iridiscencia (arcoíris)
@@ -680,6 +697,9 @@
       u.uTransmission.value = trans;
       u.uRefract.value = ud.baseRefract * TUNE.refract;
       u.uFres.value = TUNE.fresnel;
+      u.uTopClear.value = TUNE.topClear;
+      u.uTopDarken.value = TUNE.topDarken;
+      u.uEdgeWhite.value = TUNE.edgeWhite;
       u.uIri.value = TUNE.iri;
       u.uSkyTop.value.copy(_skyTopC);
       u.uSkyHz.value.copy(_skyHzC);

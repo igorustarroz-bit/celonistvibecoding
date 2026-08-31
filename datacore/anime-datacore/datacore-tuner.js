@@ -102,6 +102,11 @@
     slider('cuerpo (tapas)', 'body', 0, 3);
     slider('a través (pre)', 'pre', 0, 3);
 
+    section('Tapas transparentes');
+    slider('tapa transp.', 'topClear', 0, 1);
+    slider('brillo a través', 'topDarken', 0, 1.5);
+    slider('blanco del borde', 'edgeWhite', 0, 1.2);
+
     section('Cantos y brillo');
     slider('fresnel', 'fresnel', 0, 1.5);
     color('cielo arriba', 'skyTop');

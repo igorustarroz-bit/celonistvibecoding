@@ -151,6 +151,14 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- TAPAS TRANSPARENTES (v8, petición directa de Igor): el shader separa la
+  pieza en zonas por normal-mundo: topness = smoothstep(0.55,0.95,up). La TAPA
+  es transparencia real — `seeThru = trans·uTopDarken + uBody·0.12` — y el
+  blanco lechoso queda SOLO en el anillo del bisel/laterales: `bevel =
+  smoothstep(0.02,0.45,up)·(1−topness); col += sky·bevel·uEdgeWhite`, con el
+  fresnel atenuado ×(1−0.7·topness·uTopClear) para que la tapa quede limpia.
+  Mandos nuevos en DATACORE y en el panel: topClear (0.85), topDarken (0.90),
+  edgeWhite (0.35). Refracción base subida a 0.13+0.06·seed.
 - TINTE AZULADO + PANEL DE AJUSTE (v7): el shader lleva uniforms editables
   (uTint vec3, uFres, uSkyTop, uSkyHz) y un objeto global `window.DATACORE`
   con todos los mandos (tint rgb, transmission/+spread, refract, fresnel,

@@ -1,0 +1,30 @@
+
+#gaita {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #000;
+}
+
+
+.video-background {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate(0%, 0%);
+}
+
+#containereroso {
+  width: 100%;
+  max-width: 100%;
+  height: 500vh;
+  margin: 0;
+  padding: 0;
+}
+

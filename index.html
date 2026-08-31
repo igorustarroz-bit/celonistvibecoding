@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Celonis Vibecoding — Experimentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000;
+    --panel: #101010;
+    --line: #232323;
+    --text: #f5f5f5;
+    --muted: #9a9a9a;
+    --accent: #7CF77E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Poppins, ui-sans-serif, system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 48px 24px 8px;
+    max-width: 980px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .brand {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .brand small {
+    display: block;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+    margin-top: 6px;
+  }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 24px;
+    display: grid;
+    gap: 20px;
+  }
+  .exp {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 26px 28px;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .exp:hover { border-color: #3a3a3a; transform: translateY(-2px); }
+  .exp .num {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .exp h2 { margin: 8px 0 6px; font-size: 22px; font-weight: 500; }
+  .exp p  { margin: 0 0 18px; color: var(--muted); font-size: 14.5px; line-height: 1.55; font-weight: 300; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; }
+  .links a {
+    display: inline-block;
+    padding: 9px 18px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: filter .15s ease;
+  }
+  .links a:hover { filter: brightness(1.12); }
+  .links a.alt {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+  .links a.alt:hover { border-color: var(--accent); color: var(--accent); }
+  footer {
+    margin-top: auto;
+    padding: 32px 24px 40px;
+    text-align: center;
+    color: #666;
+    font-size: 12.5px;
+    font-weight: 300;
+  }
+  footer a { color: #888; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">celonis <span style="color:var(--accent)">/ vibecoding</span>
+    <small>Experimentos sobre celonis.com — propuestas de mejora y prototipos</small>
+  </div>
+</header>
+<main>
+  <article class="exp">
+    <div class="num">Experimento 1</div>
+    <h2>Hero: mundo 3D sin vídeo (anime.js)</h2>
+    <p>La home guardada con el globo punteado del hero recreado en Canvas 2D + anime.js en lugar del
+       vídeo original: ~18.000 guiones proyectados sobre la esfera, continentes reales, bloom,
+       arrastre con inercia (ratón y táctil) y foco-aguja 3D que sigue al cursor en desktop.</p>
+    <div class="links">
+      <a href="celonis-home/index.html">Abrir experimento</a>
+      <a class="alt" href="celonis-home/Enterprise%20AI%20powered%20by%20Celonis.html">Original guardado (con vídeo)</a>
+    </div>
+  </article>
+
+  <article class="exp">
+    <div class="num">Experimento 2</div>
+    <h2>Concept Video Scroll</h2>
+    <p>Scrubbing de vídeo controlado por scroll sobre la página de Banking Solutions:
+       el vídeo avanza fotograma a fotograma al desplazarse. Dos variantes.</p>
+    <div class="links">
+      <a href="Concept%20Video%20Scroll/test1/index.html">Test 1</a>
+      <a href="Concept%20Video%20Scroll/test2/index.html">Test 2</a>
+    </div>
+  </article>
+</main>
+<footer>
+  <a href="https://github.com/igorustarroz-bit/celonistvibecoding">github.com/igorustarroz-bit/celonistvibecoding</a>
+</footer>
+</body>
+</html>

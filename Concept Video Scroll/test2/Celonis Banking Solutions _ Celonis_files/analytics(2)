@@ -1,0 +1,30 @@
+
+function piResponse() {
+		piSetCookie('visitor_id238122', '628756347', 3650);
+			piSetCookie('visitor_id238122-hash', 'f4134bfaba84694d7afceb0cd665a4927997d3b89d4b132622466ff37e0dbbdaf5e5b2e2ce77c26c26ec8093aa95ee2af485c499', 3650);
+		
+		if (document.location.protocol != "https:" || (document.location.protocol == "https:" && true)) {
+		var analytics_link = document.location.protocol + "//" + "pi.pardot.com/analytics?";
+		pi.tracker.visitor_id='628756347';
+
+				pi.tracker.visitor_id_sign='f4134bfaba84694d7afceb0cd665a4927997d3b89d4b132622466ff37e0dbbdaf5e5b2e2ce77c26c26ec8093aa95ee2af485c499';
+		
+				pi.tracker.campaign_id='83104';
+		
+		var variables = 'conly=true';
+		for (property in pi.tracker) {
+					variables += "&" + property + "=" + encodeURIComponent(pi.tracker[property]);
+				}
+		var headID = document.getElementsByTagName("head")[0];
+		piScriptObj[piScriptNum] = document.createElement('script');
+		piScriptObj[piScriptNum].type = 'text/javascript';
+		piScriptObj[piScriptNum].src = analytics_link + variables;
+		headID.appendChild(piScriptObj[piScriptNum]);
+		piScriptObj[piScriptNum].onload = function() { return; }
+	}
+	}
+piResponse();
+
+
+
+

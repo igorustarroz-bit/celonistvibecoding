@@ -218,9 +218,15 @@
       // que el fade/slide se hace a mano con rAF, escalonado por tarjeta
       block.querySelectorAll('.card-grid-item').forEach(function (item, k) {
         item.style.setProperty('transition', 'none', 'important');
+        function showNow() {
+          item.style.setProperty('opacity', '1', 'important');
+          item.style.setProperty('transform', 'translateY(0)', 'important');
+        }
+        if (document.hidden) { showNow(); return; } // pestaña oculta: sin animación (rAF suspendido)
         setTimeout(function () {
           var t0 = performance.now(), DUR = 450;
           (function step(now) {
+            if (document.hidden) { showNow(); return; }
             var t = Math.min(1, (now - t0) / DUR);
             var e = 1 - Math.pow(1 - t, 3); // easeOutCubic
             item.style.setProperty('opacity', String(e), 'important');

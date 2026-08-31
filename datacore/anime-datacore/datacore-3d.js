@@ -94,8 +94,8 @@
     var c = document.createElement('canvas'); c.width = 512; c.height = 512;
     var g = c.getContext('2d');
     var grad = g.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, '#585e66'); grad.addColorStop(0.45, '#3c4148');
-    grad.addColorStop(0.8, '#23262b'); grad.addColorStop(1, '#141619');
+    grad.addColorStop(0, '#33373d'); grad.addColorStop(0.45, '#1c1f24');
+    grad.addColorStop(0.8, '#0d0f12'); grad.addColorStop(1, '#060708');
     g.fillStyle = grad; g.fillRect(0, 0, 512, 512);
     function blob(x, y, r, col, a) {
       var rg = g.createRadialGradient(x, y, 0, x, y, r);
@@ -103,14 +103,28 @@
       rg.addColorStop(1, 'rgba(' + col + ',0)');
       g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
     }
-    blob(170, 150, 200, '235,240,246', 0.75);  // foco principal
-    blob(410, 330, 180, '220,226,233', 0.30);  // relleno
+    blob(170, 150, 170, '245,248,252', 0.95);  // foco principal (contraste)
+    blob(410, 330, 150, '225,230,236', 0.35);  // relleno
     blob(256, 470, 260, '10,11,13', 0.8);      // pie oscuro
     var tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     return tex;
   }
   var backdropTex = makeBackdropTexture();
+
+  // PRE-PASE (Xylophone completo): la escena se renderiza a una textura y el
+  // cristal refracta ESA textura => se ve de verdad a través de las piezas.
+  var backRT = new THREE.WebGLRenderTarget(2, 2, {
+    minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter
+  });
+  // fondo de estudio, visible solo dentro del pre-pase (detrás de la pila)
+  var bgQuad = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: backdropTex, depthWrite: false })
+  );
+  bgQuad.visible = false;
+  scene.add(bgQuad);
+  var glassMeshes = [];   // meshes de cristal: en el pre-pase usan su material simple
 
   var GLASS_VERT = [
     'varying vec3 vN;',
@@ -142,7 +156,7 @@
     '  vec2 buv = vScreenUv + N.xy * uRefract;',
     '  vec3 trans = texture2D(uBackdrop, buv).rgb;',
     // cuerpo -> lechoso: mezcla con el backdrop difuminado
-    '  vec3 col = mix(uBody, trans, uTransmission * mix(1.0, 0.22, up * up));',  // tapas oscuras, laterales/biseles lechosos
+    '  vec3 col = mix(uBody, trans, uTransmission * mix(1.0, 0.35, up * up));',  // tapas más oscuras, laterales/biseles transparentes
     // Fresnel hacia "cielo" de 3 paradas (sin HDR, como el tutorial)
     '  float ndv = abs(N.z);',                       // cámara orto: vista = +z (view space)
     '  float fres = pow(1.0 - ndv, 3.0);',
@@ -161,12 +175,12 @@
   var glassMats = [];
   function glassMat(seed, g) {
     var gg = g === undefined ? 0.5 : g;
-    var tint = 0.10 + 0.10 * seed + 0.08 * gg;
+    var tint = 0.055 + 0.075 * seed + 0.055 * gg;
     var m = new THREE.ShaderMaterial({
       vertexShader: GLASS_VERT,
       fragmentShader: GLASS_FRAG,
       uniforms: {
-        uBackdrop: { value: backdropTex },
+        uBackdrop: { value: backRT.texture },
         uBody: { value: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05) },
         uTransmission: { value: 0.75 },
         uRefract: { value: 0.10 + 0.05 * seed },
@@ -175,8 +189,13 @@
       }
     });
     glassMats.push(m);
+    // gemelo simple para el pre-pase (lo que se ve A TRAVÉS del cristal)
+    m.userData.preMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(tint * 0.55, tint * 0.58, tint * 0.65)
+    });
     return m;
   }
+  function registerGlass(mesh) { glassMeshes.push(mesh); return mesh; }
   var plateMat = new THREE.MeshPhysicalMaterial({
     color: 0x060708, metalness: 0.1, roughness: 0.38, clearcoat: 0.6,
     clearcoatRoughness: 0.3, envMapIntensity: 0.4
@@ -308,7 +327,7 @@
         else if (r < 0.78) keyName = 'leafB';
         else keyName = 'circ';
         var seed = rnd();
-        var mesh = new THREE.Mesh(topGeos[keyName], glassMat(seed, 0.5 + (u - v) * 0.31));
+        var mesh = registerGlass(new THREE.Mesh(topGeos[keyName], glassMat(seed, 0.5 + (u - v) * 0.31)));
         var cy = topGeos[keyName].userData.cy;
         mesh.position.set(u, cy, v);
         addRim(mesh, 0.20 + 0.28 * seed);
@@ -342,7 +361,7 @@
       for (var ix = 0; ix < MID_N; ix++) {
         var u = -MID_EXT + midCell * (ix + 0.5), v = -MID_EXT + midCell * (iy + 0.5);
         var seed = rnd();
-        var mesh = new THREE.Mesh(morphGeos[0], glassMat(seed, 0.5 + (u - v) * 0.31));
+        var mesh = registerGlass(new THREE.Mesh(morphGeos[0], glassMat(seed, 0.5 + (u - v) * 0.31)));
         mesh.position.set(u, morphGeos[0].userData.cy, v);
         addRim(mesh, 0.16 + 0.26 * seed);
         group.add(mesh);
@@ -365,7 +384,7 @@
     ];
     hexes.forEach(function (hx) {
       var geo = extrude(hexShape(hx.R, hx.sx, 1), HEX_H, BEV);
-      var mesh = new THREE.Mesh(geo, glassMat(0.30, 0.5 + hx.a * 0.55));
+      var mesh = registerGlass(new THREE.Mesh(geo, glassMat(0.30, 0.5 + hx.a * 0.55)));
       mesh.position.set((hx.a + hx.b) * SQ, 0, (hx.b - hx.a) * SQ);
       addRim(mesh, 0.32);
       group.add(mesh);
@@ -461,6 +480,7 @@
       composer.setPixelRatio(dpr);
       composer.setSize(W, H);
     }
+    backRT.setSize(Math.round(W * dpr * 0.6), Math.round(H * dpr * 0.6));
   }
   window.addEventListener('resize', resize);
 
@@ -554,6 +574,32 @@
     // cristal: algo más transmisivo con la pila explosionada
     var trans = 0.62 + 0.18 * state.spread;
     for (var mi = 0; mi < glassMats.length; mi++) glassMats[mi].uniforms.uTransmission.value = trans;
+
+    // PRE-PASE: escena con materiales simples + fondo de estudio → backRT
+    bgQuad.visible = true;
+    bgQuad.quaternion.copy(camera.quaternion);
+    bgQuad.position.copy(VIEW).multiplyScalar(-8);
+    bgQuad.scale.set((camera.right - camera.left) * 1.1, (camera.top - camera.bottom) * 1.1, 1);
+    var gi;
+    for (gi = 0; gi < 3; gi++) layers[gi].def.sprite.visible = false;
+    for (gi = 0; gi < glassMeshes.length; gi++) {
+      var gm = glassMeshes[gi];
+      gm.userData.mainMat = gm.material;
+      gm.material = gm.material.userData.preMat;
+    }
+    renderer.setRenderTarget(backRT);
+    renderer.setClearColor(0x000000, 1);
+    renderer.clear();
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    for (gi = 0; gi < glassMeshes.length; gi++) {
+      glassMeshes[gi].material = glassMeshes[gi].userData.mainMat;
+    }
+    for (gi = 0; gi < 3; gi++) {
+      var Lg = layers[gi];
+      Lg.def.sprite.visible = (Lg.labelAlways ? 1 : state.label) > 0.01;
+    }
+    bgQuad.visible = false;
 
     if (composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);

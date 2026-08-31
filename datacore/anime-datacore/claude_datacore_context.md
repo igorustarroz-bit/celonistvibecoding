@@ -150,7 +150,17 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
-- GLASS v5 — SOLUCIÓN DEL XYLOPHONE AL 100% (la definitiva): el cristal es un
+- GLASS v6 — el pre-pase que faltaba (SIN ESTO EL CRISTAL SE VE GRIS Y SORDO):
+  cada frame, ANTES del composer, la escena se renderiza a `backRT` (0.6×dpr)
+  con: (a) un quad de fondo (`bgQuad`, textura de estudio oscura con hotspot,
+  visible SOLO en el pre-pase, colocado en −VIEW·8 mirando a cámara y escalado
+  al frustum ×1.1), (b) los meshes de cristal cambiados a su gemelo simple
+  `userData.preMat` (MeshBasic oscuro, tint×0.55) — los filos LineSegments se
+  renderizan también, así que A TRAVÉS del cristal se ven las piezas de detrás
+  con sus filos brillantes, refractados, (c) las etiquetas ocultas (se
+  duplicaban feo). Después se restauran materiales y visibilidades y corre el
+  composer. El cristal muestrea `backRT.texture` — transparencia REAL.
+- GLASS v5 — receta base del Xylophone: el cristal es un
   `ShaderMaterial` propio, NO MeshPhysicalMaterial. La transmisión física no
   funcionaba: con fondo negro no hay nada que refractar (por eso se veía opaco
   y gomoso). En su lugar, como el tutorial: (1) BACKDROP procedural claro y

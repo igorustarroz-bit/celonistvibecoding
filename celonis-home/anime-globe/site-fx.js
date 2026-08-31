@@ -220,14 +220,24 @@
         item.style.transform = 'translateY(0)';
       });
     }
-    var io = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (en.isIntersecting) { reveal(en.target); io.unobserve(en.target); }
+    var pending = Array.prototype.slice.call(document.querySelectorAll('.cards.grid'));
+    if (!pending.length) return;
+    function check() {
+      pending = pending.filter(function (block) {
+        var r = block.getBoundingClientRect();
+        if (r.top < window.innerHeight * 0.85 && r.bottom > 0) { reveal(block); return false; }
+        return true;
       });
-    }, { threshold: 0.1 }) : null;
-    document.querySelectorAll('.cards.grid').forEach(function (block) {
-      if (io) io.observe(block); else reveal(block);
-    });
+      if (!pending.length) window.removeEventListener('scroll', onScroll);
+    }
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () { ticking = false; check(); });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    check();
   }
 
   function init() {

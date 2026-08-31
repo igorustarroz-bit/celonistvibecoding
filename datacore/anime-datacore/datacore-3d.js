@@ -182,6 +182,10 @@
     'uniform sampler2D uBackdrop;',
     'uniform sampler2D uBackdropBlur;',
     'uniform float uFrost;',
+    'uniform vec2 uCenter;',    // centro de ESTA pieza en uv de pantalla (por frame)
+    'uniform vec2 uOffset;',    // desvío propio de la pieza (por seed)
+    'uniform float uMag;',      // lupa: <1 magnifica lo visto a través
+    'uniform float uShift;',    // escala del desvío por pieza
     'uniform vec3 uBody;',
     'uniform float uTransmission;',
     'uniform float uRefract;',
@@ -201,7 +205,10 @@
     '  vec3 N = normalize(vN);',
     '  float up = clamp(normalize(vWN).y, 0.0, 1.0);',
     // refracción en espacio de pantalla (Xylophone): desplaza la lectura por la normal
-    '  vec2 buv = vScreenUv + N.xy * uRefract;',
+    // lente POR PIEZA: magnifica alrededor del centro de la pieza y desvía
+    // con su offset propio => cada cristal refracta distinto, no una lámina única
+    '  vec2 rel = vScreenUv - uCenter;',
+    '  vec2 buv = uCenter + rel * uMag + N.xy * uRefract + uOffset * uShift;',
     '  vec3 trans = mix(texture2D(uBackdrop, buv).rgb, texture2D(uBackdropBlur, buv).rgb, uFrost);',
     // zonas de la pieza: tapa plana (topness=1) / bisel y laterales (0)
     '  float topness = smoothstep(0.55, 0.95, up);',
@@ -240,6 +247,11 @@
         uBackdrop: { value: backRT.texture },
         uBackdropBlur: { value: blurRT2.texture },
         uFrost: { value: 0.6 },
+        uCenter: { value: new THREE.Vector2(0.5, 0.5) },
+        uOffset: { value: new THREE.Vector2(
+          Math.sin(seed * 78.233) * 0.03, Math.sin(seed * 127.1) * 0.03) },
+        uMag: { value: 0.90 },
+        uShift: { value: 0.5 },
         uBody: { value: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05) },
         uTransmission: { value: 0.75 },
         uRefract: { value: 0.13 + 0.06 * seed },
@@ -574,6 +586,7 @@
   var t0 = performance.now();
   var SEPK = 1 / (Math.cos(31.3 * Math.PI / 180) * Math.SQRT2);
   var VIEW = camera.position.clone().normalize();
+  var _wp = new THREE.Vector3();
   function render(now) {
     var t = (now - t0) / 1000;
     mouse.cx += (mouse.x - mouse.cx) * 0.055;
@@ -646,6 +659,15 @@
     // aplica los mandos en vivo (window.DATACORE)
     applyTune(state.spread);
 
+    // centro de cada pieza en uv de pantalla (para la lente por pieza)
+    for (var ci = 0; ci < glassMeshes.length; ci++) {
+      var cm = glassMeshes[ci];
+      if (!cm.visible) continue;
+      cm.getWorldPosition(_wp);
+      _wp.project(camera);
+      cm.material.uniforms.uCenter.value.set(_wp.x * 0.5 + 0.5, _wp.y * 0.5 + 0.5);
+    }
+
     // PRE-PASE: escena con materiales simples + fondo de estudio → backRT
     bgQuad.visible = true;
     bgQuad.quaternion.copy(camera.quaternion);
@@ -711,13 +733,15 @@
 
   /* ---------- MANDOS EN VIVO (edítalos en la consola): window.DATACORE ---------- */
   var TUNE = window.DATACORE = {
-    // defaults calibrados por Igor (2026-08-31)
-    tint:        { r: 0.76, g: 0.96, b: 1.20 }, // tinte global del cristal (azulado)
+    // defaults calibrados por Igor (2026-08-31, 2ª pasada)
+    tint:        { r: 1.8, g: 1.8, b: 1.8 },  // tinte global del cristal
     transmission: 0.66,   // cuánto backdrop se ve a través (base)
     transmissionSpread: 0.22, // extra al explotar
     refract:     0.10,    // multiplicador de la refracción
-    frost:       0.60,    // blur de la refracción (0 nítido → 1 esmerilado)
-    frostRadius: 1.20,    // radio del blur
+    frost:       0.61,    // blur de la refracción (0 nítido → 1 esmerilado)
+    frostRadius: 1.60,    // radio del blur
+    pieceMag:    0.90,    // lupa por pieza (<1 magnifica lo de detrás)
+    pieceShift:  0.50,    // desvío propio de cada pieza (0 = lámina única)
     fresnel:     0.85,    // blanco lechoso de los cantos
     topClear:    0.85,    // 1 = tapa totalmente transparente
     topDarken:   0.90,    // brillo de lo que se ve a través de la tapa
@@ -750,6 +774,8 @@
       u.uRefract.value = ud.baseRefract * TUNE.refract;
       u.uFres.value = TUNE.fresnel;
       u.uFrost.value = TUNE.frost;
+      u.uMag.value = TUNE.pieceMag;
+      u.uShift.value = TUNE.pieceShift;
       u.uTopClear.value = TUNE.topClear;
       u.uTopDarken.value = TUNE.topDarken;
       u.uEdgeWhite.value = TUNE.edgeWhite;

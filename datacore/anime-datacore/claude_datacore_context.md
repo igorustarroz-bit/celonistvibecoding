@@ -151,6 +151,14 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- LENTE POR PIEZA (v10, observación de Igor: "aplicas la refracción a todos
+  los cristales como si fueran una única forma"): cada pieza es su propia
+  lente — uniforms por mesh: uCenter (centro de la pieza proyectado a uv de
+  pantalla, actualizado POR FRAME con getWorldPosition+project), uOffset
+  (desvío propio por seed, ±0.03 uv) y compartidos uMag (lupa: rel·uMag
+  alrededor de uCenter, <1 magnifica) y uShift. buv = uCenter + rel·uMag +
+  N.xy·uRefract + uOffset·uShift. Mandos: pieceMag (0.90), pieceShift (0.50).
+  Defaults 2ª pasada de Igor: tint 1.8/1.8/1.8, frost 0.61, frostRadius 1.6.
 - FROST + DEFAULTS DE IGOR (v9): blur gaussiano separable del backdrop a
   cuarto de resolución (blurRT1/2, 9 taps, dos pasadas tras el pre-pase);
   el shader mezcla nítido/difuminado con uFrost. Mandos: frost (0.60) y

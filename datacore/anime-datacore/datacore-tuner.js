@@ -101,6 +101,8 @@
     slider('refracción', 'refract', 0, 3);
     slider('blur (frost)', 'frost', 0, 1);
     slider('radio blur', 'frostRadius', 0, 4);
+    slider('lupa pieza', 'pieceMag', 0.6, 1.2);
+    slider('desvío pieza', 'pieceShift', 0, 1.5);
     slider('cuerpo (tapas)', 'body', 0, 3);
     slider('a través (pre)', 'pre', 0, 3);
 

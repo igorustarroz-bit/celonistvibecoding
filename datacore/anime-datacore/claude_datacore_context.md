@@ -151,6 +151,17 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v14 (correcciones de Igor sobre v13): (1) PLACAS E/O = FLECHAS HACIA FUERA
+  (zoom del still): borde interior vertical ancho, dos lados largos
+  convergiendo a punta truncada; N/S ya eran flechas (N con muesca). (2)
+  FUSIÓN definitiva según Igor: al colapsar, las TRES LÍNEAS SE UNEN en una
+  (outline.position.y = −(li−1)·sep·inv cancela el offset del grupo), las
+  piezas quedan a la misma altura (sepMin 0.035 — las medias se apoyan en las
+  placas), y el reparto es CONCÉNTRICO: placas ALREDEDOR (spread 1.03), media
+  en ANILLO (midScale 0.78 + midHole 0.68·inv vacía su núcleo), superior al
+  CENTRO (topScale 0.48 compacto, todos los tiles visibles — se retiró el
+  anillo Chebyshev de v12/13). La caja central se encoge (xz 0.58, y 0.30) en
+  compacto para dejar ver el centro.
 - v13: (1) PLACAS = OCTÓGONOS de lados desiguales (medidos del still): E/O son
   hexágonos alargados con las dos puntas TRUNCADAS en cortes verticales cortos;
   S = escudo con biseles y punta truncada; N igual + muesca en V (9 lados).

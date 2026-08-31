@@ -463,7 +463,8 @@
         mesh.position.set(u, morphGeos[0].userData.cy, v);
         addRim(mesh, 0.16 + 0.26 * seed);
         group.add(mesh);
-        var mTile = { mesh: mesh, u: u, v: v, seed: seed, morph: ix / (MID_N - 1), cy: morphGeos[0].userData.cy, hoverP: 0, hovering: false };
+        var mTile = { mesh: mesh, u: u, v: v, seed: seed, morph: ix / (MID_N - 1), cy: morphGeos[0].userData.cy, hoverP: 0, hovering: false,
+          ring: Math.max(Math.abs(u), Math.abs(v)) / (MID_EXT - midCell / 2) };
         mesh.userData.hoverInfo = { kind: 'mid', tile: mTile };
         tiles.push(mTile);
       }
@@ -502,14 +503,15 @@
     });
   }
   var PLATES = [
-    // Sur: octógono escudo — top largo, biseles cortos, diagonales largas, punta truncada
+    // Sur: flecha hacia abajo — base ancha interior, lados convergen a punta truncada
     [[-0.45, 0.28], [0.45, 0.28], [0.55, 0.33], [0.63, 0.50], [0.08, 0.905], [-0.08, 0.905], [-0.63, 0.50], [-0.55, 0.33]],
-    // Norte: como el sur reflejado, con MUESCA en V en el vértice
+    // Norte: flecha hacia arriba con MUESCA en V en la punta
     [[-0.63, -0.50], [-0.145, -0.885], [0.0, -0.72], [0.145, -0.885], [0.63, -0.50], [0.55, -0.33], [0.45, -0.28], [-0.45, -0.28], [-0.55, -0.33]],
-    // Oeste: octógono — hexágono alargado con las DOS PUNTAS truncadas en vertical
-    [[-0.845, -0.07], [-0.66, -0.385], [-0.33, -0.385], [-0.155, -0.07], [-0.155, 0.09], [-0.33, 0.415], [-0.66, 0.415], [-0.845, 0.09]],
+    // Oeste: FLECHA hacia fuera-izquierda — borde interior vertical ancho,
+    // dos lados largos convergiendo y punta truncada (zoom del still)
+    [[-0.155, -0.295], [-0.24, -0.385], [-0.845, -0.025], [-0.845, 0.05], [-0.24, 0.415], [-0.155, 0.325]],
     // Este (espejo del oeste)
-    [[0.845, 0.09], [0.66, 0.415], [0.33, 0.415], [0.155, 0.09], [0.155, -0.07], [0.33, -0.385], [0.66, -0.385], [0.845, -0.07]]
+    [[0.155, -0.295], [0.155, 0.325], [0.24, 0.415], [0.845, 0.05], [0.845, -0.025], [0.24, -0.385]]
   ];
   function buildHexLayer() {
     var group = new THREE.Group();
@@ -531,7 +533,7 @@
     group.add(plate);
     var sprite = makeLabelSprite('DATA INTEGRATION');
     group.add(sprite);
-    return { group: group, sprite: sprite, plates: plates };
+    return { group: group, sprite: sprite, plates: plates, plate: plate };
   }
   var hexLayer = buildHexLayer();
 
@@ -702,37 +704,47 @@
     root.rotation.y = -mouse.cx * 0.22;
     root.rotation.x = mouse.cy * 0.05;
 
-    var sep = (0.13 + (1.28 - 0.13) * state.spread) * SEPK;   // compacto: capas casi tocándose
+    var sep = (0.035 + (1.28 - 0.035) * state.spread) * SEPK; // compacto: un solo plano (las piezas se apoyan)
     // FUSIÓN como el vídeo: al colapsar, la capa superior se abre en anillo
     // (los tiles interiores desaparecen), la media se encoge y anida dentro
     var inv = 1 - state.spread;
-    var hideBelow = 0.75 * inv;         // en compacto solo queda el anillo exterior
-    var topScale = 1 + 0.24 * inv;      // el anillo superior se abre
-    var midScale = 1 - 0.30 * inv;      // la retícula media se encoge y anida
+    // fusión concéntrica (Igor): arriba al CENTRO, media en ANILLO, abajo ALREDEDOR
+    var topScale = 1 - 0.52 * inv;      // la capa superior se encoge al centro
+    var midScale = 1 - 0.22 * inv;      // la media se encoge un poco…
+    var midHole = 0.68 * inv;           // …y vacía su núcleo (queda en anillo)
+    var plateSpread = 1 + 0.03 * inv;   // las placas se abren un pelín (sin salir del contorno)
 
     for (var li = 0; li < 3; li++) {
       var L = layers[li], def = L.def;
       var bob = reduced ? 0 : Math.sin(t * 0.6) * (0.009 + 0.003 * li) * state.spread; // fase común: flotación coordinada
       def.group.position.y = (li - 1) * sep + bob;
 
+      L.outline.position.y = -(li - 1) * sep * inv;   // las 3 líneas se funden en una
+
+      if (L.labelAlways) {
+        for (var pi = 0; pi < def.plates.length; pi++) {
+          var pm = def.plates[pi];
+          pm.scale.set(plateSpread, 1, plateSpread);
+        }
+        var pxz = 1 - 0.42 * inv;        // la caja central se encoge para dejar ver el centro
+        def.plate.scale.set(pxz, 0.3 + 0.7 * state.spread, pxz);
+      }
+
       var alpha = L.labelAlways ? 1 : state.label;
       def.sprite.material.opacity = alpha;
       def.sprite.visible = alpha > 0.01;
       var sw = def.sprite.userData.aspect, sh = 0.085;
       def.sprite.scale.set(sh * sw, sh, 1);
-      def.sprite.position.set(0, (L.labelAlways ? PLATE_H : TILE_H) + 0.06, 0);
+      def.sprite.position.set(0, (L.labelAlways ? PLATE_H * (0.3 + 0.7 * state.spread) : TILE_H) + 0.06, 0);
 
       if (L.isTop) {
         for (var i = 0; i < def.tiles.length; i++) {
           var tile = def.tiles[i];
-          // pop de escala al cruzar el umbral (anillo en compacto → grid completo)
-          var ap = Math.max(0, Math.min(1, (tile.d + tile.jit * 0.3 - hideBelow) / 0.15));
-          tile.ap = ap;
-          tile.mesh.visible = ap > 0.01;
-          if (!tile.mesh.visible) continue;
+          tile.ap = 1;
+          tile.mesh.visible = true;
           tile.mesh.position.x = tile.u * topScale;
           tile.mesh.position.z = tile.v * topScale;
-          var sc = (0.55 + 0.45 * ap) * topScale;
+          var sc = topScale;
           var lift = 0;
           if (tile.flip) {
             var f = tile.flip;
@@ -767,9 +779,12 @@
           var p = Math.max(0, Math.min(1, 0.5 + (front - aScr + (mt.seed - 0.5) * 0.18) * 2.6 + mt.hoverP));
           var idx = Math.round(p * (MORPH_STEPS - 1));
           if (mt.mesh.geometry !== morphGeos[idx]) swapGeo(mt.mesh, morphGeos[idx]);
+          var mAp = Math.max(0, Math.min(1, (mt.ring - midHole) / 0.12));
+          mt.mesh.visible = mAp > 0.01;
+          if (!mt.mesh.visible) continue;
           mt.mesh.position.x = mt.u * midScale;
           mt.mesh.position.z = mt.v * midScale;
-          mt.mesh.scale.setScalar(midScale);
+          mt.mesh.scale.setScalar(midScale * (0.55 + 0.45 * mAp));
         }
       }
       L.outline.material.opacity = 0.30 + 0.25 * state.spread;

@@ -146,6 +146,10 @@
     'uniform float uRefract;',
     'uniform float uSeed;',
     'uniform float uIri;',
+    'uniform float uFres;',
+    'uniform vec3 uSkyTop;',
+    'uniform vec3 uSkyHz;',
+    'uniform vec3 uTint;',
     'varying vec3 vN;',
     'varying vec3 vWN;',
     'varying vec2 vScreenUv;',
@@ -160,12 +164,13 @@
     // Fresnel hacia "cielo" de 3 paradas (sin HDR, como el tutorial)
     '  float ndv = abs(N.z);',                       // cámara orto: vista = +z (view space)
     '  float fres = pow(1.0 - ndv, 3.0);',
-    '  vec3 sky = mix(vec3(0.62,0.65,0.70), vec3(1.0), clamp(N.y * 0.5 + 0.5, 0.0, 1.0));',
-    '  col = mix(col, sky, fres * 0.85);',
+    '  vec3 sky = mix(uSkyHz, uSkyTop, clamp(N.y * 0.5 + 0.5, 0.0, 1.0));',
+    '  col = mix(col, sky, fres * uFres);',
     // iridiscencia: paleta coseno con fase dependiente de la normal (grosor falso)
     '  float ph = N.x * 1.7 + N.y * 2.3 + N.z * 1.1 + uSeed * 6.2831;',
     '  vec3 iri = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67)) + ph * 3.0);',
     '  col += iri * fres * uIri;',
+    '  col *= uTint;',                              // tinte global (azulado por defecto)
     // el composer trabaja en lineal y la pasada gamma final hace linear->sRGB:
     // autoría en sRGB, conversión aquí
     '  gl_FragColor = vec4(pow(col, vec3(2.2)), 1.0);',
@@ -185,14 +190,21 @@
         uTransmission: { value: 0.75 },
         uRefract: { value: 0.10 + 0.05 * seed },
         uSeed: { value: seed },
-        uIri: { value: 0.10 }
+        uIri: { value: 0.10 },
+        uFres: { value: 0.85 },
+        uSkyTop: { value: new THREE.Color('#eef4ff') },
+        uSkyHz: { value: new THREE.Color('#8e9aad') },
+        uTint: { value: new THREE.Color(1, 1, 1) }
       }
     });
     glassMats.push(m);
+    m.userData.baseRefract = 0.10 + 0.05 * seed;
+    m.userData.baseBody = new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05);
     // gemelo simple para el pre-pase (lo que se ve A TRAVÉS del cristal)
     m.userData.preMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(tint * 0.55, tint * 0.58, tint * 0.65)
     });
+    m.userData.basePre = m.userData.preMat.color.clone();
     return m;
   }
   function registerGlass(mesh) { glassMeshes.push(mesh); return mesh; }
@@ -571,9 +583,8 @@
     }
     underLight.intensity = 0.5 + 0.8 * state.spread;
 
-    // cristal: algo más transmisivo con la pila explosionada
-    var trans = 0.62 + 0.18 * state.spread;
-    for (var mi = 0; mi < glassMats.length; mi++) glassMats[mi].uniforms.uTransmission.value = trans;
+    // aplica los mandos en vivo (window.DATACORE)
+    applyTune(state.spread);
 
     // PRE-PASE: escena con materiales simples + fondo de estudio → backRT
     bgQuad.visible = true;
@@ -634,6 +645,68 @@
     return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + Math.floor(half) + ' ' + Math.floor(half) + ', crosshair';
   }
   if (FINE_POINTER) canvas.style.cursor = crossCursorCss();
+
+  /* ---------- MANDOS EN VIVO (edítalos en la consola): window.DATACORE ---------- */
+  var TUNE = window.DATACORE = {
+    tint:        { r: 0.90, g: 0.97, b: 1.16 }, // tinte global del cristal (azulado)
+    transmission: 0.62,   // cuánto backdrop se ve a través (base)
+    transmissionSpread: 0.18, // extra al explotar
+    refract:     1.0,     // multiplicador de la refracción
+    fresnel:     0.85,    // blanco lechoso de los cantos
+    skyTop:      '#eef4ff', // color fresnel arriba
+    skyHorizon:  '#8e9aad', // color fresnel horizonte
+    iri:         0.10,    // iridiscencia (arcoíris)
+    body:        1.0,     // brillo del cuerpo (tapas)
+    rim:         1.0,     // multiplicador de los filos de luz
+    pre:         1.0,     // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
+    backdrop:    '#e6ecf5', // tinte del fondo de estudio (multiplica su textura)
+    bloom:       { strength: 0.38, radius: 0.5, threshold: 0.55 },
+    help: function () {
+      console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
+      console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');
+    },
+    copy: function () {
+      var out = JSON.stringify(DATACORE, function (k, v) { return typeof v === 'function' ? undefined : v; }, 2);
+      console.log(out);
+      return out;
+    }
+  };
+  var _skyTopC = new THREE.Color(), _skyHzC = new THREE.Color(), _lastRim = -1, _lastPre = -1;
+  function applyTune(sprd) {
+    _skyTopC.set(TUNE.skyTop); _skyHzC.set(TUNE.skyHorizon);
+    var trans = TUNE.transmission + TUNE.transmissionSpread * sprd;
+    for (var i = 0; i < glassMats.length; i++) {
+      var u = glassMats[i].uniforms, ud = glassMats[i].userData;
+      u.uTransmission.value = trans;
+      u.uRefract.value = ud.baseRefract * TUNE.refract;
+      u.uFres.value = TUNE.fresnel;
+      u.uIri.value = TUNE.iri;
+      u.uSkyTop.value.copy(_skyTopC);
+      u.uSkyHz.value.copy(_skyHzC);
+      u.uTint.value.setRGB(TUNE.tint.r, TUNE.tint.g, TUNE.tint.b);
+      u.uBody.value.copy(ud.baseBody).multiplyScalar(TUNE.body);
+      if (TUNE.pre !== _lastPre) ud.preMat.color.copy(ud.basePre).multiplyScalar(TUNE.pre);
+    }
+    if (TUNE.pre !== _lastPre) _lastPre = TUNE.pre;
+    if (TUNE.rim !== _lastRim) {
+      _lastRim = TUNE.rim;
+      for (var m = 0; m < glassMeshes.length; m++) {
+        var rimLine = glassMeshes[m].userData.rim;
+        if (rimLine) {
+          if (rimLine.userData.baseOp === undefined) rimLine.userData.baseOp = rimLine.material.opacity;
+          rimLine.material.opacity = Math.min(1, rimLine.userData.baseOp * TUNE.rim);
+        }
+      }
+    }
+    bgQuad.material.color.set(TUNE.backdrop);
+    if (bloomPass) {
+      bloomPass.strength = TUNE.bloom.strength;
+      bloomPass.radius = TUNE.bloom.radius;
+      bloomPass.threshold = TUNE.bloom.threshold;
+    }
+  }
+  console.log('%cDATACORE%c listo: edita los materiales en vivo desde la consola. Escribe DATACORE.help()',
+    'font-weight:bold;color:#5cfe50', '');
 
   window.__datacore3d = { state: state, renderer: renderer };
 

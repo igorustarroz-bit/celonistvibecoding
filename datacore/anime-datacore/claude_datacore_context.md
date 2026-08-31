@@ -25,6 +25,7 @@ fijado por un `<style id="datacore-exp">` inline en `index.html`).
   no se guarda offline). Reescribe todos los `<use>` a símbolos locales `#id`.
   Es el MISMO spritemap que el experimento 1 (extraído de su `site-fx.js`).
 - `anime.umd.min.js` — anime.js v4.5.0 UMD (copiado del experimento 1); expone `window.anime`.
+- `datacore-tuner.js` — panel visual de ajuste del cristal (solo variante B).
 - `claude_datacore_context.md` — este fichero.
 
 Fuera de la carpeta:
@@ -150,6 +151,15 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- TINTE AZULADO + PANEL DE AJUSTE (v7): el shader lleva uniforms editables
+  (uTint vec3, uFres, uSkyTop, uSkyHz) y un objeto global `window.DATACORE`
+  con todos los mandos (tint rgb, transmission/+spread, refract, fresnel,
+  skyTop/skyHorizon, iri, body, pre, rim, backdrop, bloom.*) que `applyTune()`
+  aplica CADA FRAME — editable en consola y desde el panel visual
+  `datacore-tuner.js` (solo cargado en index3d.html): sliders + color pickers,
+  colapsable, con "Copiar ajustes" (exporta el JSON de DATACORE) y "Reset".
+  Cuando Igor encuentre los valores buenos, pegar su JSON exportado como
+  nuevos defaults de DATACORE en datacore-3d.js.
 - GLASS v6 — el pre-pase que faltaba (SIN ESTO EL CRISTAL SE VE GRIS Y SORDO):
   cada frame, ANTES del composer, la escena se renderiza a `backRT` (0.6×dpr)
   con: (a) un quad de fondo (`bgQuad`, textura de estudio oscura con hotspot,

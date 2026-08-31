@@ -8,7 +8,9 @@
   var CFG = {
     latStepDeg: 1.0,         // latitude row spacing (degrees)
     radiusRatio: 0.4775,     // sphere radius / canvas size
-    dashLenDeg: 0.62,        // dash length on the sphere surface (degrees of arc)
+    dashLenDeg: 0.85,        // max dash length on the sphere surface (degrees of arc)
+    dashAngleDeg: 40,        // dash tilt on the surface: 0 = along meridians, 40 ≈ "/" slashes
+    dotFloor: 0.22,          // min dash length fraction (dim water renders as near-dots)
     dashWidthRatio: 0.0015,  // dash stroke width / canvas size
     tiltDeg: 21,             // axis tilt toward viewer
     rollDeg: 7,              // slow lateral wobble amplitude
@@ -20,9 +22,9 @@
     inertiaMaxMs: 3200,      // longest glide after a flick
     inertiaMinMs: 350,       // shortest glide
     flickMinVel: 0.00008,    // rad/ms below which a release just resumes auto-spin
-    oceanBase: 0.40,         // ocean dash brightness
+    oceanBase: 0.30,         // ocean dash brightness (kept low: open water is mostly tiny dots)
     landBase: 0.09,          // land dash brightness (dark silhouette)
-    coastBoost: 0.72,        // extra brightness for ocean cells near coast
+    coastBoost: 0.85,        // extra brightness for ocean cells hugging the coastline
     lightDir: [-0.30, 0.62, 0.72],
     entranceMs: 1800,
     // blur / bloom (to match the soft focus of the original video)
@@ -59,8 +61,8 @@
     var iy = Math.floor((90 - latDeg) / 180 * MH);
     return isLand(ix, iy);
   }
-  // distance (in mask cells, chebyshev, max 5) to opposite terrain — for coast glow
-  var COAST_MAX = 5;
+  // distance (in mask cells, chebyshev, max 3) to opposite terrain — for coast glow
+  var COAST_MAX = 3;
   function coastDist(lonDeg, latDeg) {
     var ix = Math.floor((lonDeg + 180) / 360 * MW);
     var iy = Math.floor((90 - latDeg) / 180 * MH);
@@ -106,14 +108,19 @@
         if (land) {
           base = CFG.landBase * (0.6 + 0.8 * rand());
         } else {
-          // strong per-dash variance: most dim, some sparkle
+          // open water: dim, sparse feel; sparkle only occasionally
           var v = rand();
-          base = CFG.oceanBase * (0.5 + 1.35 * v * v);
+          base = CFG.oceanBase * (0.45 + 1.2 * v * v);
           var d = coastDist(lon, lat);
-          if (d <= COAST_MAX) base += CFG.coastBoost * Math.pow(1 - (d - 1) / COAST_MAX, 1.4) * (0.55 + 0.65 * rand());
-          base *= 0.75 + 0.55 * blotch(lon, lat);
+          if (d <= COAST_MAX) base += CFG.coastBoost * Math.pow(1 - (d - 1) / COAST_MAX, 2) * (0.6 + 0.5 * rand());
+          base *= 0.9 + 0.2 * blotch(lon, lat);
         }
-        P.push(px, py, pz, tx, ty, tz, base, land);
+        // dash direction: north tangent rotated dashAngleDeg toward east ("/" slashes)
+        var aRot = CFG.dashAngleDeg * Math.PI / 180;
+        var ca = Math.cos(aRot), sa = Math.sin(aRot);
+        var ex3 = Math.cos(lam), ez3 = -Math.sin(lam); // east tangent (ey3 = 0)
+        var dx3 = ca * tx + sa * ex3, dy3 = ca * ty, dz3 = ca * tz + sa * ez3;
+        P.push(px, py, pz, dx3, dy3, dz3, base, land);
       }
     }
   })();
@@ -258,7 +265,9 @@
       if (alpha < 0.02) continue;
       if (alpha > 1) alpha = 1;
 
-      var ex = tX * dashHalf * R * lens, ey = -tY * dashHalf * R * lens;
+      // dash length follows brightness: dim open water = near-dot, bright coasts = full slash
+      var lf = CFG.dotFloor + (1 - CFG.dotFloor) * Math.min(1, P[o + 6] * 1.6);
+      var ex = tX * dashHalf * R * lens * lf, ey = -tY * dashHalf * R * lens * lf;
 
       var Lv = (alpha * (LEVELS - 1) + 0.5) | 0;
       var b = buckets[Lv] || (buckets[Lv] = new Path2D());

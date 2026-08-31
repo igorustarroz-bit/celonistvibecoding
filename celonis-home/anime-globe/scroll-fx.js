@@ -15,7 +15,8 @@
 
   function aOffset() {
     var w = window.innerWidth;
-    return w >= 1200 ? 440 : w >= 768 ? 434 : 386;
+    // desktop: 440 - 185 → the world sits 185px higher than the original
+    return w >= 1200 ? 255 : w >= 768 ? 434 : 386;
   }
 
   var baseY = 0, startPx = 0, endPx = 1;

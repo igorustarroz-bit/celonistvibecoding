@@ -19,7 +19,7 @@ Sustituye al `<video>` por un `<canvas id="earth-canvas">` dentro de `<p class="
 - `landmask.js` — máscara de continentes ACTIVA (bitfield base64, ver abajo).
 - `anime.umd.min.js` — anime.js v4.5.0 UMD; expone `window.anime` ({animate, ...}).
 - `scroll-fx.js` — reacción al scroll (réplica del home-hero.js original del site).
-- `static-fixes.js` — arregla el titular char-by-char congelado del snapshot HTML.
+- `site-fx.js` — interacciones del site restauradas: sprite/logo, titular char-by-char cíclico, cuadrado verde rotatorio, tabs+acordeón de Solutions, carrusel de stories, reveal de grids. (Sustituye al antiguo static-fixes.js.)
 - `tools/mask-tools.py` — export/filter/tojs para editar la máscara como PNG.
 - `tools/landmask-actual.png` — mapamundi completo corregido (blanco = tierra).
 - `tools/landmask-propuesta.png` — la máscara aplicada (sin islas árticas).

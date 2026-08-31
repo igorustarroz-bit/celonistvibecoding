@@ -114,12 +114,27 @@ cursor que la variante A, pero:
   (rounded-rect con radios por esquina / hexágonos). El morph cuadrado→círculo
   de la capa media usa 13 geometrías precalculadas compartidas y swap de
   `mesh.geometry` por índice (rebuild por frame sería carísimo).
-- Material: `MeshPhysicalMaterial` cristal ahumado — transmission 0.18,
-  thickness 0.15, ior 1.5, attenuation oscura, clearcoat 1.0, envMapIntensity
-  0.8, exposure 0.9. OJO: con transmission ≥0.4 el estado colapsado se vuelve
-  lechoso (capas apiladas) — mantener bajo.
-- Entorno: equirect procedural (canvas 512×256, gradiente oscuro + 3 blobs de
-  luz) via PMREMGenerator; luz direccional 0.5 + ambiente 0.06.
+- Material (v2, calibrado contra frames del vídeo): `MeshPhysicalMaterial`
+  cristal ahumado casi negro — tint 0.045–0.155, roughness 0.10, transmission
+  0.22, thickness 0.18, clearcoat 1.0/0.10, envMapIntensity 1.6, exposure 1.0.
+  OJO: con transmission ≥0.4 el estado colapsado se vuelve lechoso (capas
+  apiladas) — mantener bajo.
+- FILOS DE LUZ (el rasgo clave del vídeo): cada mesh lleva un hijo
+  `LineSegments(EdgesGeometry(geo, 20°))` blanco translúcido (opacity
+  0.16–0.48 por seed). Cachear EdgesGeometry por geometría (`edgesFor`) y usar
+  `swapGeo()` para que el rim siga los cambios de geometría (morph y volteos).
+- Entorno: equirect procedural 1024×512 con BANDAS horizontales tipo softbox
+  (stripe y≈78 fuerte + refuerzo + relleno tenue y blob caliente) →
+  reflejos alargados en los biseles; bevel 0.018, bevelSegments 3.
+- VOLTEOS (como el vídeo): cada ~520 ms, si spread>0.75, un tile aleatorio de
+  la capa superior (máx 2 a la vez) gira 180° sobre eje X o Z aleatorio con
+  lift senoidal 0.16, duración 1050 ms inOutSine (anime.animate); a medio giro
+  (p≥0.5) cambia su geometría a OTRA forma del pool (sq/leafA/leafB/circ).
+  Para ello las geometrías de tiles van centradas en Y (extrude(...,center)) y
+  el mesh se posiciona en y=cy.
+- CRECIMIENTO 4×4→6×6 (como el vídeo): radio visible reach = 0.62+0.52·spread
+  contra d=(|u|+|v|)/1.6 + jitter por tile; los tiles hacen pop de escala
+  (0.55→1) al cruzar el umbral. En compacto solo queda el 4×4 interior.
 - Etiquetas: sprites con textura canvas (pill), altura 0.085 unidades de mundo
   (≈ mismas px que la variante A), depthTest off.
 - Los dos index llevan un enlace fijo abajo-derecha para alternar A↔B.

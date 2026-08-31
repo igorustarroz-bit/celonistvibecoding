@@ -213,13 +213,20 @@
     function reveal(block) {
       block.classList.add('cards-in-viewport');
       Array.prototype.forEach.call(block.children, function (c) { c.classList.add('cards-in-viewport'); });
-      // transición propia con !important: la del CSS original usa una variable
-      // de easing indefinida en la copia y se queda "running" sin progresar
+      // sin transición CSS: en la copia estática las CSSTransition de estos
+      // elementos quedan "running" sin progresar (incluso las propias), así
+      // que el fade/slide se hace a mano con rAF, escalonado por tarjeta
       block.querySelectorAll('.card-grid-item').forEach(function (item, k) {
-        item.style.setProperty('transition', 'opacity .35s ease, transform .55s ease', 'important');
+        item.style.setProperty('transition', 'none', 'important');
         setTimeout(function () {
-          item.style.setProperty('opacity', '1', 'important');
-          item.style.setProperty('transform', 'translateY(0)', 'important');
+          var t0 = performance.now(), DUR = 450;
+          (function step(now) {
+            var t = Math.min(1, (now - t0) / DUR);
+            var e = 1 - Math.pow(1 - t, 3); // easeOutCubic
+            item.style.setProperty('opacity', String(e), 'important');
+            item.style.setProperty('transform', 'translateY(' + (200 * (1 - e)).toFixed(1) + 'px)', 'important');
+            if (t < 1) requestAnimationFrame(step);
+          })(t0);
         }, 60 + k * 130);
       });
     }

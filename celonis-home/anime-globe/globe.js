@@ -6,7 +6,7 @@
 
   // ---------- Config ----------
   var CFG = {
-    latStepDeg: 1.0,         // latitude row spacing (degrees)
+    latStepDeg: 0.8,         // latitude row spacing (degrees) — also sets dash density per row
     radiusRatio: 0.4775,     // sphere radius / canvas size
     dashLenDeg: 0.85,        // max dash length on the sphere surface (degrees of arc)
     dashAngleDeg: 40,        // dash tilt on the surface: 0 = along meridians, 40 ≈ "/" slashes
@@ -25,8 +25,6 @@
     landBase: 0.30,          // land dash brightness (continents are the lit side)
     oceanBase: 0.09,         // ocean dash brightness (dark, near-invisible dots)
     coastBoost: 0.85,        // extra brightness for land cells hugging the coastline
-    arcticSeaLat: 66,        // above this latitude, land is treated as sea (clean pole)
-    arcticFadeDeg: 8,        // fade band below arcticSeaLat (soft transition, no hard cut)
     lightDir: [-0.30, 0.62, 0.72],
     entranceMs: 1800,
     // blur / bloom (to match the soft focus of the original video)
@@ -63,8 +61,9 @@
     var iy = Math.floor((90 - latDeg) / 180 * MH);
     return isLand(ix, iy);
   }
-  // distance (in mask cells, chebyshev, max 3) to opposite terrain — for coast glow
-  var COAST_MAX = 3;
+  // distance (in mask cells, chebyshev) to opposite terrain — for coast glow
+  // (mask cells are 0.25°, so 5 cells ≈ 1.25° fringe)
+  var COAST_MAX = 5;
   function coastDist(lonDeg, latDeg) {
     var ix = Math.floor((lonDeg + 180) / 360 * MW);
     var iy = Math.floor((90 - latDeg) / 180 * MH);
@@ -109,7 +108,6 @@
         var tx = -Math.sin(phi) * Math.sin(lam), ty = Math.cos(phi), tz = -Math.sin(phi) * Math.cos(lam);
         var land = landAt(lon, lat);
         var base;
-        var oceanDot = CFG.oceanBase * (0.6 + 0.8 * rand()); // plain dark-water dot
         if (land) {
           // continents: lit, with brighter fringe along the coastline
           var v = rand();
@@ -119,15 +117,7 @@
           base *= 0.9 + 0.2 * blotch(lon, lat);
         } else {
           // open water: dark, sparse near-dots
-          base = oceanDot;
-        }
-        // arctic sea treatment: above arcticSeaLat everything melts into dark
-        // water dots (soft fade over arcticFadeDeg), so the pole stays clean
-        var fadeStart = CFG.arcticSeaLat - CFG.arcticFadeDeg;
-        if (lat > fadeStart) {
-          var tA = 1 - Math.min(1, (lat - fadeStart) / CFG.arcticFadeDeg);
-          base = oceanDot + (base - oceanDot) * tA;
-          if (tA < 0.5) land = 0;
+          base = CFG.oceanBase * (0.6 + 0.8 * rand());
         }
         // dash direction: north tangent rotated dashAngleDeg toward east ("/" slashes)
         var aRot = CFG.dashAngleDeg * Math.PI / 180;

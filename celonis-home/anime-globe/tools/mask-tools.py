@@ -10,7 +10,7 @@ import sys, base64, math, re
 from collections import deque
 from PIL import Image
 
-W, H = 720, 360
+W, H = 1440, 720
 
 def read_mask_js(path):
     src = open(path).read()

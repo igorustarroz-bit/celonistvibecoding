@@ -360,9 +360,10 @@
     var tex = new THREE.CanvasTexture(c);
     tex.anisotropy = 4;
     var sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: tex, transparent: true, depthTest: false
+      map: tex, transparent: true, depthTest: false, toneMapped: false
     }));
     sp.renderOrder = 10;
+    sp.layers.set(1);   // capa de overlay: se renderiza aparte, sin efectos
     sp.userData.aspect = c.width / c.height;
     return sp;
   }
@@ -674,7 +675,6 @@
     bgQuad.position.copy(VIEW).multiplyScalar(-8);
     bgQuad.scale.set((camera.right - camera.left) * 1.1, (camera.top - camera.bottom) * 1.1, 1);
     var gi;
-    for (gi = 0; gi < 3; gi++) layers[gi].def.sprite.visible = false;
     for (gi = 0; gi < glassMeshes.length; gi++) {
       var gm = glassMeshes[gi];
       gm.userData.mainMat = gm.material;
@@ -691,13 +691,18 @@
     for (gi = 0; gi < glassMeshes.length; gi++) {
       glassMeshes[gi].material = glassMeshes[gi].userData.mainMat;
     }
-    for (gi = 0; gi < 3; gi++) {
-      var Lg = layers[gi];
-      Lg.def.sprite.visible = (Lg.labelAlways ? 1 : state.label) > 0.01;
-    }
     bgQuad.visible = false;
 
     if (composer) composer.render(); else renderer.render(scene, camera);
+
+    // OVERLAY de etiquetas: capa 1, sin bloom ni cristal por delante
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    camera.layers.set(1);
+    renderer.render(scene, camera);
+    camera.layers.set(0);
+    renderer.autoClear = true;
+
     requestAnimationFrame(render);
   }
 
@@ -733,27 +738,27 @@
 
   /* ---------- MANDOS EN VIVO (edítalos en la consola): window.DATACORE ---------- */
   var TUNE = window.DATACORE = {
-    // defaults calibrados por Igor (2026-08-31, 2ª pasada)
+    // defaults calibrados por Igor (2026-08-31, 3ª pasada)
     tint:        { r: 1.8, g: 1.8, b: 1.8 },  // tinte global del cristal
-    transmission: 0.66,   // cuánto backdrop se ve a través (base)
-    transmissionSpread: 0.22, // extra al explotar
-    refract:     0.10,    // multiplicador de la refracción
+    transmission: 0.43,   // cuánto backdrop se ve a través (base)
+    transmissionSpread: 0.14, // extra al explotar
+    refract:     0.13,    // multiplicador de la refracción
     frost:       0.61,    // blur de la refracción (0 nítido → 1 esmerilado)
-    frostRadius: 1.60,    // radio del blur
-    pieceMag:    0.90,    // lupa por pieza (<1 magnifica lo de detrás)
-    pieceShift:  0.50,    // desvío propio de cada pieza (0 = lámina única)
-    fresnel:     0.85,    // blanco lechoso de los cantos
-    topClear:    0.85,    // 1 = tapa totalmente transparente
-    topDarken:   0.90,    // brillo de lo que se ve a través de la tapa
-    edgeWhite:   0.35,    // blanco extra SOLO en el anillo del bisel
+    frostRadius: 0.98,    // radio del blur
+    pieceMag:    0.71,    // lupa por pieza (<1 magnifica lo de detrás)
+    pieceShift:  0.11,    // desvío propio de cada pieza (0 = lámina única)
+    fresnel:     0.44,    // blanco lechoso de los cantos
+    topClear:    0.92,    // 1 = tapa totalmente transparente
+    topDarken:   0.43,    // brillo de lo que se ve a través de la tapa
+    edgeWhite:   0.53,    // blanco extra SOLO en el anillo del bisel
     skyTop:      '#eef4ff', // color fresnel arriba
     skyHorizon:  '#8e9aad', // color fresnel horizonte
-    iri:         0.10,    // iridiscencia (arcoíris)
+    iri:         0.08,    // iridiscencia (arcoíris)
     body:        0.87,    // brillo del cuerpo (tapas)
-    rim:         1.0,     // multiplicador de los filos de luz
-    pre:         0.88,    // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
+    rim:         1.16,    // multiplicador de los filos de luz
+    pre:         0.79,    // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
     backdrop:    '#e6ecf5', // tinte del fondo de estudio (multiplica su textura)
-    bloom:       { strength: 0.38, radius: 0.5, threshold: 0.55 },
+    bloom:       { strength: 0.16, radius: 0.26, threshold: 0.35 },
     help: function () {
       console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
       console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');

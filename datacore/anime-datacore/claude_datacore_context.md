@@ -151,6 +151,16 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- ETIQUETAS EN OVERLAY (v11): los sprites de etiqueta viven en la CAPA 1 de
+  three (sp.layers.set(1), toneMapped:false). La cámara renderiza la capa 0 en
+  composer/prepass/bloom (las etiquetas quedan fuera de todos los efectos) y,
+  tras composer.render(), un pase extra con autoClear=false + clearDepth y
+  camera.layers.set(1) las dibuja nítidas encima de todo. Defaults 3ª pasada
+  de Igor: transmission 0.43/+0.14, refract 0.13, frostRadius 0.98, pieceMag
+  0.71, pieceShift 0.11, fresnel 0.44, topClear 0.92, topDarken 0.43,
+  edgeWhite 0.53, iri 0.08, rim 1.16, pre 0.79, bloom 0.16/0.26/0.35.
+  Los scripts de index3d.html van versionados (?v=N, subir en cada publish:
+  GitHub Pages cachea los JS 10 min).
 - LENTE POR PIEZA (v10, observación de Igor: "aplicas la refracción a todos
   los cristales como si fueran una única forma"): cada pieza es su propia
   lente — uniforms por mesh: uCenter (centro de la pieza proyectado a uv de

@@ -502,21 +502,21 @@
     });
   }
   var PLATES = [
-    // Sur: escudo (chevrón hacia abajo)
-    [[-0.45, 0.28], [0.45, 0.28], [0.63, 0.50], [0.02, 0.92], [-0.02, 0.92], [-0.63, 0.50]],
-    // Norte: chevrón con MUESCA en V en el vértice
-    [[-0.63, -0.50], [-0.145, -0.90], [0.0, -0.72], [0.145, -0.90], [0.63, -0.50], [0.45, -0.28], [-0.45, -0.28]],
-    // Oeste: hexágono alargado con punta hacia fuera
-    [[-0.84, 0.01], [-0.63, -0.385], [-0.34, -0.385], [-0.20, 0.01], [-0.34, 0.415], [-0.63, 0.415]],
+    // Sur: octógono escudo — top largo, biseles cortos, diagonales largas, punta truncada
+    [[-0.45, 0.28], [0.45, 0.28], [0.55, 0.33], [0.63, 0.50], [0.08, 0.905], [-0.08, 0.905], [-0.63, 0.50], [-0.55, 0.33]],
+    // Norte: como el sur reflejado, con MUESCA en V en el vértice
+    [[-0.63, -0.50], [-0.145, -0.885], [0.0, -0.72], [0.145, -0.885], [0.63, -0.50], [0.55, -0.33], [0.45, -0.28], [-0.45, -0.28], [-0.55, -0.33]],
+    // Oeste: octógono — hexágono alargado con las DOS PUNTAS truncadas en vertical
+    [[-0.845, -0.07], [-0.66, -0.385], [-0.33, -0.385], [-0.155, -0.07], [-0.155, 0.09], [-0.33, 0.415], [-0.66, 0.415], [-0.845, 0.09]],
     // Este (espejo del oeste)
-    [[0.84, 0.01], [0.63, 0.415], [0.34, 0.415], [0.20, 0.01], [0.34, -0.385], [0.63, -0.385]]
+    [[0.845, 0.09], [0.66, 0.415], [0.33, 0.415], [0.155, 0.09], [0.155, -0.07], [0.33, -0.385], [0.66, -0.385], [0.845, -0.07]]
   ];
   function buildHexLayer() {
     var group = new THREE.Group();
     var plates = [];
     PLATES.forEach(function (ab, i) {
       var uv = ab2uv(ab);
-      var shape = roundedPolyShape(uv, 0.05);
+      var shape = roundedPolyShape(uv, 0.035);
       var geo = extrude(shape, HEX_H, BEV);
       var mesh = registerGlass(new THREE.Mesh(geo, glassMat(0.30 + i * 0.08, 0.5 + ab[0][0] * -0.3)));
       addRim(mesh, 0.32);
@@ -702,7 +702,7 @@
     root.rotation.y = -mouse.cx * 0.22;
     root.rotation.x = mouse.cy * 0.05;
 
-    var sep = (0.34 + (1.28 - 0.34) * state.spread) * SEPK;
+    var sep = (0.13 + (1.28 - 0.13) * state.spread) * SEPK;   // compacto: capas casi tocándose
     // FUSIÓN como el vídeo: al colapsar, la capa superior se abre en anillo
     // (los tiles interiores desaparecen), la media se encoge y anida dentro
     var inv = 1 - state.spread;
@@ -758,11 +758,13 @@
           tile.mesh.position.y = tile.cy + lift;
         }
       } else if (L.isMorph) {
+        // frontera diagonal que barre el grid (como el vídeo): a un lado círculos,
+        // al otro cuadrados; la línea oscila con state.wave
+        var front = reduced ? 0.3 : Math.sin(state.wave * Math.PI * 2) * 0.85;
         for (var j = 0; j < def.tiles.length; j++) {
           var mt = def.tiles[j];
-          // onda viajera visible cuadrado→círculo + pulso al pasar el ratón
-          var sweep = reduced ? 0 : 0.30 * Math.sin(state.wave * Math.PI * 2 - (mt.u + mt.v) * 2.2);
-          var p = Math.max(0, Math.min(1, (mt.morph - 0.5) * 1.2 + 0.5 + sweep + mt.hoverP));
+          var aScr = (mt.u - mt.v) / 1.6;          // −1..1 eje horizontal de pantalla
+          var p = Math.max(0, Math.min(1, 0.5 + (front - aScr + (mt.seed - 0.5) * 0.18) * 2.6 + mt.hoverP));
           var idx = Math.round(p * (MORPH_STEPS - 1));
           if (mt.mesh.geometry !== morphGeos[idx]) swapGeo(mt.mesh, morphGeos[idx]);
           mt.mesh.position.x = mt.u * midScale;

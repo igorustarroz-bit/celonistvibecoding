@@ -151,6 +151,15 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v13: (1) PLACAS = OCTÓGONOS de lados desiguales (medidos del still): E/O son
+  hexágonos alargados con las dos puntas TRUNCADAS en cortes verticales cortos;
+  S = escudo con biseles y punta truncada; N igual + muesca en V (9 lados).
+  roundedPolyShape r=0.035. (2) CAPA MEDIA como el vídeo: una FRONTERA
+  DIAGONAL barre el grid — p = 0.5+(front−aScr+jitter)·2.6 con aScr=(u−v)/1.6
+  y front = sin(wave·2π)·0.85 — círculos a un lado, cuadrados al otro,
+  oscilando automáticamente (el gradiente estático por columnas se retiró).
+  (3) FUSIÓN APRETADA: sepMin 0.34→0.13 (compacto: capas casi tocándose;
+  con menos de ~0.104/SEPK los mid interpenetran las placas).
 - v12 (lote de peticiones de Igor): (1) figura +10% (A×1.10). (2) Contorno de
   capa = CINTA de malla ~2px (makeOutline genera ribbon con normales 2D;
   Line de 1px no puede engordar en WebGL). (3) CAPA INFERIOR FIEL AL STILL:

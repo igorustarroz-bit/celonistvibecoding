@@ -15,14 +15,15 @@
 
   function aOffset() {
     var w = window.innerWidth;
-    // desktop: 440 - 185 → the world sits 185px higher than the original
-    return w >= 1200 ? 255 : w >= 768 ? 434 : 386;
+    return w >= 768 ? 434 : 386;
   }
 
   var baseY = 0, startPx = 0, endPx = 1;
 
   function measure() {
-    baseY = -window.innerHeight + aOffset(); // o: rest position (only the dome peeks into the hero)
+    // desktop: fixed rest position chosen by hand (translate(0, -500px) scale(1));
+    // tablet/mobile keep the original viewport-relative formula
+    baseY = window.innerWidth >= 1200 ? -500 : -window.innerHeight + aOffset();
     var E = hero.offsetHeight * 1.75 + 88;
     startPx = Math.max(0, (4 / 7) * E - window.innerHeight);
     endPx = E - window.innerHeight;

@@ -59,7 +59,7 @@
     }
     stripe(78, 34, 0.95);              // softbox principal alto (rim de biseles)
     stripe(78, 34, 0.9, 96, 480);      // refuerzo del lado clave
-    stripe(168, 22, 0.28, 540, 1000);  // relleno lateral tenue
+    stripe(168, 30, 0.55, 520, 1010);  // banda que reflejan las TAPAS (el≈31°, az opuesto a camara)
     function blob(x, y, r, a) {
       var rg = g.createRadialGradient(x, y, 0, x, y, r);
       rg.addColorStop(0, 'rgba(255,255,255,' + a + ')');
@@ -80,25 +80,28 @@
   scene.add(new THREE.AmbientLight(0xffffff, 0.05));
 
   /* ---------- materiales: cristal ahumado casi negro, bisel brillante ---------- */
+  var glassMats = [];   // para modular transmission con el spread
   function glassMat(seed, g) {
     var gg = g === undefined ? 0.5 : g;
-    var tint = 0.045 + 0.06 * seed + 0.05 * gg;
-    return new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(tint * 0.9, tint * 0.95, tint * 1.1),
+    var tint = 0.04 + 0.055 * seed + 0.045 * gg;
+    var m = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05),
       metalness: 0.0,
-      roughness: 0.10,
-      transmission: 0.22,
-      thickness: 0.18,
+      roughness: 0.09,            // pulido: el vídeo es cristal ahumado, no esmerilado
+      transmission: 0.25,         // se anima con el spread en el render loop
+      thickness: 0.22,
       ior: 1.5,
-      attenuationColor: new THREE.Color(0x05060a),
-      attenuationDistance: 0.4,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.10,
-      envMapIntensity: 1.6,
+      attenuationColor: new THREE.Color(0x0a0d14),
+      attenuationDistance: 0.55,
+      clearcoat: 1.0,             // capa pulida encima del frost
+      clearcoatRoughness: 0.06,
+      envMapIntensity: 1.75,
       specularIntensity: 1.0,
       transparent: true,
       opacity: 1
     });
+    glassMats.push(m);
+    return m;
   }
   var plateMat = new THREE.MeshPhysicalMaterial({
     color: 0x060708, metalness: 0.1, roughness: 0.38, clearcoat: 0.6,
@@ -369,8 +372,26 @@
     camera.left = -W / PPW / 2; camera.right = W / PPW / 2;
     camera.top = H / PPW / 2; camera.bottom = -H / PPW / 2;
     camera.updateProjectionMatrix();
+    if (composer) {
+      composer.setPixelRatio(dpr);
+      composer.setSize(W, H);
+    }
   }
   window.addEventListener('resize', resize);
+
+  /* ---------- postprocesado: bloom sutil para el glare de los filos ---------- */
+  var composer = null, bloomPass = null;
+  if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
+    renderer.setClearColor(0x000000, 1);   // la sección es negra: fondo opaco para el composer
+    composer = new THREE.EffectComposer(renderer);
+    composer.addPass(new THREE.RenderPass(scene, camera));
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.42, 0.55, 0.32);
+    composer.addPass(bloomPass);
+    // el composer trabaja en lineal: conversión sRGB al final
+    if (THREE.ShaderPass && THREE.GammaCorrectionShader) {
+      composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
+    }
+  }
 
   /* ---------- render loop ---------- */
   var t0 = performance.now();
@@ -434,7 +455,11 @@
       }
       L.outline.material.opacity = 0.30 + 0.25 * state.spread;
     }
-    renderer.render(scene, camera);
+    // cristal: compacto = ahumado casi opaco; explosionado = transmisivo (evita el colapsado lechoso)
+    var trans = 0.10 + 0.22 * state.spread;
+    for (var mi = 0; mi < glassMats.length; mi++) glassMats[mi].transmission = trans;
+
+    if (composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);
   }
 

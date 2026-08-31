@@ -135,6 +135,21 @@ cursor que la variante A, pero:
 - CRECIMIENTO 4×4→6×6 (como el vídeo): radio visible reach = 0.62+0.52·spread
   contra d=(|u|+|v|)/1.6 + jitter por tile; los tiles hacen pop de escala
   (0.55→1) al cruzar el umbral. En compacto solo queda el 4×4 interior.
+- GLASS v3 (tras estudiar los tutoriales de Codrops "GlassEffect" y "Xylophone"):
+  postprocesado con EffectComposer — RenderPass + UnrealBloomPass(0.42, 0.55,
+  threshold 0.32) + ShaderPass(GammaCorrectionShader). OJO: el composer trabaja
+  en LINEAL; sin la pasada gamma todo sale plano y oscuro. Los pases van en
+  `three-post.js` (concatenado de examples/js de three r147: CopyShader,
+  LuminosityHighPassShader, Pass, MaskPass, ShaderPass, RenderPass,
+  EffectComposer, UnrealBloomPass, GammaCorrectionShader). Fondo del canvas
+  ahora OPACO negro (la sección es negra) para el composer.
+- Transmisión ANIMADA con el spread: transmission = 0.10 + 0.22·spread
+  (compacto = ahumado casi opaco, explosionado = cristalino). Probado y
+  descartado: roughness 0.30 para "frost" (agrisa y mata los reflejos — el
+  vídeo es cristal PULIDO, roughness 0.09) y transmission ≥0.5 explosionado
+  (los tiles se tragan el fondo negro y quedan planos).
+- Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
+  — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
 - Etiquetas: sprites con textura canvas (pill), altura 0.085 unidades de mundo
   (≈ mismas px que la variante A), depthTest off.
 - Los dos index llevan un enlace fijo abajo-derecha para alternar A↔B.

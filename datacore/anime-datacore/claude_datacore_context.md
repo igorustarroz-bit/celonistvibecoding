@@ -101,6 +101,33 @@ central, trazo negro 3px con borde blanco 1.5px, 28px, hotspot centrado,
 SVG en data-URI como `canvas.style.cursor`; solo con puntero fino
 (`hover:hover and pointer:fine`), fallback `crosshair`.
 
+## Variante B — polígonos 3D reales (Three.js)
+
+`../index3d.html` + `datacore-3d.js` + `three.min.js` (r147 UMD, de npm: los
+CDN están bloqueados desde el sandbox). Misma escena, semilla RNG, timeline y
+cursor que la variante A, pero:
+- Cámara ortográfica isométrica: azimut 45°, elevación 31.3°. Escala:
+  px-por-unidad-de-mundo = √2·A (A = misma regla que la variante A) para que
+  el diamante coincida en pantalla; la separación entre capas se multiplica
+  por 1/(cos 31.3°·√2) para igualar el alzado.
+- Geometría: `ExtrudeGeometry` con bisel (bevelSize 0.012) desde `THREE.Shape`
+  (rounded-rect con radios por esquina / hexágonos). El morph cuadrado→círculo
+  de la capa media usa 13 geometrías precalculadas compartidas y swap de
+  `mesh.geometry` por índice (rebuild por frame sería carísimo).
+- Material: `MeshPhysicalMaterial` cristal ahumado — transmission 0.18,
+  thickness 0.15, ior 1.5, attenuation oscura, clearcoat 1.0, envMapIntensity
+  0.8, exposure 0.9. OJO: con transmission ≥0.4 el estado colapsado se vuelve
+  lechoso (capas apiladas) — mantener bajo.
+- Entorno: equirect procedural (canvas 512×256, gradiente oscuro + 3 blobs de
+  luz) via PMREMGenerator; luz direccional 0.5 + ambiente 0.06.
+- Etiquetas: sprites con textura canvas (pill), altura 0.085 unidades de mundo
+  (≈ mismas px que la variante A), depthTest off.
+- Los dos index llevan un enlace fijo abajo-derecha para alternar A↔B.
+
+Lección del primer intento: la pared frontal por "cadena entre extremos"
+(variante A) y aquí la escala sin el factor √2 y las etiquetas en 0.22 world
+salían mal; ya corregido como arriba.
+
 ## Rendimiento
 
 ~60 fps en Chromium headless 1440×900 (136 tiles + 5 placas por frame,
@@ -110,7 +137,8 @@ fuentes/imágenes del propio site.
 ## Publicación
 
 GitHub Pages del repo `igorustarroz-bit/celonisvibecoding` (rama main, raíz).
-- Experimento: https://igorustarroz-bit.github.io/celonisvibecoding/datacore/index.html
+- Variante A (Canvas 2D): https://igorustarroz-bit.github.io/celonisvibecoding/datacore/index.html
+- Variante B (WebGL): https://igorustarroz-bit.github.io/celonisvibecoding/datacore/index3d.html
 - Original guardado: .../datacore/original.html
 - El índice raíz (`/index.html`) lista este experimento como "Experiment 3".
 El token está en `github-token.txt` (gitignored — NUNCA subirlo).

@@ -151,8 +151,13 @@
       while (b.firstChild) b.removeChild(b.firstChild);
       b.appendChild(first);
       for (var k = 0; k < 3; k++) b.appendChild(document.createElement('div'));
+      /* el snapshot guarda --rotate acumulado (p.ej. -9090deg): resetear a 0
+         SIN transicion, o el cubo da ~25 vueltas de golpe al cargar */
+      b.style.transition = 'none';
       wrappers[bi].style.setProperty('--rotate', '0deg');
       wrappers[bi].classList.remove('rotation-ready');
+      void b.offsetWidth; /* aplica el 0deg antes de reactivar la transicion */
+      b.style.transition = '';
       first.style.opacity = '0';
       first.style.transform = 'scale(0)'; /* estado previo a la entrada */
     });

@@ -202,7 +202,11 @@ backdrop #e6ecf5; bloom {strength 0.16, radius 0.26, threshold 0.35}.
   paleta coseno con fase por normal.
 - Postprocesado: RenderPass + UnrealBloomPass + GammaCorrection (el composer
   trabaja en LINEAL: sin la pasada gamma todo sale plano y oscuro); salida
-  del shader en pow(col, 2.2).
+  del shader en pow(col, 2.2). Al final, pasada FXAA (v20): los render
+  targets del composer NO tienen MSAA — el antialias:true del renderer solo
+  aplica al canvas directo — así que sin FXAA los cantos salen pixelados.
+  FXAA va DESPUÉS de la gamma (espera entrada sRGB) y su uniform resolution
+  se actualiza en resize con 1/(W·dpr). devicePixelRatio con tope 2.
 - Entorno para los reflejos de biseles del plateMat: equirect procedural con
   bandas horizontales tipo softbox; la banda y=168 es la que reflejan las
   tapas.
@@ -284,4 +288,6 @@ concéntrica · v15 formas EXACTAS del SVG de Igor + morph escudos↔anillo ·
 v16 sin caja central, placas centradas, línea=suelo solidario, etiquetas no
 permanentes · v17 pisos coincidentes en compacto (las 3 líneas = una,
 sepMin 0.004) · v18 etiquetas +50% · v19 sin switch A↔B, glass tuner
-abajo-dcha plegado hacia arriba y en inglés · nav-fx.js menú como el site.
+abajo-dcha plegado hacia arriba y en inglés · nav-fx.js menú como el site ·
+v20 antialiasing: FXAA al final del composer + dpr hasta 2 (FXAAShader r147
+añadido a three-post.js).

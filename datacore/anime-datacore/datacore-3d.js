@@ -717,7 +717,7 @@
     var r = stage.getBoundingClientRect();
     if (!r.width) return;
     W = Math.round(r.width); H = Math.round(r.height || r.width * 9 / 16);
-    var dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);   // v20: nitidez retina
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
     A = Math.min(W * 0.17, H / 5.4) * 1.10;   // +10% (petición de Igor)
@@ -729,6 +729,7 @@
       composer.setPixelRatio(dpr);
       composer.setSize(W, H);
     }
+    if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (W * dpr), 1 / (H * dpr));
     backRT.setSize(Math.round(W * dpr * 0.6), Math.round(H * dpr * 0.6));
     var bw = Math.max(2, Math.round(W * dpr * 0.25)), bh = Math.max(2, Math.round(H * dpr * 0.25));
     blurRT1.setSize(bw, bh); blurRT2.setSize(bw, bh);
@@ -737,7 +738,7 @@
   window.addEventListener('resize', resize);
 
   /* ---------- postprocesado: bloom sutil para el glare de los filos ---------- */
-  var composer = null, bloomPass = null;
+  var composer = null, bloomPass = null, fxaaPass = null;
   if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
     renderer.setClearColor(0x000000, 1);   // la sección es negra: fondo opaco para el composer
     composer = new THREE.EffectComposer(renderer);
@@ -747,6 +748,14 @@
     // el composer trabaja en lineal: conversión sRGB al final
     if (THREE.ShaderPass && THREE.GammaCorrectionShader) {
       composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
+    }
+    // v20: ANTIALIASING — los render targets del composer no tienen MSAA
+    // (el antialias:true del renderer solo aplica al canvas directo), así
+    // que sin esto los cantos salen pixelados. FXAA tras la pasada gamma
+    // (espera entrada sRGB); resolution se actualiza en resize().
+    if (THREE.ShaderPass && THREE.FXAAShader) {
+      fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+      composer.addPass(fxaaPass);
     }
   }
 

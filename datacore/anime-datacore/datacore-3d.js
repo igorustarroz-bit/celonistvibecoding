@@ -796,7 +796,7 @@
       var alpha = state.label;
       def.sprite.material.opacity = alpha;
       def.sprite.visible = alpha > 0.01;
-      var sw = def.sprite.userData.aspect, sh = 0.085;
+      var sw = def.sprite.userData.aspect, sh = 0.1275;  // v18: etiquetas +50%
       def.sprite.scale.set(sh * sw, sh, 1);
       def.sprite.position.set(0, (L.isHex ? HEX_H : TILE_H) + 0.06, 0);
 

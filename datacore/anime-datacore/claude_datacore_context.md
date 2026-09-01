@@ -151,6 +151,8 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v18 (Igor): etiquetas +50% — altura del sprite 0.085 → 0.1275 unidades de
+  mundo (el ancho sigue el aspect del canvas de la pill).
 - v17 (Igor): en compacto las TRES LÍNEAS SE VEN COMO UNA — como las líneas
   van solidarias a su piso (v16), la fusión se logra juntando los PISOS de
   verdad: sepMin 0.035 → 0.004 (las líneas quedan a <1px; el epsilon evita el

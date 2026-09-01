@@ -126,6 +126,7 @@
     slider('FXAA (0/1)', 'quality.fxaa', 0, 1, 1);
     slider('max pixel ratio', 'quality.dprMax', 0.5, 3, 0.25);
     slider('pre-pass res', 'quality.preRes', 0.2, 1, 0.05);
+    slider('blur (not labels)', 'blur', 0, 8, 0.1);
 
     section('Backdrop & bloom');
     color('studio backdrop', 'backdrop');

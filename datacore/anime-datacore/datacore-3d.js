@@ -730,6 +730,9 @@
       composer.setSize(W, H);
     }
     if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (W * dpr), 1 / (H * dpr));
+    if (blurPasses) for (var bpi = 0; bpi < blurPasses.length; bpi++) {
+      blurPasses[bpi].material.uniforms.uTexel.value.set(1 / (W * dpr), 1 / (H * dpr));
+    }
     var pr = (window.DATACORE && DATACORE.quality.preRes) || 0.6;
     backRT.setSize(Math.max(2, Math.round(W * dpr * pr)), Math.max(2, Math.round(H * dpr * pr)));
     var bw = Math.max(2, Math.round(W * dpr * 0.25)), bh = Math.max(2, Math.round(H * dpr * 0.25));
@@ -739,7 +742,7 @@
   window.addEventListener('resize', resize);
 
   /* ---------- postprocesado: bloom sutil para el glare de los filos ---------- */
-  var composer = null, bloomPass = null, fxaaPass = null;
+  var composer = null, bloomPass = null, fxaaPass = null, blurPasses = null;
   if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
     renderer.setClearColor(0x000000, 1);   // la sección es negra: fondo opaco para el composer
     composer = new THREE.EffectComposer(renderer);
@@ -750,6 +753,34 @@
     if (THREE.ShaderPass && THREE.GammaCorrectionShader) {
       composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
     }
+    // v22: BLUR FINAL opcional (mando DATACORE.blur). Va al final del
+    // composer, así que difumina TODA la escena pero NO las etiquetas
+    // (el overlay se dibuja después, fuera del composer). Gaussiano
+    // separable de 9 taps en dos pasadas H/V; desactivado con blur=0.
+    var DirBlurShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        uDir: { value: new THREE.Vector2(1, 0) },
+        uTexel: { value: new THREE.Vector2(1 / 1024, 1 / 1024) },
+        uRadius: { value: 0 }
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: [
+        'uniform sampler2D tDiffuse;',
+        'uniform vec2 uDir;',
+        'uniform vec2 uTexel;',
+        'uniform float uRadius;',
+        'varying vec2 vUv;',
+        'void main() {',
+        '  vec2 st = uDir * uTexel * uRadius;',
+        '  vec4 c = texture2D(tDiffuse, vUv) * 0.227027;',
+        '  c += (texture2D(tDiffuse, vUv + st * 1.0) + texture2D(tDiffuse, vUv - st * 1.0)) * 0.1945946;',
+        '  c += (texture2D(tDiffuse, vUv + st * 2.0) + texture2D(tDiffuse, vUv - st * 2.0)) * 0.1216216;',
+        '  c += (texture2D(tDiffuse, vUv + st * 3.0) + texture2D(tDiffuse, vUv - st * 3.0)) * 0.054054;',
+        '  gl_FragColor = c;',
+        '}'
+      ].join('\n')
+    };
     // v20: ANTIALIASING — los render targets del composer no tienen MSAA
     // (el antialias:true del renderer solo aplica al canvas directo), así
     // que sin esto los cantos salen pixelados. FXAA tras la pasada gamma
@@ -757,6 +788,17 @@
     if (THREE.ShaderPass && THREE.FXAAShader) {
       fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
       composer.addPass(fxaaPass);
+    }
+    if (THREE.ShaderPass) {
+      // dos iteraciones H/V: blurs pequeños repetidos ≈ gaussiano sin bandas
+      blurPasses = [];
+      for (var bi = 0; bi < 4; bi++) {
+        var bp = new THREE.ShaderPass(DirBlurShader);
+        bp.material.uniforms.uDir.value.set(bi % 2 === 0 ? 1 : 0, bi % 2 === 0 ? 0 : 1);
+        bp.enabled = false;
+        composer.addPass(bp);
+        blurPasses.push(bp);
+      }
     }
   }
 
@@ -966,8 +1008,12 @@
     pre:         0.79,    // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
     backdrop:    '#e6ecf5', // tinte del fondo de estudio (multiplica su textura)
     bloom:       { strength: 0.16, radius: 0.26, threshold: 0.35 },
-    // v21: mandos de nitidez (para las pruebas de pixelado)
-    quality:     { fxaa: 1, dprMax: 2, preRes: 0.6 },
+    // v21: mandos de nitidez — defaults de Igor (2026-09-01): FXAA off,
+    // pre-pase a resolución completa (lo ve más limpio así)
+    quality:     { fxaa: 0, dprMax: 2, preRes: 1 },
+    // v22: blur final de la escena (px) — NO afecta a las etiquetas,
+    // que se dibujan en el overlay después del composer
+    blur:        0,
     help: function () {
       console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
       console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');
@@ -1020,12 +1066,21 @@
     }
     // v21: nitidez en vivo — fxaa on/off y, si cambian dpr/preRes, resize
     if (fxaaPass) fxaaPass.enabled = !!(+TUNE.quality.fxaa);
+    if (blurPasses) {
+      var bl = +TUNE.blur || 0;
+      var r1 = Math.min(bl, 1.4), r2 = bl * 0.55;   // iteración 2 solo en radios grandes
+      for (var bj = 0; bj < 4; bj++) {
+        var on = bj < 2 ? bl > 0.01 : bl > 1.4;
+        blurPasses[bj].enabled = on;
+        blurPasses[bj].material.uniforms.uRadius.value = bj < 2 ? r1 : r2;
+      }
+    }
     if (TUNE.quality.dprMax !== _lastQ.dprMax || TUNE.quality.preRes !== _lastQ.preRes) {
       _lastQ.dprMax = TUNE.quality.dprMax; _lastQ.preRes = TUNE.quality.preRes;
       resize();
     }
   }
-  var _lastQ = { dprMax: 2, preRes: 0.6 };
+  var _lastQ = { dprMax: 2, preRes: 1 };
   console.log('%cDATACORE%c listo: edita los materiales en vivo desde la consola. Escribe DATACORE.help()',
     'font-weight:bold;color:#5cfe50', '');
 

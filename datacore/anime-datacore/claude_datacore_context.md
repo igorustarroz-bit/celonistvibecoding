@@ -181,7 +181,11 @@ tint {1.8,1.8,1.8}; transmission 0.43 (+0.14 al explotar); refract 0.13;
 frost 0.61; frostRadius 0.98; pieceMag 0.71; pieceShift 0.11; fresnel 0.44;
 topClear 0.92; topDarken 0.43; edgeWhite 0.44; skyTop #eef4ff;
 skyHorizon #8e9aad; iri 0.08; body 0.87; rim 1.16; pre 0.79;
-backdrop #e6ecf5; bloom {strength 0.16, radius 0.26, threshold 0.35}.
+backdrop #e6ecf5; bloom {strength 0.16, radius 0.26, threshold 0.35};
+quality {fxaa 0, dprMax 2, preRes 1} (Igor 2026-09-01: lo ve más limpio SIN
+FXAA y con el pre-pase a resolución completa); blur 0 (mando de pruebas:
+difumina la escena final SIN tocar las etiquetas — dos iteraciones H/V de
+gaussiano 9-tap al final del composer, el overlay de etiquetas va después).
 
 ### Implementación actual del cristal (three.js r147) — resumen
 
@@ -295,4 +299,5 @@ sepMin 0.004) · v18 etiquetas +50% · v19 sin switch A↔B, glass tuner
 abajo-dcha plegado hacia arriba y en inglés · nav-fx.js menú como el site ·
 v20 antialiasing: FXAA al final del composer + dpr hasta 2 (FXAAShader r147
 añadido a three-post.js) · v21 sección Sharpness en el tuner
-(DATACORE.quality: fxaa/dprMax/preRes en vivo).
+(DATACORE.quality: fxaa/dprMax/preRes en vivo) · v22 defaults de Igor
+(fxaa 0, preRes 1) + mando blur de escena que respeta las etiquetas.

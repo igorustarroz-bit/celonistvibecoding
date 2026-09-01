@@ -1026,8 +1026,9 @@
     // render target del composer — AA nítido, sin el suavizado del FXAA
     quality:     { fxaa: 0, msaa: 4, dprMax: 2, preRes: 1 },
     // v22: blur final de la escena (px) — NO afecta a las etiquetas,
-    // que se dibujan en el overlay después del composer
-    blur:        0.2,
+    // que se dibujan en el overlay después del composer.
+    // v24: Igor lo devuelve a 0 (el pixelado quedó arreglado con MSAA 4)
+    blur:        0,
     help: function () {
       console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
       console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');

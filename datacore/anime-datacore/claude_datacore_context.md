@@ -182,10 +182,12 @@ frost 0.61; frostRadius 0.98; pieceMag 0.71; pieceShift 0.11; fresnel 0.44;
 topClear 0.92; topDarken 0.43; edgeWhite 0.44; skyTop #eef4ff;
 skyHorizon #8e9aad; iri 0.08; body 0.87; rim 1.16; pre 0.79;
 backdrop #e6ecf5; bloom {strength 0.16, radius 0.26, threshold 0.35};
-quality {fxaa 0, msaa 4, dprMax 2, preRes 1} (Igor 2026-09-01: lo ve más
-limpio SIN FXAA y con el pre-pase a resolución completa); blur 0.2 (difumina
-la escena final SIN tocar las etiquetas — dos iteraciones H/V de gaussiano
-9-tap al final del composer, el overlay de etiquetas va después).
+quality {fxaa 0, msaa 4, dprMax 2, preRes 1}; blur 0. CERRADO por Igor
+(2026-09-01, v24): el pixelado quedó arreglado con MSAA 4 + pre-pase a
+resolución completa, SIN FXAA y SIN blur. El mando blur (difumina la escena
+final sin tocar las etiquetas — dos iteraciones H/V de gaussiano 9-tap al
+final del composer, el overlay de etiquetas va después) queda a 0 como
+herramienta de pruebas.
 
 ANTIALIASING (v23) — dos tipos, combinables desde el tuner:
 - MSAA real por MUESTRAS (quality.msaa: 0/2/4/8, default 4): en WebGL2 los
@@ -312,4 +314,5 @@ añadido a three-post.js) · v21 sección Sharpness en el tuner
 (DATACORE.quality: fxaa/dprMax/preRes en vivo) · v22 defaults de Igor
 (fxaa 0, preRes 1) + mando blur de escena que respeta las etiquetas ·
 v23 MSAA real por muestras (0/2/4/8, default 4) vía samples en los RT del
-composer; blur 0.2 de default (settings de Igor).
+composer · v24 settings FINALES de Igor: msaa 4, fxaa 0, preRes 1, blur 0 —
+pixelado resuelto.

@@ -789,6 +789,9 @@
       fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
       composer.addPass(fxaaPass);
     }
+    // v23: MSAA real a través del composer (WebGL2): sus render targets
+    // aceptan 'samples'; al cambiarlas hay que dispose para reasignar los FBO
+    if (renderer.capabilities.isWebGL2) setMsaa(4);
     if (THREE.ShaderPass) {
       // dos iteraciones H/V: blurs pequeños repetidos ≈ gaussiano sin bandas
       blurPasses = [];
@@ -800,6 +803,15 @@
         blurPasses.push(bp);
       }
     }
+  }
+
+  function setMsaa(n) {
+    if (!composer || !renderer.capabilities.isWebGL2) return;
+    n = Math.max(0, Math.min(8, Math.round(n)));
+    composer.renderTarget1.samples = n;
+    composer.renderTarget2.samples = n;
+    composer.renderTarget1.dispose();   // el próximo render reasigna los FBO
+    composer.renderTarget2.dispose();   // leyendo el nuevo .samples
   }
 
   /* ---------- render loop ---------- */
@@ -1010,10 +1022,12 @@
     bloom:       { strength: 0.16, radius: 0.26, threshold: 0.35 },
     // v21: mandos de nitidez — defaults de Igor (2026-09-01): FXAA off,
     // pre-pase a resolución completa (lo ve más limpio así)
-    quality:     { fxaa: 0, dprMax: 2, preRes: 1 },
+    // msaa = MUESTRAS de multisampling reales (0/2/4/8, WebGL2) sobre el
+    // render target del composer — AA nítido, sin el suavizado del FXAA
+    quality:     { fxaa: 0, msaa: 4, dprMax: 2, preRes: 1 },
     // v22: blur final de la escena (px) — NO afecta a las etiquetas,
     // que se dibujan en el overlay después del composer
-    blur:        0,
+    blur:        0.2,
     help: function () {
       console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
       console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');
@@ -1066,6 +1080,7 @@
     }
     // v21: nitidez en vivo — fxaa on/off y, si cambian dpr/preRes, resize
     if (fxaaPass) fxaaPass.enabled = !!(+TUNE.quality.fxaa);
+    if (TUNE.quality.msaa !== _lastQ.msaa) { _lastQ.msaa = TUNE.quality.msaa; setMsaa(+TUNE.quality.msaa); }
     if (blurPasses) {
       var bl = +TUNE.blur || 0;
       var r1 = Math.min(bl, 1.4), r2 = bl * 0.55;   // iteración 2 solo en radios grandes
@@ -1080,7 +1095,7 @@
       resize();
     }
   }
-  var _lastQ = { dprMax: 2, preRes: 1 };
+  var _lastQ = { dprMax: 2, preRes: 1, msaa: 4 };
   console.log('%cDATACORE%c listo: edita los materiales en vivo desde la consola. Escribe DATACORE.help()',
     'font-weight:bold;color:#5cfe50', '');
 

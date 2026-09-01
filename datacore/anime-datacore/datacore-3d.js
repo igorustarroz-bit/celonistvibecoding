@@ -502,33 +502,84 @@
       return [(A2 + B2) * SQH, (B2 - A2) * SQH];
     });
   }
-  var PLATES = [
-    // Sur: flecha hacia abajo — base ancha interior, lados convergen a punta truncada
-    [[-0.45, 0.28], [0.45, 0.28], [0.55, 0.33], [0.63, 0.50], [0.08, 0.905], [-0.08, 0.905], [-0.63, 0.50], [-0.55, 0.33]],
-    // Norte: flecha hacia arriba con MUESCA en V en la punta
-    [[-0.63, -0.50], [-0.145, -0.885], [0.0, -0.72], [0.145, -0.885], [0.63, -0.50], [0.55, -0.33], [0.45, -0.28], [-0.45, -0.28], [-0.55, -0.33]],
-    // Oeste: FLECHA hacia fuera-izquierda — borde interior vertical ancho,
-    // dos lados largos convergiendo y punta truncada (zoom del still)
-    [[-0.155, -0.295], [-0.24, -0.385], [-0.845, -0.025], [-0.845, 0.05], [-0.24, 0.415], [-0.155, 0.325]],
-    // Este (espejo del oeste)
-    [[0.155, -0.295], [0.155, 0.325], [0.24, 0.415], [0.845, 0.05], [0.845, -0.025], [0.24, -0.385]]
+  /* v15: formas EXACTAS del SVG de Igor (piso_inferior_forma_poligonos.svg).
+     Dos estados por placa — EXPLOSIONADO (izq: 4 escudos alrededor de la caja)
+     y COMPACTO (dcha: anillo-diamante con muescas en V) — con MORPH geométrico
+     ligado a spread: remuestreo de ambos contornos a puntos equiespaciados,
+     alineado por mínima distancia e interpolación lineal por vértice. */
+  var PLATES_EXPLODED = [
+    /* S */ [[0.222, 0.201], [-0.22, 0.201], [-0.385, 0.355], [-0.385, 0.459], [-0.059, 0.778], [0.056, 0.778], [0.375, 0.459], [0.375, 0.355]],
+    /* N */ [[0.222, -0.268], [-0.22, -0.268], [-0.385, -0.422], [-0.385, -0.526], [-0.059, -0.845], [0.056, -0.845], [0.375, -0.526], [0.375, -0.422]],
+    /* O */ [[-0.22, -0.245], [-0.22, 0.184], [-0.385, 0.339], [-0.5, 0.339], [-0.824, 0.017], [-0.824, -0.08], [-0.5, -0.409], [-0.395, -0.409]],
+    /* E */ [[0.225, -0.245], [0.225, 0.184], [0.39, 0.339], [0.505, 0.339], [0.829, 0.017], [0.829, -0.08], [0.505, -0.409], [0.4, -0.409]]
   ];
+  var PLATES_COMPACT = [
+    /* S */ [[0.394, 0.371], [0.395, 0.484], [0.065, 0.814], [-0.056, 0.815], [-0.393, 0.484], [-0.393, 0.372], [-0.325, 0.308], [0.002, 0.637], [0.331, 0.307]],
+    /* N */ [[0.058, -0.882], [0.395, -0.551], [0.395, -0.439], [0.329, -0.377], [0.002, -0.704], [-0.328, -0.373], [-0.393, -0.439], [-0.393, -0.551], [-0.063, -0.882]],
+    /* O */ [[-0.412, -0.432], [-0.338, -0.363], [-0.666, -0.034], [-0.336, 0.297], [-0.401, 0.359], [-0.523, 0.359], [-0.862, 0.02], [-0.862, -0.086], [-0.524, -0.432]],
+    /* E */ [[0.518, -0.432], [0.857, -0.086], [0.857, 0.02], [0.518, 0.358], [0.397, 0.359], [0.336, 0.302], [0.671, -0.034], [0.338, -0.367], [0.407, -0.432]]
+  ];
+  var PLATE_STEPS = 13, PLATE_PTS = 96;
+  function plateLoop(ab) {
+    var pts = roundedPolyShape(ab2uv(ab), 0.035).getSpacedPoints(PLATE_PTS);
+    if (pts.length > PLATE_PTS) pts.pop();      // el último repite el primero
+    var area = 0;                               // winding uniforme
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i], q = pts[(i + 1) % pts.length];
+      area += p.x * q.y - q.x * p.y;
+    }
+    if (area < 0) pts.reverse();
+    return pts;
+  }
+  function alignLoop(ref, pts) {   // desfase cíclico de mínima distancia al ref
+    var n = ref.length, best = 0, bestD = Infinity;
+    for (var k = 0; k < n; k++) {
+      var d = 0;
+      for (var i = 0; i < n; i++) {
+        var q = pts[(i + k) % n];
+        var dx = ref[i].x - q.x, dy = ref[i].y - q.y;
+        d += dx * dx + dy * dy;
+      }
+      if (d < bestD) { bestD = d; best = k; }
+    }
+    var out = [];
+    for (var j = 0; j < n; j++) out.push(pts[(j + best) % n]);
+    return out;
+  }
+  var plateGeoPools = PLATES_EXPLODED.map(function (abE, i) {
+    var e = plateLoop(abE), c = alignLoop(e, plateLoop(PLATES_COMPACT[i]));
+    var pool = [];
+    for (var s = 0; s < PLATE_STEPS; s++) {
+      var t = s / (PLATE_STEPS - 1);            // 0 = explosionado … 1 = compacto
+      var sh = new THREE.Shape();
+      for (var j = 0; j < e.length; j++) {
+        var x = e[j].x + (c[j].x - e[j].x) * t, y = e[j].y + (c[j].y - e[j].y) * t;
+        if (j === 0) sh.moveTo(x, y); else sh.lineTo(x, y);
+      }
+      sh.closePath();
+      pool.push(extrude(sh, HEX_H, BEV));
+    }
+    return pool;
+  });
   function buildHexLayer() {
     var group = new THREE.Group();
     var plates = [];
-    PLATES.forEach(function (ab, i) {
-      var uv = ab2uv(ab);
-      var shape = roundedPolyShape(uv, 0.035);
-      var geo = extrude(shape, HEX_H, BEV);
-      var mesh = registerGlass(new THREE.Mesh(geo, glassMat(0.30 + i * 0.08, 0.5 + ab[0][0] * -0.3)));
+    PLATES_EXPLODED.forEach(function (ab, i) {
+      var ca = 0;
+      for (var k = 0; k < ab.length; k++) ca += ab[k][0];
+      ca /= ab.length;                          // gradiente izq→dcha como los tiles
+      var mesh = registerGlass(new THREE.Mesh(plateGeoPools[i][0], glassMat(0.30 + i * 0.08, 0.5 + ca * 0.31)));
       addRim(mesh, 0.32);
       mesh.userData.hoverInfo = { kind: 'hex' };
       mesh.userData.baseY = 0;
       group.add(mesh);
       plates.push(mesh);
     });
+    // caja central ALINEADA A PANTALLA (rotada 45°), medidas del SVG de Igor
     var plate = new THREE.Mesh(
-      extrude(roundedRectShape(0.34, 0.26, [0.05, 0.05, 0.05, 0.05]), PLATE_H, BEV), plateMat);
+      extrude(roundedRectShape(0.325, 0.345, [0.04, 0.04, 0.04, 0.04]), PLATE_H, BEV), plateMat);
+    plate.rotation.y = Math.PI / 4;
+    plate.position.set(-0.034, 0, -0.036);
     addRim(plate, 0.4);
     group.add(plate);
     var sprite = makeLabelSprite('DATA INTEGRATION');
@@ -712,7 +763,7 @@
     var topScale = 1 - 0.52 * inv;      // la capa superior se encoge al centro
     var midScale = 1 - 0.22 * inv;      // la media se encoge un poco…
     var midHole = 0.68 * inv;           // …y vacía su núcleo (queda en anillo)
-    var plateSpread = 1 + 0.03 * inv;   // las placas se abren un pelín (sin salir del contorno)
+    var plateIdx = Math.round(inv * (PLATE_STEPS - 1)); // morph escudos↔anillo (SVG de Igor)
 
     for (var li = 0; li < 3; li++) {
       var L = layers[li], def = L.def;
@@ -724,7 +775,7 @@
       if (L.labelAlways) {
         for (var pi = 0; pi < def.plates.length; pi++) {
           var pm = def.plates[pi];
-          pm.scale.set(plateSpread, 1, plateSpread);
+          if (pm.geometry !== plateGeoPools[pi][plateIdx]) swapGeo(pm, plateGeoPools[pi][plateIdx]);
         }
         var pxz = 1 - 0.42 * inv;        // la caja central se encoge para dejar ver el centro
         def.plate.scale.set(pxz, 0.3 + 0.7 * state.spread, pxz);
@@ -735,7 +786,8 @@
       def.sprite.visible = alpha > 0.01;
       var sw = def.sprite.userData.aspect, sh = 0.085;
       def.sprite.scale.set(sh * sw, sh, 1);
-      def.sprite.position.set(0, (L.labelAlways ? PLATE_H * (0.3 + 0.7 * state.spread) : TILE_H) + 0.06, 0);
+      if (L.labelAlways) def.sprite.position.set(-0.034, PLATE_H * (0.3 + 0.7 * state.spread) + 0.06, -0.036);
+      else def.sprite.position.set(0, TILE_H + 0.06, 0);
 
       if (L.isTop) {
         for (var i = 0; i < def.tiles.length; i++) {

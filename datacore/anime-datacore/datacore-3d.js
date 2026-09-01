@@ -762,7 +762,10 @@
     root.rotation.y = -mouse.cx * 0.22;
     root.rotation.x = mouse.cy * 0.05;
 
-    var sep = (0.035 + (1.28 - 0.035) * state.spread) * SEPK; // compacto: un solo plano (las piezas se apoyan)
+    // v17: compacto = UN SOLO PLANO de verdad — las líneas (solidarias a su
+    // piso) quedan a <1px y se ven como UNA; el reparto concéntrico evita que
+    // las piezas se pisen (epsilon 0.004 solo para no coplanar exacto)
+    var sep = (0.004 + (1.28 - 0.004) * state.spread) * SEPK;
     // FUSIÓN como el vídeo: al colapsar, la capa superior se abre en anillo
     // (los tiles interiores desaparecen), la media se encoge y anida dentro
     var inv = 1 - state.spread;

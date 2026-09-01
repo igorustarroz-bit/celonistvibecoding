@@ -151,6 +151,11 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v17 (Igor): en compacto las TRES LÍNEAS SE VEN COMO UNA — como las líneas
+  van solidarias a su piso (v16), la fusión se logra juntando los PISOS de
+  verdad: sepMin 0.035 → 0.004 (las líneas quedan a <1px; el epsilon evita el
+  coplanar exacto/z-fighting). El reparto concéntrico (placas alrededor, media
+  en anillo, superior al centro) hace que las piezas no se pisen en planta.
 - v16 (peticiones de Igor sobre v15): (1) SIN CAJA CENTRAL — el prisma bajo
   DATA INTEGRATION se retiró (no está en su SVG); el hueco rectangular entre
   las 4 placas queda enmarcado por sus filos interiores. (2) Placas CENTRADAS

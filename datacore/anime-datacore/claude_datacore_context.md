@@ -151,6 +151,21 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v15 (2026-09-01): CAPA INFERIOR = SVG DE IGOR
+  (`../Data Core _ Celonis_files/piso_inferior_forma_poligonos.svg`): dibujó en
+  vector las formas EXACTAS de las placas en los dos estados — explosionado
+  (izq: 4 escudos alrededor de la caja) y compacto (dcha: anillo-diamante con
+  muescas en V). Implementación: PLATES_EXPLODED/PLATES_COMPACT en (a,b)
+  normalizadas del SVG ((x−cx)/298.34, (y−153)/149.17; cx 305.74/1012.74),
+  morph geométrico ligado a spread — roundedPolyShape(r 0.035) →
+  getSpacedPoints(96) → winding uniforme → alignLoop (desfase cíclico de
+  mínima distancia) → 13 geometrías interpoladas por placa con swapGeo por
+  índice (plateIdx = round(inv·12)). Se retiró plateSpread: el morph ya lleva
+  cada placa a su sitio en cada estado. CAJA CENTRAL alineada a PANTALLA como
+  el vídeo: rounded-rect hw 0.325 × hh 0.345 rotado 45° (rotation.y = π/4),
+  centro uv (−0.034, −0.036) — medidas del hueco del SVG; la etiqueta se
+  centra sobre la caja. Gradiente de las placas ahora por centroide
+  (g = 0.5 + ca·0.31, como los tiles).
 - v14 (correcciones de Igor sobre v13): (1) PLACAS E/O = FLECHAS HACIA FUERA
   (zoom del still): borde interior vertical ancho, dos lados largos
   convergiendo a punta truncada; N/S ya eran flechas (N con muesca). (2)

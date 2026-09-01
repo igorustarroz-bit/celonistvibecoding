@@ -16,7 +16,10 @@
 
     var css = document.createElement('style');
     css.textContent = [
-      '#dc-tuner{position:fixed;top:14px;right:14px;z-index:99999;width:252px;',
+      // v19: donde estaba el switch A/B (abajo-dcha), desplegado HACIA ARRIBA:
+      // column-reverse deja la cabecera abajo y el cuerpo se abre encima
+      '#dc-tuner{position:fixed;right:18px;bottom:18px;z-index:99999;width:252px;',
+      'display:flex;flex-direction:column-reverse;',
       'font-family:Poppins,Arial,sans-serif;font-size:11px;color:#eee;',
       'background:rgba(6,6,8,.92);border:1px solid rgba(255,255,255,.25);',
       'border-radius:12px;backdrop-filter:blur(6px);user-select:none}',
@@ -45,7 +48,8 @@
 
     var panel = document.createElement('div');
     panel.id = 'dc-tuner';
-    panel.innerHTML = '<header><span><span class="dot">●</span> GLASS TUNER</span><span id="dc-tgl">—</span></header><div class="body"></div>';
+    panel.className = 'min';   // v19: empieza plegado
+    panel.innerHTML = '<header><span><span class="dot">●</span> GLASS TUNER</span><span id="dc-tgl">+</span></header><div class="body"></div>';
     document.body.appendChild(panel);
     var body = panel.querySelector('.body');
     panel.querySelector('header').addEventListener('click', function () {
@@ -90,50 +94,50 @@
       var h = document.createElement('h4'); h.textContent = t; body.appendChild(h);
     }
 
-    section('Tinte del cristal');
-    slider('tinte R', 'tint.r', 0.4, 1.8);
-    slider('tinte G', 'tint.g', 0.4, 1.8);
-    slider('tinte B', 'tint.b', 0.4, 1.8);
+    section('Glass tint');
+    slider('tint R', 'tint.r', 0.4, 1.8);
+    slider('tint G', 'tint.g', 0.4, 1.8);
+    slider('tint B', 'tint.b', 0.4, 1.8);
 
-    section('Transparencia');
-    slider('transmisión', 'transmission', 0, 1);
-    slider('+ al explotar', 'transmissionSpread', 0, 0.5);
-    slider('refracción', 'refract', 0, 3);
-    slider('blur (frost)', 'frost', 0, 1);
-    slider('radio blur', 'frostRadius', 0, 4);
-    slider('lupa pieza', 'pieceMag', 0.6, 1.2);
-    slider('desvío pieza', 'pieceShift', 0, 1.5);
-    slider('cuerpo (tapas)', 'body', 0, 3);
-    slider('a través (pre)', 'pre', 0, 3);
+    section('Transparency');
+    slider('transmission', 'transmission', 0, 1);
+    slider('+ on explode', 'transmissionSpread', 0, 0.5);
+    slider('refraction', 'refract', 0, 3);
+    slider('frost blur', 'frost', 0, 1);
+    slider('blur radius', 'frostRadius', 0, 4);
+    slider('piece magnify', 'pieceMag', 0.6, 1.2);
+    slider('piece shift', 'pieceShift', 0, 1.5);
+    slider('body (tops)', 'body', 0, 3);
+    slider('see-through (pre)', 'pre', 0, 3);
 
-    section('Tapas transparentes');
-    slider('tapa transp.', 'topClear', 0, 1);
-    slider('brillo a través', 'topDarken', 0, 1.5);
-    slider('blanco del borde', 'edgeWhite', 0, 1.2);
+    section('Clear tops');
+    slider('top clarity', 'topClear', 0, 1);
+    slider('through glow', 'topDarken', 0, 1.5);
+    slider('edge white', 'edgeWhite', 0, 1.2);
 
-    section('Cantos y brillo');
+    section('Edges & glow');
     slider('fresnel', 'fresnel', 0, 1.5);
-    color('cielo arriba', 'skyTop');
-    color('cielo horizonte', 'skyHorizon');
-    slider('filos de luz', 'rim', 0, 3);
-    slider('iridiscencia', 'iri', 0, 0.6);
+    color('sky top', 'skyTop');
+    color('sky horizon', 'skyHorizon');
+    slider('light rims', 'rim', 0, 3);
+    slider('iridescence', 'iri', 0, 0.6);
 
-    section('Fondo y glow');
-    color('fondo estudio', 'backdrop');
-    slider('bloom fuerza', 'bloom.strength', 0, 1.5);
-    slider('bloom radio', 'bloom.radius', 0, 1);
-    slider('bloom umbral', 'bloom.threshold', 0, 1);
+    section('Backdrop & bloom');
+    color('studio backdrop', 'backdrop');
+    slider('bloom strength', 'bloom.strength', 0, 1.5);
+    slider('bloom radius', 'bloom.radius', 0, 1);
+    slider('bloom threshold', 'bloom.threshold', 0, 1);
 
     var btns = document.createElement('div');
     btns.className = 'btns';
-    btns.innerHTML = '<button id="dc-copy">Copiar ajustes</button><button id="dc-reset">Reset</button>';
+    btns.innerHTML = '<button id="dc-copy">Copy settings</button><button id="dc-reset">Reset</button>';
     body.appendChild(btns);
     btns.querySelector('#dc-copy').addEventListener('click', function () {
       var out = JSON.stringify(T, function (k, v) { return typeof v === 'function' ? undefined : v; }, 2);
       (navigator.clipboard ? navigator.clipboard.writeText(out) : Promise.reject()).then(function () {
-        btns.querySelector('#dc-copy').textContent = '¡Copiado!';
-      }, function () { console.log(out); btns.querySelector('#dc-copy').textContent = 'En consola'; });
-      setTimeout(function () { btns.querySelector('#dc-copy').textContent = 'Copiar ajustes'; }, 1500);
+        btns.querySelector('#dc-copy').textContent = 'Copied!';
+      }, function () { console.log(out); btns.querySelector('#dc-copy').textContent = 'In console'; });
+      setTimeout(function () { btns.querySelector('#dc-copy').textContent = 'Copy settings'; }, 1500);
     });
     btns.querySelector('#dc-reset').addEventListener('click', function () {
       (function apply(dst, src) {

@@ -151,6 +151,11 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v19 (Igor): SIN switch A<->B en ambos index (se retiraron el <a
+  class=variant-switch> y su <style>). El GLASS TUNER ocupa su sitio
+  (fixed right/bottom 18px), empieza PLEGADO y se despliega HACIA ARRIBA
+  (flex column-reverse: cabecera abajo, cuerpo encima). Toda la UI del tuner
+  en INGLES — regla de Igor: nada en espanol en la interfaz.
 - v18 (Igor): etiquetas +50% — altura del sprite 0.085 → 0.1275 unidades de
   mundo (el ancho sigue el aspect del canvas de la pill).
 - v17 (Igor): en compacto las TRES LÍNEAS SE VEN COMO UNA — como las líneas

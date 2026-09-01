@@ -230,3 +230,14 @@ bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
   las curvas de scroll (§9) y los valores del CFG (§10). Son el "look".
 - El vídeo original guardado sirve como referencia visual de contraste y ritmo
   de rotación (~100° cada 6 s).
+
+## Menú como el site real (nav-fx.js)
+
+`nav-fx.js` (copiado en `celonis-home/anime-globe/` y en
+`datacore/anime-datacore/`, cargado por las 6 páginas de ambos experimentos)
+replica el comportamiento del menú de celonis.com en desktop (>=1200px): al
+hacer scroll hacia abajo el nav se oculta (clase `nav-hidden` de header.css:
+opacity 0 + pointer-events none) dejando un clon fijo del CTA arriba a la
+derecha (`.cloned-cta`); al hacer scroll hacia arriba reaparece (`nav-shown`).
+Mismo mecanismo de clases que el header.js del site real, con detección de
+dirección y guarda de 500 ms.

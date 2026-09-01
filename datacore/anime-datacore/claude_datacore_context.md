@@ -312,6 +312,17 @@ Lección del primer intento: la pared frontal por "cadena entre extremos"
 (variante A) y aquí la escala sin el factor √2 y las etiquetas en 0.22 world
 salían mal; ya corregido como arriba.
 
+## Menú como el site real (nav-fx.js)
+
+`nav-fx.js` (copiado en `celonis-home/anime-globe/` y en
+`datacore/anime-datacore/`, cargado por las 6 páginas de ambos experimentos)
+replica el comportamiento del menú de celonis.com en desktop (>=1200px): al
+hacer scroll hacia abajo el nav se oculta (clase `nav-hidden` de header.css:
+opacity 0 + pointer-events none) dejando un clon fijo del CTA arriba a la
+derecha (`.cloned-cta`); al hacer scroll hacia arriba reaparece (`nav-shown`).
+Mismo mecanismo de clases que el header.js del site real, con detección de
+dirección y guarda de 500 ms.
+
 ## Rendimiento
 
 ~60 fps en Chromium headless 1440×900 (136 tiles + 5 placas por frame,

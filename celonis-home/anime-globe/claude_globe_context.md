@@ -133,9 +133,9 @@ sigue haciendo scroll de página).
   animación de v→0 con ease out(2), duración = clamp(|v|·900000, 350, 3200) ms,
   integrando `dragLon += v·dt` por frame. Al terminar, el auto-spin se reanuda.
 
-## 8. Foco del cursor 3D "aguja" (solo desktop: hover+pointer:fine y pointerType mouse)
+## 8. Foco 3D "aguja" (desktop: hover · móvil: al tocar)
 
-El cursor se proyecta sobre la esfera en espacio de vista
+El puntero se proyecta sobre la esfera en espacio de vista
 (`u=(x,y) → z=√(1−|u|²)`; si |u|>0.9995 se fija al limbo; si |u|>1.2 se apaga).
 Cada marca se afecta por su distancia geodésica al punto del cursor:
 `c = dot(p_vista, cursor)`; dentro del casquete (`c > cos(23°)`):
@@ -143,8 +143,21 @@ Cada marca se afecta por su distancia geodésica al punto del cursor:
 - LUZ: `alpha += 0.3 · smoothstep(f) · (tierra ? 1 : 0.1)` — gradiente 100%→0.
 - ELEVACIÓN "aguja": `mag = 0.045 · f^400` (pico finísimo solo en el centro);
   el punto se eleva por la normal `p → p·(1+mag)` y la marca crece ×(1+mag·1.5).
-- Todo escala con `spot.on`, que hace fade 250 ms al entrar/salir el cursor →
-  al retirar el ratón la retícula vuelve EXACTA a su sitio.
+- Todo escala con `spot.on`, que hace fade 250 ms al entrar/salir el puntero →
+  al retirarlo la retícula vuelve EXACTA a su sitio.
+
+Activación según el puntero (misma fórmula y misma intensidad en ambos):
+- Ratón (`pointerType === 'mouse'`, solo si `FINE_POINTER`): hover — sigue al
+  cursor en `pointermove` y se apaga en `pointerleave`.
+- Táctil / lápiz (cualquier `pointerType` distinto de mouse, sin depender de
+  FINE_POINTER, así que también funciona en portátiles con pantalla táctil):
+  se enciende en `pointerdown` DONDE se toca, sigue al dedo mientras se
+  arrastra (compartiendo el gesto con el giro del globo) y al levantar el dedo
+  se queda `spotTouchHoldMs` (900 ms) antes del fade, para que un tap suelto
+  se llegue a ver. `pointercancel` (p. ej. cuando el navegador se queda el
+  gesto para hacer scroll) también lo apaga.
+- Helpers compartidos `moveSpot(e)` y `fadeSpot(to, delayMs)`; el delay se
+  cancela solo si se vuelve a tocar antes de que expire.
 
 ## 9. Entrada y scroll
 
@@ -170,7 +183,7 @@ spinPeriodMs 21600 · wobblePeriodMs 26000 · entranceMs 1800
 landBase 0.55 · oceanBase 0.09 · coastBoost 0.85 (COAST_MAX 5 celdas)
 softBlurPx 0.6 · bloomStrength 0.55 · bloomWidth 3.4 · bloomFrom 0.5
 spotAngleDeg 23 · spotStrength 0.3 · spotLandFactor 0.1 · spotBulge 0.045
-spotNeedlePow 400 · spotFadeMs 250
+spotNeedlePow 400 · spotFadeMs 250 · spotTouchHoldMs 900
 dragPitchMin −25 · dragPitchMax 40 · inertiaMinMs 350 · inertiaMaxMs 3200
 flickMinVel 0.00008
 cursorColor #000000 · cursorOutline #ffffff · cursorOutlinePx 1.5
@@ -203,6 +216,10 @@ bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
   menos elementos").
 - Islas árticas como agua, Groenlandia como tierra: decisión de Igor (filtro por área).
 - Foco pequeño con aguja f^400: valores elegidos por Igor probando en consola.
+- 2026-09-01: el foco deja de ser solo-desktop y se activa AL TOCAR en móvil
+  (petición de Igor). Se quitó el gate `FINE_POINTER` de `spotActive` en
+  draw() y se separaron los listeners por `pointerType`. El resto de efectos
+  de la página no se tocó.
 - Reposo desktop −500px fijo: valor elegido por Igor.
 - 2026-08-31: cursor personalizado sobre el canvas en desktop (pointer fino):
   crosshair de mira SVG — 4 brazos SIN punto central (referencia visual

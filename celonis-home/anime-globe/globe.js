@@ -33,15 +33,16 @@
     bloomStrength: 0.55,     // halo intensity around bright dashes (0 disables)
     bloomWidth: 3.4,         // halo width as a multiple of the dash width
     bloomFrom: 0.5,          // only dashes above this brightness fraction get a halo
-    // cursor spot (desktop / fine pointer only) — a cap ON the sphere surface:
-    // the cursor is projected onto the globe and dashes are affected by their
-    // geodesic distance to that point, so the spot foreshortens near the limb
+    // cursor spot — a cap ON the sphere surface: el puntero se proyecta sobre el
+    // globo y las marcas se afectan por su distancia geodésica a ese punto, así
+    // que el foco se escorza cerca del limbo. Desktop: hover. Móvil: al tocar.
     spotAngleDeg: 23,        // angular radius of the cap on the sphere (0 disables)
     spotStrength: 0.3,       // extra brightness at the center (gradient: 100% center → 0 edge)
     spotLandFactor: 0.1,     // how much the dark land dashes light up (vs ocean)
     spotBulge: 0.045,        // lift along the sphere normal at the cap center (fraction of R)
     spotNeedlePow: 400,      // lift profile exponent: high = needle (sharp peak, curved base); 1 = cone; ~0.5 = bubble
     spotFadeMs: 250,         // fade in/out when the cursor enters/leaves (also settles the lift back)
+    spotTouchHoldMs: 900,    // táctil: cuánto se queda el foco tras levantar el dedo (para que un tap se vea)
     // custom cursor (desktop / fine pointer only): Celonis-green cross
     cursorColor: '#000000',  // color del trazo (prueba: negro; el verde del site es #5cfe50)
     cursorOutline: '#ffffff',// color del borde alrededor del trazo ('' = sin borde)
@@ -155,7 +156,7 @@
   var size = 0, dpr = 1;
   if (CFG.softBlurPx > 0) canvas.style.filter = 'blur(' + CFG.softBlurPx + 'px)';
 
-  // cursor flashlight state (desktop / fine pointer only)
+  // cursor flashlight state (hover en desktop, toque en móvil)
   var FINE_POINTER = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   var spot = { nx: 0.5, ny: 0.5, on: 0 };
 
@@ -214,7 +215,7 @@
     var yOffset = state.rise * size * 0.10;
 
     // project the cursor onto the sphere (view space) for the surface spot
-    var spotActive = FINE_POINTER && CFG.spotAngleDeg > 0 && spot.on > 0.01;
+    var spotActive = CFG.spotAngleDeg > 0 && spot.on > 0.01;
     var scx = 0, scy = 0, scz = 0, cosA0 = 0, invA = 0;
     if (spotActive) {
       var ux = (spot.nx * size - cx) / R;
@@ -455,28 +456,56 @@
   canvas.addEventListener('pointercancel', function (e) { endDrag(e, false); });
   window.addEventListener('pointerup', function (e) { endDrag(e, true); });
 
-  // ---------- cursor flashlight (desktop only) ----------
+  // ---------- cursor flashlight: hover en desktop, toque en móvil ----------
+  var spotFade = null, spotTarget = 0, spotHold = null;
+  function fadeSpot(to, delayMs) {
+    if (spotHold) { clearTimeout(spotHold); spotHold = null; }
+    if (delayMs > 0) {
+      spotHold = setTimeout(function () { spotHold = null; fadeSpot(to, 0); }, delayMs);
+      return;
+    }
+    if (spotTarget === to) return;
+    spotTarget = to;
+    if (spotFade) spotFade.pause();
+    spotFade = animate(spot, { on: to, duration: CFG.spotFadeMs, ease: 'out(2)' });
+  }
+  function moveSpot(e) {
+    var rect = canvas.getBoundingClientRect();
+    if (rect.width > 0) {
+      spot.nx = (e.clientX - rect.left) / rect.width;
+      spot.ny = (e.clientY - rect.top) / rect.height;
+    }
+  }
+
+  // desktop: sigue al ratón mientras esté sobre el canvas
   if (FINE_POINTER) {
-    var spotFade = null, spotTarget = 0;
-    var fadeSpot = function (to) {
-      if (spotTarget === to) return;
-      spotTarget = to;
-      if (spotFade) spotFade.pause();
-      spotFade = animate(spot, { on: to, duration: CFG.spotFadeMs, ease: 'out(2)' });
-    };
     canvas.addEventListener('pointermove', function (e) {
       if (e.pointerType !== 'mouse') return;
-      var rect = canvas.getBoundingClientRect();
-      if (rect.width > 0) {
-        spot.nx = (e.clientX - rect.left) / rect.width;
-        spot.ny = (e.clientY - rect.top) / rect.height;
-      }
-      fadeSpot(1);
+      moveSpot(e); fadeSpot(1, 0);
     });
     canvas.addEventListener('pointerleave', function (e) {
-      if (e.pointerType === 'mouse') fadeSpot(0);
+      if (e.pointerType === 'mouse') fadeSpot(0, 0);
     });
   }
+
+  // táctil (móvil/tablet, también en portátiles con pantalla táctil): el foco
+  // aparece donde se toca, sigue al dedo mientras se arrastra y se queda
+  // spotTouchHoldMs al levantarlo, para que un tap suelto también se vea.
+  canvas.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse') return;
+    moveSpot(e); fadeSpot(1, 0);
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (e.pointerType === 'mouse' || !dragging || e.pointerId !== dragId) return;
+    moveSpot(e);
+  });
+  function endTouchSpot(e) {
+    if (e && e.pointerType === 'mouse') return;
+    fadeSpot(0, CFG.spotTouchHoldMs);
+  }
+  canvas.addEventListener('pointerup', endTouchSpot);
+  canvas.addEventListener('pointercancel', endTouchSpot);
+  window.addEventListener('pointerup', endTouchSpot);
 
   // expose for tuning in devtools (flick(v) spins the globe programmatically, v in rad/ms, e.g. 0.004)
   window.__earth = { cfg: CFG, state: state, redraw: draw, spinAnim: spinAnim, flick: function (v) { spinAnim.pause(); startInertia(v); }, rebuild: function () { buildParticles(); draw(); }, applyCursor: applyCursor };

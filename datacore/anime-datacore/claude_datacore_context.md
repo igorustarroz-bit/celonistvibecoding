@@ -31,7 +31,12 @@ sobre fondo negro, cada piso con su etiqueta pill. De abajo arriba:
 DATA INTEGRATION, DATA TRANSFORMATION, PROCESS QUERY ENGINE.
 
 - Cámara ortográfica isométrica: azimut 45°, elevación 31.3°.
-- Escala: A = min(anchoPx·0.17, altoPx/5.4) · 1.10. En la variante 3D,
+- Escala: A = min(anchoPx·K, altoPx/5.4) · 1.10, con K = 0.17 en desktop y
+  K = 0.205 por debajo de 900px (v26). En MÓVIL además el stage pasa de
+  16/9 a 5/6 por CSS (`@media (max-width:900px)` en el <style id=datacore-exp>
+  de ambos index): con el 16/9 la altura mandaba en el min() y la figura
+  salía diminuta (A≈40 en 390px de ancho); ahora A≈79, el doble justo, y la
+  figura ocupa ~94% del ancho. Misma regla en las dos variantes. En la variante 3D,
   píxeles-por-unidad-de-mundo = √2·A. La separación vertical entre pisos se
   multiplica por SEPK = 1/(cos 31.3°·√2) para igualar el alzado de la
   variante 2D.
@@ -258,6 +263,18 @@ un clon fijo del CTA arriba a la derecha (.cloned-cta); al subir reaparece
 (nav-shown). Detección de dirección con guarda de 500 ms — mismo mecanismo
 de clases que el header.js del site real.
 
+OJO, dos fallos ya cometidos con esto (no repetir):
+1. El breakpoint se comprobaba UNA SOLA VEZ en init(). Una ventana que
+   empezaba ancha y luego se estrechaba (o el modo responsive) seguía
+   ocultando el nav en móvil: el logo y el menú desaparecían y quedaba el CTA
+   clonado flotando sobre el texto. v2 del script: isDesktop() se consulta en
+   cada scroll, y al cruzar el breakpoint hacia abajo (listener de matchMedia
+   + resize) restoreNow() devuelve el nav y borra el clon al instante.
+2. El <script src="anime-datacore/nav-fx.js"> de index3d.html se perdió al
+   publicar index3d.html desde un clon DESACTUALIZADO del repo. Antes de
+   tocar un index: git pull, o editar sobre la copia del portátil de Igor.
+   El menú con el logo NO se toca: estaba bien, solo necesita este efecto.
+
 ## 11. Ficheros
 
 En esta carpeta: `datacore.js` (variante A), `datacore-3d.js` (variante B),
@@ -324,4 +341,6 @@ añadido a three-post.js) · v21 sección Sharpness en el tuner
 v23 MSAA real por muestras (0/2/4/8, default 4) vía samples en los RT del
 composer · v24 settings FINALES de Igor: msaa 4, fxaa 0, preRes 1, blur 0 —
 pixelado resuelto · v25 padding horizontal de las pills ≥ una "o" (1.5·oW) y
-centrado corregido por el letter-spacing.
+centrado corregido por el letter-spacing · v26 móvil: stage 5/6 y K 0.205
+(figura ×2 en las dos variantes) + nav-fx con breakpoint en vivo y
+restaurado en index3d.

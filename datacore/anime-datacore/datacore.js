@@ -150,7 +150,8 @@
     W = Math.round(r.width); H = Math.round(r.height || r.width * 9 / 16);
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-    A = Math.min(W * 0.17, H / 5.4);        // escala isométrica eje X
+    // v26: en móvil el stage pasa a 5/6 y la figura se dobla (como en 3D)
+    A = Math.min(W * (W < 900 ? 0.205 : 0.17), H / 5.4);   // escala isométrica eje X
     CX = W / 2;
   }
   window.addEventListener('resize', resize);

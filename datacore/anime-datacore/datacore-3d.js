@@ -725,7 +725,11 @@
     var dpr = Math.min(window.devicePixelRatio || 1, (window.DATACORE && DATACORE.quality.dprMax) || 2);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
-    A = Math.min(W * 0.17, H / 5.4) * 1.10;   // +10% (petición de Igor)
+    // v26 (Igor): en MÓVIL la figura se veía diminuta (el stage 16/9 es
+    // muy bajo en pantallas estrechas y H/5.4 mandaba). El stage pasa a
+    // 5/6 por CSS y aquí subimos el coeficiente de anchura: A ×2 real.
+    var kW = W < 900 ? 0.205 : 0.17;
+    A = Math.min(W * kW, H / 5.4) * 1.10;   // +10% (petición de Igor)
     var PPW = A * Math.SQRT2;              // px por unidad de mundo
     camera.left = -W / PPW / 2; camera.right = W / PPW / 2;
     camera.top = H / PPW / 2; camera.bottom = -H / PPW / 2;

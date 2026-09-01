@@ -151,6 +151,17 @@ cursor que la variante A, pero:
   (los tiles se tragan el fondo negro y quedan planos).
 - Banda de entorno clave para las TAPAS: stripe(y=168, alpha 0.55, x 520–1010)
   — es la que reflejan las caras superiores (el≈31°, azimut opuesto a cámara).
+- v16 (peticiones de Igor sobre v15): (1) SIN CAJA CENTRAL — el prisma bajo
+  DATA INTEGRATION se retiró (no está en su SVG); el hueco rectangular entre
+  las 4 placas queda enmarcado por sus filos interiores. (2) Placas CENTRADAS
+  con la línea de su piso: centerPlates() resta el centro del bbox del
+  conjunto en (a,b) por estado (el dibujo iba ~0.034 al norte por el hueco).
+  (3) La LÍNEA de cada capa es su SUELO transparente: va SOLIDARIA al grupo
+  (outline.position.y = 0 siempre — se retiró el contra-offset que fundía las
+  3 líneas al colapsar); en compacto casi coinciden por sepMin 0.035. Las
+  piezas nunca se adelantan ni atrasan a su línea. (4) TODAS las etiquetas
+  siguen state.label (se retiró labelAlways): desaparecen antes de que los
+  pisos se junten y aparecen al explosionar.
 - v15 (2026-09-01): CAPA INFERIOR = SVG DE IGOR
   (`../Data Core _ Celonis_files/piso_inferior_forma_poligonos.svg`): dibujó en
   vector las formas EXACTAS de las placas en los dos estados — explosionado

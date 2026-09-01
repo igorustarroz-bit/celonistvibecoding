@@ -519,6 +519,19 @@
     /* O */ [[-0.412, -0.432], [-0.338, -0.363], [-0.666, -0.034], [-0.336, 0.297], [-0.401, 0.359], [-0.523, 0.359], [-0.862, 0.02], [-0.862, -0.086], [-0.524, -0.432]],
     /* E */ [[0.518, -0.432], [0.857, -0.086], [0.857, 0.02], [0.518, 0.358], [0.397, 0.359], [0.336, 0.302], [0.671, -0.034], [0.338, -0.367], [0.407, -0.432]]
   ];
+  // v16: el conjunto de placas se CENTRA con la línea de su piso (el dibujo
+  // iba un pelín al norte por el hueco de la caja, que ya no existe)
+  function centerPlates(sets) {
+    var minA = 1e9, maxA = -1e9, minB = 1e9, maxB = -1e9;
+    sets.forEach(function (ab) { ab.forEach(function (p) {
+      minA = Math.min(minA, p[0]); maxA = Math.max(maxA, p[0]);
+      minB = Math.min(minB, p[1]); maxB = Math.max(maxB, p[1]);
+    }); });
+    var ca = (minA + maxA) / 2, cb = (minB + maxB) / 2;
+    return sets.map(function (ab) { return ab.map(function (p) { return [p[0] - ca, p[1] - cb]; }); });
+  }
+  PLATES_EXPLODED = centerPlates(PLATES_EXPLODED);
+  PLATES_COMPACT = centerPlates(PLATES_COMPACT);
   var PLATE_STEPS = 13, PLATE_PTS = 96;
   function plateLoop(ab) {
     var pts = roundedPolyShape(ab2uv(ab), 0.035).getSpacedPoints(PLATE_PTS);
@@ -575,21 +588,15 @@
       group.add(mesh);
       plates.push(mesh);
     });
-    // caja central ALINEADA A PANTALLA (rotada 45°), medidas del SVG de Igor
-    var plate = new THREE.Mesh(
-      extrude(roundedRectShape(0.325, 0.345, [0.04, 0.04, 0.04, 0.04]), PLATE_H, BEV), plateMat);
-    plate.rotation.y = Math.PI / 4;
-    plate.position.set(-0.034, 0, -0.036);
-    addRim(plate, 0.4);
-    group.add(plate);
+    // v16: SIN caja central (Igor: sobraba — no está en su SVG)
     var sprite = makeLabelSprite('DATA INTEGRATION');
     group.add(sprite);
-    return { group: group, sprite: sprite, plates: plates, plate: plate };
+    return { group: group, sprite: sprite, plates: plates };
   }
   var hexLayer = buildHexLayer();
 
   var layers = [
-    { def: hexLayer, labelAlways: true },
+    { def: hexLayer, isHex: true },
     { def: midLayer, isMorph: true },
     { def: topLayer, isTop: true }
   ];
@@ -770,24 +777,25 @@
       var bob = reduced ? 0 : Math.sin(t * 0.6) * (0.009 + 0.003 * li) * state.spread; // fase común: flotación coordinada
       def.group.position.y = (li - 1) * sep + bob;
 
-      L.outline.position.y = -(li - 1) * sep * inv;   // las 3 líneas se funden en una
+      // v16: la línea es el SUELO transparente de su piso — va SOLIDARIA a la
+      // capa (hija del grupo, sin contra-offset): las piezas nunca se le
+      // adelantan ni atrasan; en compacto casi coinciden (sepMin 0.035)
+      L.outline.position.y = 0;
 
-      if (L.labelAlways) {
+      if (L.isHex) {
         for (var pi = 0; pi < def.plates.length; pi++) {
           var pm = def.plates[pi];
           if (pm.geometry !== plateGeoPools[pi][plateIdx]) swapGeo(pm, plateGeoPools[pi][plateIdx]);
         }
-        var pxz = 1 - 0.42 * inv;        // la caja central se encoge para dejar ver el centro
-        def.plate.scale.set(pxz, 0.3 + 0.7 * state.spread, pxz);
       }
 
-      var alpha = L.labelAlways ? 1 : state.label;
+      // v16: TODAS las etiquetas desaparecen al juntarse los pisos
+      var alpha = state.label;
       def.sprite.material.opacity = alpha;
       def.sprite.visible = alpha > 0.01;
       var sw = def.sprite.userData.aspect, sh = 0.085;
       def.sprite.scale.set(sh * sw, sh, 1);
-      if (L.labelAlways) def.sprite.position.set(-0.034, PLATE_H * (0.3 + 0.7 * state.spread) + 0.06, -0.036);
-      else def.sprite.position.set(0, TILE_H + 0.06, 0);
+      def.sprite.position.set(0, (L.isHex ? HEX_H : TILE_H) + 0.06, 0);
 
       if (L.isTop) {
         for (var i = 0; i < def.tiles.length; i++) {

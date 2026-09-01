@@ -153,6 +153,14 @@ Pills con el texto en INGLÉS: fondo casi negro rgba(2,2,2,.92), borde blanco
 2.5px, Poppins 500, letter-spacing 14%, texto blanco. Una por piso, centrada
 (x=z=0), a altura piso + 0.06. Altura de la pill: 0.1275 unidades de mundo
 (+50% sobre la original 0.085); el ancho sigue el aspect del texto.
+PADDING HORIZONTAL (v25, regla de Igor): al menos la anchura de una letra
+"o" por lado. Implementado como pad = ceil(1.5·measureText('o').width) sobre
+el canvas de la pill (a fs 34 → "o" 21.7 px, pad 33 px, hueco real medido
+tinta↔borde 38 px ≈ 1.75 "o"). El 1.5 no es capricho: con menos, el texto
+empieza dentro del casquete redondeado (radio = alto/2 = 32 px) y se ve
+apretado aunque el número cumpla. Además el texto se dibuja en
+c.width/2 + letterSpacing/2: el letter-spacing añade hueco TRAS la última
+letra y descentraba la pill hacia la izquierda.
 - Las TRES siguen `state.label`: aparecen explosionado, DESAPARECEN antes de
   que los pisos se junten. Ninguna es permanente.
 - Se dibujan en OVERLAY: nítidas encima de todo, fuera del pipeline de
@@ -315,4 +323,5 @@ añadido a three-post.js) · v21 sección Sharpness en el tuner
 (fxaa 0, preRes 1) + mando blur de escena que respeta las etiquetas ·
 v23 MSAA real por muestras (0/2/4/8, default 4) vía samples en los RT del
 composer · v24 settings FINALES de Igor: msaa 4, fxaa 0, preRes 1, blur 0 —
-pixelado resuelto.
+pixelado resuelto · v25 padding horizontal de las pills ≥ una "o" (1.5·oW) y
+centrado corregido por el letter-spacing.

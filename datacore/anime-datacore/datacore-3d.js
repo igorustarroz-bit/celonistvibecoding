@@ -339,14 +339,19 @@
 
   /* ---------- etiquetas (sprites con textura canvas) ---------- */
   function makeLabelSprite(text) {
-    var fs = 34, pad = 22, padY = 15;
+    var fs = 34, padY = 15, ls = fs * 0.14;
     var c = document.createElement('canvas'), g = c.getContext('2d');
     g.font = '500 ' + fs + 'px Poppins, Arial, sans-serif';
-    var tw = g.measureText(text).width + text.length * fs * 0.14;
+    // v25 (Igor): padding horizontal >= la anchura de una letra "o" por lado.
+    // Con 1.5·"o" el texto además libera el casquete redondeado de la pill
+    // (radio = alto/2), que es lo que hacía que se viera apretado.
+    var oW = g.measureText('o').width;
+    var pad = Math.ceil(oW * 1.5);
+    var tw = g.measureText(text).width + text.length * ls;
     c.width = Math.ceil(tw + pad * 2 + 8); c.height = fs + padY * 2 + 8;
     g = c.getContext('2d');
     g.font = '500 ' + fs + 'px Poppins, Arial, sans-serif';
-    try { g.letterSpacing = (fs * 0.14) + 'px'; } catch (e) {}
+    try { g.letterSpacing = ls + 'px'; } catch (e) {}
     var w = c.width - 8, h = c.height - 8, r = h / 2, x = 4, y = 4;
     g.beginPath();
     g.moveTo(x + r, y);
@@ -356,7 +361,7 @@
     g.fillStyle = 'rgba(2,2,2,0.92)'; g.fill();
     g.lineWidth = 2.5; g.strokeStyle = 'rgba(255,255,255,0.95)'; g.stroke();
     g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(text, c.width / 2, c.height / 2 + fs * 0.06);
+    g.fillText(text, c.width / 2 + ls / 2, c.height / 2 + fs * 0.06);
     var tex = new THREE.CanvasTexture(c);
     tex.anisotropy = 4;
     var sp = new THREE.Sprite(new THREE.SpriteMaterial({

@@ -122,6 +122,11 @@
     slider('light rims', 'rim', 0, 3);
     slider('iridescence', 'iri', 0, 0.6);
 
+    section('Sharpness');
+    slider('FXAA (0/1)', 'quality.fxaa', 0, 1, 1);
+    slider('max pixel ratio', 'quality.dprMax', 0.5, 3, 0.25);
+    slider('pre-pass res', 'quality.preRes', 0.2, 1, 0.05);
+
     section('Backdrop & bloom');
     color('studio backdrop', 'backdrop');
     slider('bloom strength', 'bloom.strength', 0, 1.5);

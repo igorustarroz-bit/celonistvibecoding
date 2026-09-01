@@ -717,7 +717,7 @@
     var r = stage.getBoundingClientRect();
     if (!r.width) return;
     W = Math.round(r.width); H = Math.round(r.height || r.width * 9 / 16);
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);   // v20: nitidez retina
+    var dpr = Math.min(window.devicePixelRatio || 1, (window.DATACORE && DATACORE.quality.dprMax) || 2);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
     A = Math.min(W * 0.17, H / 5.4) * 1.10;   // +10% (petición de Igor)
@@ -730,7 +730,8 @@
       composer.setSize(W, H);
     }
     if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (W * dpr), 1 / (H * dpr));
-    backRT.setSize(Math.round(W * dpr * 0.6), Math.round(H * dpr * 0.6));
+    var pr = (window.DATACORE && DATACORE.quality.preRes) || 0.6;
+    backRT.setSize(Math.max(2, Math.round(W * dpr * pr)), Math.max(2, Math.round(H * dpr * pr)));
     var bw = Math.max(2, Math.round(W * dpr * 0.25)), bh = Math.max(2, Math.round(H * dpr * 0.25));
     blurRT1.setSize(bw, bh); blurRT2.setSize(bw, bh);
     blurMat.uniforms.uTexel.value.set(1 / bw, 1 / bh);
@@ -965,6 +966,8 @@
     pre:         0.79,    // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
     backdrop:    '#e6ecf5', // tinte del fondo de estudio (multiplica su textura)
     bloom:       { strength: 0.16, radius: 0.26, threshold: 0.35 },
+    // v21: mandos de nitidez (para las pruebas de pixelado)
+    quality:     { fxaa: 1, dprMax: 2, preRes: 0.6 },
     help: function () {
       console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
       console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');
@@ -1015,7 +1018,14 @@
       bloomPass.radius = TUNE.bloom.radius;
       bloomPass.threshold = TUNE.bloom.threshold;
     }
+    // v21: nitidez en vivo — fxaa on/off y, si cambian dpr/preRes, resize
+    if (fxaaPass) fxaaPass.enabled = !!(+TUNE.quality.fxaa);
+    if (TUNE.quality.dprMax !== _lastQ.dprMax || TUNE.quality.preRes !== _lastQ.preRes) {
+      _lastQ.dprMax = TUNE.quality.dprMax; _lastQ.preRes = TUNE.quality.preRes;
+      resize();
+    }
   }
+  var _lastQ = { dprMax: 2, preRes: 0.6 };
   console.log('%cDATACORE%c listo: edita los materiales en vivo desde la consola. Escribe DATACORE.help()',
     'font-weight:bold;color:#5cfe50', '');
 

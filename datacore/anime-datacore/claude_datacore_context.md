@@ -219,7 +219,11 @@ DESPLIEGA HACIA ARRIBA (flex column-reverse: cabecera abajo, cuerpo
 encima, max-height 70vh). Sliders y color pickers enganchados a
 window.DATACORE (aplicado cada frame), botones Copy settings (exporta el
 JSON) y Reset. Flujo de trabajo de Igor: ajusta en vivo, exporta el JSON y
-se pega como nuevos defaults en datacore-3d.js.
+se pega como nuevos defaults en datacore-3d.js. Sección Sharpness (v21):
+FXAA 0/1 (habilita/deshabilita la pasada), max pixel ratio (tope de dpr,
+0.5–3) y pre-pass res (resolución del RT del pre-pase, 0.2–1) — cambios de
+dpr/preRes disparan resize() desde applyTune; viven en DATACORE.quality
+{fxaa:1, dprMax:2, preRes:0.6}.
 
 ## 10. Menú como el site real (nav-fx.js)
 
@@ -290,4 +294,5 @@ permanentes · v17 pisos coincidentes en compacto (las 3 líneas = una,
 sepMin 0.004) · v18 etiquetas +50% · v19 sin switch A↔B, glass tuner
 abajo-dcha plegado hacia arriba y en inglés · nav-fx.js menú como el site ·
 v20 antialiasing: FXAA al final del composer + dpr hasta 2 (FXAAShader r147
-añadido a three-post.js).
+añadido a three-post.js) · v21 sección Sharpness en el tuner
+(DATACORE.quality: fxaa/dprMax/preRes en vivo).

@@ -4,3 +4,190 @@ github-token.txt
 # Sistema
 .DS_Store
 _to_delete/
+
+# Scripts de analitica/publicidad de terceros que venian en las paginas guardadas.
+# Se conservan en local como referencia, pero NO se publican en GitHub Pages.
+/celonis-home/original/134009660.js
+/celonis-home/original/206576593469197
+/celonis-home/original/449c287370a93fc8afe2a96ce70d96b3.js
+/celonis-home/original/4QFNJIQZGRFI7AG7YPCDFC
+/celonis-home/original/8094.js
+/celonis-home/original/RC6f17d466e49d4235bd7b630e812de090-source.min.js
+/celonis-home/original/analytics
+/celonis-home/original/analytics-1
+/celonis-home/original/analytics-2
+/celonis-home/original/analytics-3
+/celonis-home/original/bat.js
+/celonis-home/original/dc.js
+/celonis-home/original/dcb2ac42031d2ccaa00ff51fa0fa6f89.js
+/celonis-home/original/events.js
+/celonis-home/original/f-1.txt
+/celonis-home/original/f-2.txt
+/celonis-home/original/f-3.txt
+/celonis-home/original/f-4.txt
+/celonis-home/original/f-5.txt
+/celonis-home/original/f.txt
+/celonis-home/original/factors.js
+/celonis-home/original/fbevents.js
+/celonis-home/original/hockeystack-pardot.min.js
+/celonis-home/original/hockeystack-qualified.min.js
+/celonis-home/original/hockeystack.min.js
+/celonis-home/original/insight.beta.min.js
+/celonis-home/original/insight.min.js
+/celonis-home/original/js-1
+/celonis-home/original/messenger-99fd826a.js
+/celonis-home/original/oktrk.js
+/celonis-home/original/otBannerSdk.js
+/celonis-home/original/otSDKStub.js
+/celonis-home/original/pardot-iframe.js
+/celonis-home/original/pardot_native_forms.js
+/celonis-home/original/pd-1.js
+/celonis-home/original/pd.js
+/celonis-home/original/piUtils.js
+/celonis-home/original/pixel-1.js
+/celonis-home/original/pixel.js
+/celonis-home/original/qualified.js
+/celonis-home/original/roundtrip.js
+/celonis-home/original/saved_resource
+/celonis-home/original/v3d52b47920f24c319d37e2661827c42b1787588026925
+/celonis-home/original/ytag.js
+/datacore/Data Core _ Celonis_files/134009660.js
+/datacore/Data Core _ Celonis_files/206576593469197
+/datacore/Data Core _ Celonis_files/449c287370a93fc8afe2a96ce70d96b3.js
+/datacore/Data Core _ Celonis_files/4QFNJIQZGRFI7AG7YPCDFC
+/datacore/Data Core _ Celonis_files/8094.js
+/datacore/Data Core _ Celonis_files/RC6f17d466e49d4235bd7b630e812de090-source.min.js
+/datacore/Data Core _ Celonis_files/analytics
+/datacore/Data Core _ Celonis_files/analytics(1)
+/datacore/Data Core _ Celonis_files/analytics(2)
+/datacore/Data Core _ Celonis_files/analytics(3)
+/datacore/Data Core _ Celonis_files/bat.js
+/datacore/Data Core _ Celonis_files/dc.js
+/datacore/Data Core _ Celonis_files/dcb2ac42031d2ccaa00ff51fa0fa6f89.js
+/datacore/Data Core _ Celonis_files/events.js
+/datacore/Data Core _ Celonis_files/f(1).txt
+/datacore/Data Core _ Celonis_files/f(2).txt
+/datacore/Data Core _ Celonis_files/f(3).txt
+/datacore/Data Core _ Celonis_files/f(4).txt
+/datacore/Data Core _ Celonis_files/f(5).txt
+/datacore/Data Core _ Celonis_files/f.txt
+/datacore/Data Core _ Celonis_files/factors.js
+/datacore/Data Core _ Celonis_files/fbevents.js
+/datacore/Data Core _ Celonis_files/hockeystack-pardot.min.js
+/datacore/Data Core _ Celonis_files/hockeystack-qualified.min.js
+/datacore/Data Core _ Celonis_files/hockeystack.min.js
+/datacore/Data Core _ Celonis_files/insight.beta.min.js
+/datacore/Data Core _ Celonis_files/insight.min.js
+/datacore/Data Core _ Celonis_files/js(1)
+/datacore/Data Core _ Celonis_files/messenger-99fd826a.js
+/datacore/Data Core _ Celonis_files/oktrk.js
+/datacore/Data Core _ Celonis_files/otBannerSdk.js
+/datacore/Data Core _ Celonis_files/otSDKStub.js
+/datacore/Data Core _ Celonis_files/pardot-iframe.js
+/datacore/Data Core _ Celonis_files/pardot_native_forms.js
+/datacore/Data Core _ Celonis_files/pd(1).js
+/datacore/Data Core _ Celonis_files/pd.js
+/datacore/Data Core _ Celonis_files/piUtils.js
+/datacore/Data Core _ Celonis_files/pixel(1).js
+/datacore/Data Core _ Celonis_files/pixel.js
+/datacore/Data Core _ Celonis_files/qualified.js
+/datacore/Data Core _ Celonis_files/roundtrip.js
+/datacore/Data Core _ Celonis_files/saved_resource
+/datacore/Data Core _ Celonis_files/v3d52b47920f24c319d37e2661827c42b1787588026925
+/datacore/Data Core _ Celonis_files/ytag.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/134009660.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/206576593469197
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/4QFNJIQZGRFI7AG7YPCDFC
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/8094.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/RC1184dafeeff945dc9e3243369af2da94-source.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/RC229754008ef842f2af89e64561e8e859-source.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/RC609c58ed9c1348c8b209f524192bdd52-source.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/RCb0f510daa29548feab2fb477e4d8fc9b-source.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/a324a85a41777aa8598b3432e66ce0ac.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/analytics
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/analytics-1
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/analytics-2
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/analytics-3
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/b616613b19c81e712a5f49536707dc2e.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/bat.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/dc.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/events-1.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/events.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/factors.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/fbevents.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/hockeystack-pardot.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/hockeystack-qualified.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/hockeystack.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/identify_c4432507.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/insight.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/js-1
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/main-6739d75103d981715ddc02e825674181.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/messenger-3603b73d.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/oktrk.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/otBannerSdk.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/otSDKStub.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/pardot-iframe.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/pardot_native_forms.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/pd-1.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/pd.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/piUtils.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/pixel.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/qualified.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/roundtrip.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/rsa.min.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/runtime~main-937fbf999fe67e7dc10d51490da5de9f.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/saved_resource
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/saved_resource-1
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/saved_resource-2
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/user_attrs
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/v4.js
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/vcd15cbe7772f49c399c6a5babf22c1241717689176015
+/Concept-Video-Scroll/test1/Celonis-Banking-Solutions-_-Celonis_files/ytag.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/134009660.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/206576593469197
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/4QFNJIQZGRFI7AG7YPCDFC
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/8094.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/RC1184dafeeff945dc9e3243369af2da94-source.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/RC229754008ef842f2af89e64561e8e859-source.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/RC609c58ed9c1348c8b209f524192bdd52-source.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/RCb0f510daa29548feab2fb477e4d8fc9b-source.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/a324a85a41777aa8598b3432e66ce0ac.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/analytics
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/analytics-1
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/analytics-2
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/analytics-3
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/b616613b19c81e712a5f49536707dc2e.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/bat.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/dc.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/events-1.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/events.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/factors.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/fbevents.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/hockeystack-pardot.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/hockeystack-qualified.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/hockeystack.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/identify_c4432507.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/insight.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/js-1
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/main-6739d75103d981715ddc02e825674181.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/messenger-3603b73d.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/oktrk.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/otBannerSdk.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/otSDKStub.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/pardot-iframe.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/pardot_native_forms.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/pd-1.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/pd.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/piUtils.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/pixel.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/qualified.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/roundtrip.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/rsa.min.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/runtime~main-937fbf999fe67e7dc10d51490da5de9f.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/saved_resource
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/saved_resource-1
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/saved_resource-2
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/user_attrs
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/v4.js
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/vcd15cbe7772f49c399c6a5babf22c1241717689176015
+/Concept-Video-Scroll/test2/Celonis-Banking-Solutions-_-Celonis_files/ytag.js

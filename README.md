@@ -1,9 +1,11 @@
 # celonisvibecoding — unofficial design prototypes
 
-**This repository is not affiliated with, authorised by, or endorsed by Celonis SE.**
-It is a personal sandbox where I try out front-end / "vibecoding" ideas: replacing
-background videos with generative Canvas 2D / WebGL animations, scroll-driven
-video scrubbing, and similar experiments.
+Front-end design experiments by [Hanzo](https://hanzo.es/), a design studio, exploring
+improvements to a client website: replacing background videos with generative Canvas 2D /
+WebGL animations, scroll-driven video scrubbing, and similar ideas.
+
+**These pages are not official pages of the brand shown, and they are neither published
+nor endorsed by them.**
 
 The HTML pages under `celonis-home/`, `datacore/` and `Concept-Video-Scroll/` are
 locally saved copies of public web pages, kept only as a static visual backdrop so the
@@ -18,6 +20,6 @@ animation prototypes can be judged in context. They are **not** functional websi
   a visible "unofficial prototype" notice.
 
 All trademarks, logos and brand assets belong to their respective owners and are used
-here only as placeholder reference material for private design experimentation.
+here only as reference material for design experimentation.
 
 Index of experiments: [`index.html`](./index.html)

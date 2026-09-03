@@ -23,7 +23,7 @@
     inertiaMaxMs: 3200,      // longest glide after a flick
     inertiaMinMs: 350,       // shortest glide
     flickMinVel: 0.00008,    // rad/ms below which a release just resumes auto-spin
-    landBase: 0.55,          // land dash brightness (continents are the lit side) — subido de 0.30, elegido por Igor
+    landBase: 0.55,          // land dash brightness (continents are the lit side) — raised from 0.30, chosen by Igor
     oceanBase: 0.09,         // ocean dash brightness (dark, near-invisible dots)
     coastBoost: 0.85,        // extra brightness for land cells hugging the coastline
     lightDir: [-0.30, 0.62, 0.72],
@@ -33,20 +33,20 @@
     bloomStrength: 0.55,     // halo intensity around bright dashes (0 disables)
     bloomWidth: 3.4,         // halo width as a multiple of the dash width
     bloomFrom: 0.5,          // only dashes above this brightness fraction get a halo
-    // cursor spot — a cap ON the sphere surface: el puntero se proyecta sobre el
-    // globo y las marcas se afectan por su distancia geodésica a ese punto, así
-    // que el foco se escorza cerca del limbo. Desktop: hover. Móvil: al tocar.
+    // cursor spot — a cap ON the sphere surface: the pointer is projected onto
+    // the globe and dashes react to their geodesic distance to that point, so
+    // the spot foreshortens near the limb. Desktop: hover. Mobile: on touch.
     spotAngleDeg: 23,        // angular radius of the cap on the sphere (0 disables)
     spotStrength: 0.3,       // extra brightness at the center (gradient: 100% center → 0 edge)
     spotLandFactor: 0.1,     // how much the dark land dashes light up (vs ocean)
     spotBulge: 0.045,        // lift along the sphere normal at the cap center (fraction of R)
     spotNeedlePow: 400,      // lift profile exponent: high = needle (sharp peak, curved base); 1 = cone; ~0.5 = bubble
     spotFadeMs: 250,         // fade in/out when the cursor enters/leaves (also settles the lift back)
-    spotTouchHoldMs: 900,    // táctil: cuánto se queda el foco tras levantar el dedo (para que un tap se vea)
+    spotTouchHoldMs: 900,    // touch: how long the spot stays after lifting the finger (so a tap shows)
     // custom cursor (desktop / fine pointer only): Celonis-green cross
-    cursorColor: '#000000',  // color del trazo (prueba: negro; el verde del site es #5cfe50)
-    cursorOutline: '#ffffff',// color del borde alrededor del trazo ('' = sin borde)
-    cursorOutlinePx: 1.5,    // grosor del borde a cada lado (CSS px)
+    cursorColor: '#000000',  // stroke color (test: black; the site green is #5cfe50)
+    cursorOutline: '#ffffff',// outline color around the stroke ('' = no outline)
+    cursorOutlinePx: 1.5,    // outline thickness on each side (CSS px)
     cursorSizePx: 28,        // crosshair size (CSS px)
     cursorStrokePx: 3        // crosshair stroke width (CSS px)
   };
@@ -156,7 +156,7 @@
   var size = 0, dpr = 1;
   if (CFG.softBlurPx > 0) canvas.style.filter = 'blur(' + CFG.softBlurPx + 'px)';
 
-  // cursor flashlight state (hover en desktop, toque en móvil)
+  // cursor flashlight state (hover on desktop, touch on mobile)
   var FINE_POINTER = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   var spot = { nx: 0.5, ny: 0.5, on: 0 };
 
@@ -374,22 +374,22 @@
   canvas.style.touchAction = 'pan-y'; // horizontal drag spins the globe, vertical swipe still scrolls the page
   // Celonis-green cross cursor (desktop only; touch keeps the default)
   function crossCursorCss() {
-    // crosshair de mira: 4 brazos con hueco central (sin punto), como la referencia de Igor
+    // reticle crosshair: 4 arms with a central gap (no dot), per Igor's reference
     var sz = CFG.cursorSizePx, half = sz / 2, sw = CFG.cursorStrokePx, col = CFG.cursorColor;
     var o = CFG.cursorOutline ? CFG.cursorOutlinePx : 0;
-    var a0 = sz * 0.04 + o; // brazo: extremo exterior
-    // extremo interior: el blanco de cada brazo acaba en a1+o, y el blanco lateral
-    // de los brazos perpendiculares empieza en half-(sw/2+o); entre ambos se deja
-    // una separación igual al grosor del borde (o)
+    var a0 = sz * 0.04 + o; // arm: outer end
+    // inner end: each arm's white ends at a1+o, and the side white of the
+    // perpendicular arms starts at half-(sw/2+o); the two are separated by
+    // a gap equal to the outline thickness (o)
     var a1 = half - sw / 2 - 3 * o;
-    function arms(g) { // los 4 brazos, alargados g en cada punta (g=o para el borde, 0 para el trazo)
+    function arms(g) { // the 4 arms, extended by g at each tip (g=o for outline, 0 for stroke)
       return 'M' + half + ' ' + (a0 - g) + 'V' + (a1 + g) +
         ' M' + half + ' ' + (sz - a0 + g) + 'V' + (sz - a1 - g) +
         ' M' + (a0 - g) + ' ' + half + 'H' + (a1 + g) +
         ' M' + (sz - a0 + g) + ' ' + half + 'H' + (sz - a1 - g);
     }
     var d = arms(0);
-    // borde: el mismo path debajo, más grueso y con las puntas alargadas
+    // outline: the same path underneath, thicker and with extended tips
     var outline = CFG.cursorOutline
       ? '<path d="' + arms(o) + '" stroke="' + CFG.cursorOutline + '" stroke-width="' + (sw + 2 * o) + '"/>'
       : '';
@@ -456,7 +456,7 @@
   canvas.addEventListener('pointercancel', function (e) { endDrag(e, false); });
   window.addEventListener('pointerup', function (e) { endDrag(e, true); });
 
-  // ---------- cursor flashlight: hover en desktop, toque en móvil ----------
+  // ---------- cursor flashlight: hover on desktop, touch on mobile ----------
   var spotFade = null, spotTarget = 0, spotHold = null;
   function fadeSpot(to, delayMs) {
     if (spotHold) { clearTimeout(spotHold); spotHold = null; }
@@ -477,7 +477,7 @@
     }
   }
 
-  // desktop: sigue al ratón mientras esté sobre el canvas
+  // desktop: follows the mouse while it is over the canvas
   if (FINE_POINTER) {
     canvas.addEventListener('pointermove', function (e) {
       if (e.pointerType !== 'mouse') return;
@@ -488,9 +488,9 @@
     });
   }
 
-  // táctil (móvil/tablet, también en portátiles con pantalla táctil): el foco
-  // aparece donde se toca, sigue al dedo mientras se arrastra y se queda
-  // spotTouchHoldMs al levantarlo, para que un tap suelto también se vea.
+  // touch (mobile/tablet, and touchscreen laptops too): the spot appears
+  // where you touch, follows the finger while dragging and stays for
+  // spotTouchHoldMs after lifting, so a plain tap is visible too.
   canvas.addEventListener('pointerdown', function (e) {
     if (e.pointerType === 'mouse') return;
     moveSpot(e); fadeSpot(1, 0);

@@ -1,12 +1,12 @@
-# Credenciales — NUNCA subir
+# Credentials — NEVER commit
 github-token.txt
 
-# Sistema
+# System
 .DS_Store
 _to_delete/
 
-# Scripts de analitica/publicidad de terceros que venian en las paginas guardadas.
-# Se conservan en local como referencia, pero NO se publican en GitHub Pages.
+# Third-party analytics/advertising scripts that came with the saved pages.
+# Kept locally as reference, but NOT published to GitHub Pages.
 /experiments/3d-globe/original/134009660.js
 /experiments/3d-globe/original/206576593469197
 /experiments/3d-globe/original/449c287370a93fc8afe2a96ce70d96b3.js

@@ -1,9 +1,9 @@
 /* =========================================================================
-   Experimento 3 — variante B: Data Core con polígonos 3D reales
+   Experiment 3 — variant B: Data Core with real 3D polygons
    Three.js r147 (UMD) + anime.js v4.
-   v2: materiales calibrados contra el vídeo (cristal ahumado casi negro con
-   biseles que capturan bandas de luz), volteos individuales de tiles que
-   revelan otra forma, y crecimiento 4×4→6×6 de la capa superior al explotar.
+   v2: materials calibrated against the video (near-black smoked glass with
+   bevels that catch light bands), individual tile flips that reveal
+   another shape, and 4×4→6×6 growth of the top layer on explode.
    ========================================================================= */
 (function () {
   'use strict';
@@ -15,7 +15,7 @@
   var stage = document.getElementById('datacore-stage') || canvas.parentElement;
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ---------- RNG determinista (mismo layout que la variante A) ---------- */
+  /* ---------- deterministic RNG (same layout as variant A) ---------- */
   function mulberry32(a) {
     return function () {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -26,7 +26,7 @@
   }
   var rnd = mulberry32(20260831);
 
-  /* ---------- renderer / escena / cámara ---------- */
+  /* ---------- renderer / scene / camera ---------- */
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   renderer.setClearColor(0x000000, 0);
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -34,39 +34,39 @@
   renderer.toneMappingExposure = 1.0;
 
   var scene = new THREE.Scene();
-  var root = new THREE.Group();          // parallax: rotamos este grupo
+  var root = new THREE.Group();          // parallax: we rotate this group
   scene.add(root);
 
-  // cámara ortográfica isométrica (azimut 45°, elevación ~31° → ratio 2:1 aprox)
+  // isometric orthographic camera (azimuth 45°, elevation ~31° → ratio ~2:1)
   var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
   var EL = 31.3 * Math.PI / 180, AZ = Math.PI / 4, R = 20;
   camera.position.set(R * Math.cos(EL) * Math.cos(AZ), R * Math.sin(EL), R * Math.cos(EL) * Math.sin(AZ));
   camera.lookAt(0, 0, 0);
 
-  /* ---------- entorno: softboxes en banda → reflejos alargados en biseles ---------- */
+  /* ---------- environment: banded softboxes → elongated bevel reflections ---------- */
   function makeEnvTexture() {
     var c = document.createElement('canvas'); c.width = 1024; c.height = 512;
     var g = c.getContext('2d');
     var grad = g.createLinearGradient(0, 0, 0, 512);
     grad.addColorStop(0, '#191b1f'); grad.addColorStop(0.55, '#0a0b0d'); grad.addColorStop(1, '#020203');
     g.fillStyle = grad; g.fillRect(0, 0, 1024, 512);
-    function stripe(y, h, a, x0, x1) { // banda horizontal difusa (softbox)
+    function stripe(y, h, a, x0, x1) { // diffuse horizontal band (softbox)
       var s = g.createLinearGradient(0, y - h, 0, y + h);
       s.addColorStop(0, 'rgba(255,255,255,0)');
       s.addColorStop(0.5, 'rgba(255,255,255,' + a + ')');
       s.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = s; g.fillRect(x0 || 0, y - h, (x1 || 1024) - (x0 || 0), h * 2);
     }
-    stripe(78, 34, 0.95);              // softbox principal alto (rim de biseles)
-    stripe(78, 34, 0.9, 96, 480);      // refuerzo del lado clave
-    stripe(168, 30, 0.55, 520, 1010);  // banda que reflejan las TAPAS (el≈31°, az opuesto a camara)
+    stripe(78, 34, 0.95);              // main high softbox (bevel rim)
+    stripe(78, 34, 0.9, 96, 480);      // key-side reinforcement
+    stripe(168, 30, 0.55, 520, 1010);  // band reflected by the TOPS (el≈31°, az opposite camera)
     function blob(x, y, r, a) {
       var rg = g.createRadialGradient(x, y, 0, x, y, r);
       rg.addColorStop(0, 'rgba(255,255,255,' + a + ')');
       rg.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
     }
-    blob(240, 66, 110, 1.0);           // punto caliente en el softbox
+    blob(240, 66, 110, 1.0);           // hot spot on the softbox
     var tex = new THREE.CanvasTexture(c);
     tex.mapping = THREE.EquirectangularReflectionMapping;
     return tex;
@@ -78,19 +78,19 @@
   key.position.set(-3, 6, 2);
   scene.add(key);
   scene.add(new THREE.AmbientLight(0xffffff, 0.05));
-  // punto de luz bajo la pila: ilumina biseles y caras inferiores desde abajo
+  // point light under the stack: lights bevels and bottom faces from below
   var underLight = new THREE.PointLight(0xf4f7ff, 1.1, 9, 1.6);
   underLight.position.set(0, -2.4, 0);
   scene.add(underLight);
 
 
-  /* ---------- material de cristal al estilo Codrops "Xylophone" ----------
-     El cristal NO refracta la escena real (fondo negro = nada que refractar):
-     lee un BACKDROP claro y pre-difuminado con refracción en espacio de
-     pantalla (uv + normal.xy·fuerza), Fresnel hacia un cielo de 3 paradas y
-     una paleta coseno como iridiscencia de película fina. Todo en shader. */
+  /* ---------- Codrops "Xylophone"-style glass material ----------
+     Glass does NOT refract the real scene (black background = nothing there):
+     it reads a light, pre-blurred BACKDROP with screen-space refraction
+     (uv + normal.xy·strength), Fresnel toward a 3-stop sky and a cosine
+     palette as thin-film iridescence. All in the shader. */
   function makeBackdropTexture() {
-    // "fondo de estudio" lechoso: gradiente + blobs suaves (nace ya difuminado)
+    // milky "studio backdrop": gradient + soft blobs (born already blurred)
     var c = document.createElement('canvas'); c.width = 512; c.height = 512;
     var g = c.getContext('2d');
     var grad = g.createLinearGradient(0, 0, 0, 512);
@@ -103,31 +103,31 @@
       rg.addColorStop(1, 'rgba(' + col + ',0)');
       g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
     }
-    blob(170, 150, 170, '245,248,252', 0.95);  // foco principal (contraste)
-    blob(410, 330, 150, '225,230,236', 0.35);  // relleno
-    blob(256, 470, 260, '10,11,13', 0.8);      // pie oscuro
+    blob(170, 150, 170, '245,248,252', 0.95);  // main highlight (contrast)
+    blob(410, 330, 150, '225,230,236', 0.35);  // fill
+    blob(256, 470, 260, '10,11,13', 0.8);      // dark base
     var tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
     return tex;
   }
   var backdropTex = makeBackdropTexture();
 
-  // PRE-PASE (Xylophone completo): la escena se renderiza a una textura y el
-  // cristal refracta ESA textura => se ve de verdad a través de las piezas.
+  // PRE-PASS (full Xylophone): the scene is rendered to a texture and the
+  // glass refracts THAT texture => you really see through the pieces.
   var backRT = new THREE.WebGLRenderTarget(2, 2, {
     minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter
   });
-  // fondo de estudio, visible solo dentro del pre-pase (detrás de la pila)
+  // studio backdrop, visible only inside the pre-pass (behind the stack)
   var bgQuad = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
     new THREE.MeshBasicMaterial({ map: backdropTex, depthWrite: false })
   );
   bgQuad.visible = false;
   scene.add(bgQuad);
-  var glassMeshes = [];   // meshes de cristal: en el pre-pase usan su material simple
+  var glassMeshes = [];   // glass meshes: they use their simple material in the pre-pass
 
-  // BLUR del backdrop (frost, como el GaussianBlurPass del Xylophone):
-  // dos pasadas separables a cuarto de resolución
+  // backdrop BLUR (frost, like Xylophone's GaussianBlurPass):
+  // two separable passes at quarter resolution
   var blurRT1 = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
   var blurRT2 = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
   var blurScene = new THREE.Scene();
@@ -174,7 +174,7 @@
     '  vWN = normalize(mat3(modelMatrix) * normal);',
     '  vec4 mv = modelViewMatrix * vec4(position, 1.0);',
     '  gl_Position = projectionMatrix * mv;',
-    '  vScreenUv = gl_Position.xy / gl_Position.w * 0.5 + 0.5;', // orto: w=1
+    '  vScreenUv = gl_Position.xy / gl_Position.w * 0.5 + 0.5;', // ortho: w=1
     '}'
   ].join('\n');
 
@@ -182,10 +182,10 @@
     'uniform sampler2D uBackdrop;',
     'uniform sampler2D uBackdropBlur;',
     'uniform float uFrost;',
-    'uniform vec2 uCenter;',    // centro de ESTA pieza en uv de pantalla (por frame)
-    'uniform vec2 uOffset;',    // desvío propio de la pieza (por seed)
-    'uniform float uMag;',      // lupa: <1 magnifica lo visto a través
-    'uniform float uShift;',    // escala del desvío por pieza
+    'uniform vec2 uCenter;',    // center of THIS piece in screen uv (per frame)
+    'uniform vec2 uOffset;',    // piece's own offset (per seed)
+    'uniform float uMag;',      // magnifier: <1 magnifies what shows through
+    'uniform float uShift;',    // per-piece offset scale
     'uniform vec3 uBody;',
     'uniform float uTransmission;',
     'uniform float uRefract;',
@@ -204,34 +204,34 @@
     'void main() {',
     '  vec3 N = normalize(vN);',
     '  float up = clamp(normalize(vWN).y, 0.0, 1.0);',
-    // refracción en espacio de pantalla (Xylophone): desplaza la lectura por la normal
-    // lente POR PIEZA: magnifica alrededor del centro de la pieza y desvía
-    // con su offset propio => cada cristal refracta distinto, no una lámina única
+    // screen-space refraction (Xylophone): offsets the lookup along the normal
+    // PER-PIECE lens: magnifies around the piece center and offsets it
+    // with its own offset => each glass refracts differently, not one sheet
     '  vec2 rel = vScreenUv - uCenter;',
     '  vec2 buv = uCenter + rel * uMag + N.xy * uRefract + uOffset * uShift;',
     '  vec3 trans = mix(texture2D(uBackdrop, buv).rgb, texture2D(uBackdropBlur, buv).rgb, uFrost);',
-    // zonas de la pieza: tapa plana (topness=1) / bisel y laterales (0)
+    // piece zones: flat top (topness=1) / bevel and sides (0)
     '  float topness = smoothstep(0.55, 0.95, up);',
-    // laterales/bisel: cristal lechoso (mezcla con el backdrop)
+    // sides/bevel: milky glass (blended with the backdrop)
     '  vec3 milky = mix(uBody, trans, uTransmission);',
-    // TAPA: transparencia real — se ve lo de detrás, apenas teñido
+    // TOP: real transparency — what is behind shows, barely tinted
     '  vec3 seeThru = trans * uTopDarken + uBody * 0.12;',
     '  vec3 col = mix(milky, seeThru, topness * uTopClear);',
-    // Fresnel hacia "cielo" (atenuado en la tapa para que quede limpia)
+    // Fresnel toward "sky" (attenuated on the top to keep it clean)
     '  float ndv = abs(N.z);',
     '  float fres = pow(1.0 - ndv, 3.0);',
     '  vec3 sky = mix(uSkyHz, uSkyTop, clamp(N.y * 0.5 + 0.5, 0.0, 1.0));',
     '  col = mix(col, sky, fres * uFres * (1.0 - 0.7 * topness * uTopClear));',
-    // blanco del cristal SOLO en el anillo del bisel y arranque de laterales
+    // glass white ONLY on the bevel ring and the start of the sides
     '  float bevel = smoothstep(0.02, 0.45, up) * (1.0 - topness);',
     '  col += sky * bevel * uEdgeWhite;',
-    // iridiscencia: paleta coseno con fase dependiente de la normal (grosor falso)
+    // iridescence: cosine palette, normal-dependent phase (fake thickness)
     '  float ph = N.x * 1.7 + N.y * 2.3 + N.z * 1.1 + uSeed * 6.2831;',
     '  vec3 iri = 0.5 + 0.5 * cos(6.2831 * (vec3(0.0, 0.33, 0.67)) + ph * 3.0);',
     '  col += iri * fres * uIri;',
-    '  col *= uTint;',                              // tinte global (azulado por defecto)
-    // el composer trabaja en lineal y la pasada gamma final hace linear->sRGB:
-    // autoría en sRGB, conversión aquí
+    '  col *= uTint;',                              // global tint (bluish by default)
+    // the composer works in linear and the final gamma pass does linear->sRGB:
+    // authored in sRGB, converted here
     '  gl_FragColor = vec4(pow(col, vec3(2.2)), 1.0);',
     '}'
   ].join('\n');
@@ -269,7 +269,7 @@
     glassMats.push(m);
     m.userData.baseRefract = 0.13 + 0.06 * seed;
     m.userData.baseBody = new THREE.Color(tint * 0.95, tint * 0.98, tint * 1.05);
-    // gemelo simple para el pre-pase (lo que se ve A TRAVÉS del cristal)
+    // simple twin for the pre-pass (what is seen THROUGH the glass)
     m.userData.preMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(tint * 0.55, tint * 0.58, tint * 0.65)
     });
@@ -282,7 +282,7 @@
     clearcoatRoughness: 0.3, envMapIntensity: 0.4
   });
 
-  /* ---------- shapes 2D ---------- */
+  /* ---------- 2D shapes ---------- */
   function roundedRectShape(hw, hh, radii) {
     var s = new THREE.Shape();
     var tl = Math.min(radii[0], hw, hh), tr = Math.min(radii[1], hw, hh);
@@ -305,7 +305,7 @@
     return s;
   }
   var TILE_H = 0.04, HEX_H = 0.05, PLATE_H = 0.11, BEV = 0.018;
-  // filos de luz: aristas blancas por geometría (el rasgo clave del vídeo)
+  // light edges: white edges from geometry (the key trait of the video)
   var edgeCache = new Map();
   function edgesFor(geo) {
     if (!edgeCache.has(geo)) edgeCache.set(geo, new THREE.EdgesGeometry(geo, 20));
@@ -327,8 +327,8 @@
       depth: depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel,
       bevelSegments: 3, curveSegments: 10
     });
-    geo.rotateX(-Math.PI / 2); // plano XZ, altura en Y
-    if (center) {              // centra en Y para poder voltear sobre su eje
+    geo.rotateX(-Math.PI / 2); // XZ plane, height on Y
+    if (center) {              // center on Y so it can flip about its axis
       geo.computeBoundingBox();
       var cy = (geo.boundingBox.max.y + geo.boundingBox.min.y) / 2;
       geo.translate(0, -cy, 0);
@@ -337,14 +337,14 @@
     return geo;
   }
 
-  /* ---------- etiquetas (sprites con textura canvas) ---------- */
+  /* ---------- labels (sprites with canvas texture) ---------- */
   function makeLabelSprite(text) {
     var fs = 34, padY = 15, ls = fs * 0.14;
     var c = document.createElement('canvas'), g = c.getContext('2d');
     g.font = '500 ' + fs + 'px Poppins, Arial, sans-serif';
-    // v25 (Igor): padding horizontal >= la anchura de una letra "o" por lado.
-    // Con 1.5·"o" el texto además libera el casquete redondeado de la pill
-    // (radio = alto/2), que es lo que hacía que se viera apretado.
+    // v25 (Igor): horizontal padding >= the width of one "o" per side.
+    // With 1.5·"o" the text also clears the pill's rounded cap
+    // (radius = height/2), which is what made it look cramped.
     var oW = g.measureText('o').width;
     var pad = Math.ceil(oW * 1.5);
     var tw = g.measureText(text).width + text.length * ls;
@@ -368,13 +368,13 @@
       map: tex, transparent: true, depthTest: false, toneMapped: false
     }));
     sp.renderOrder = 10;
-    sp.layers.set(1);   // capa de overlay: se renderiza aparte, sin efectos
+    sp.layers.set(1);   // overlay layer: rendered separately, without effects
     sp.userData.aspect = c.width / c.height;
     return sp;
   }
 
   function makeOutline(extent) {
-    // cinta plana (~2px) en vez de Line de 1px (WebGL ignora linewidth)
+    // flat ribbon (~2px) instead of a 1px Line (WebGL ignores linewidth)
     var pts = roundedRectShape(extent, extent, [0.10, 0.10, 0.10, 0.10]).getPoints(64);
     var w = 0.012, n = pts.length, pos = [], idx = [];
     for (var i = 0; i <= n; i++) {
@@ -397,7 +397,7 @@
     }));
   }
 
-  /* ---------- capa superior: 6×6, formas mixtas + pool para volteos ---------- */
+  /* ---------- top layer: 6×6, mixed shapes + pool for flips ---------- */
   var TOP_N = 6, TOP_EXT = 0.8, TOP_GAP = 0.10;
   var topCell = TOP_EXT * 2 / TOP_N, topHalf = topCell / 2 * (1 - TOP_GAP);
   var SHAPES = {
@@ -407,7 +407,7 @@
     circ:  [1, 1, 1, 1]
   };
   var SHAPE_KEYS = ['sq', 'leafA', 'leafB', 'circ'];
-  // forma que se VE al estar girada 180° sobre X o Z (espejo del shape)
+  // shape SEEN when rotated 180° about X or Z (mirror of the shape)
   var MIRROR = { sq: 'sq', circ: 'circ', leafA: 'leafB', leafB: 'leafA' };
   var topGeos = {};
   SHAPE_KEYS.forEach(function (k) {
@@ -432,10 +432,10 @@
         mesh.position.set(u, cy, v);
         addRim(mesh, 0.20 + 0.28 * seed);
         group.add(mesh);
-        // (hoverInfo se asigna tras crear el objeto tile, abajo)
+        // (hoverInfo is assigned after creating the tile object, below)
         var tileObj = {
           mesh: mesh, u: u, v: v, seed: seed, key: keyName, cy: cy,
-          d: Math.max(Math.abs(u), Math.abs(v)) / (TOP_EXT - topCell / 2), // anillo CUADRADO (Chebyshev): 0.2/0.6/1.0
+          d: Math.max(Math.abs(u), Math.abs(v)) / (TOP_EXT - topCell / 2), // SQUARE ring (Chebyshev): 0.2/0.6/1.0
           jit: rnd() * 0.08, flip: null, ap: 1, cool: 0
         };
         mesh.userData.hoverInfo = { kind: 'top', tile: tileObj };
@@ -448,7 +448,7 @@
   }
   var topLayer = buildTopLayer();
 
-  /* ---------- capa media: 10×10 con morph cuadrado→círculo ---------- */
+  /* ---------- mid layer: 10×10 with square→circle morph ---------- */
   var MORPH_STEPS = 13, morphGeos = [];
   var MID_N = 10, MID_EXT = 0.8, midCell = MID_EXT * 2 / MID_N, midHalf = midCell / 2 * (1 - 0.18);
   (function () {
@@ -480,10 +480,10 @@
   }
   var midLayer = buildMidLayer();
 
-  /* ---------- capa inferior: 4 placas fieles al still ----------
-     Medidas tomadas del still (coords de pantalla normalizadas a=-1..1, b=-1..1
-     sobre el diamante): N y S son CHEVRONES que siguen los bordes del diamante
-     (la N con muesca en V en su vértice); E y O son hexágonos alargados. */
+  /* ---------- bottom layer: 4 plates faithful to the still ----------
+     Measured from the still (screen coords normalized a=-1..1, b=-1..1 over
+     the diamond): N and S are CHEVRONS following the diamond edges
+     (N with a V notch at its vertex); E and W are elongated hexagons. */
   function roundedPolyShape(pts, r) {
     var s = new THREE.Shape(), n = pts.length;
     function lerp(p, q, t) { return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]; }
@@ -499,7 +499,7 @@
     s.closePath();
     return s;
   }
-  // (a,b) pantalla-normalizada -> (u,v) plano
+  // (a,b) screen-normalized -> (u,v) plane
   var AB = 1.471, SQH = Math.SQRT1_2;
   function ab2uv(pts) {
     return pts.map(function (p) {
@@ -507,25 +507,25 @@
       return [(A2 + B2) * SQH, (B2 - A2) * SQH];
     });
   }
-  /* v15: formas EXACTAS del SVG de Igor (piso_inferior_forma_poligonos.svg).
-     Dos estados por placa — EXPLOSIONADO (izq: 4 escudos alrededor de la caja)
-     y COMPACTO (dcha: anillo-diamante con muescas en V) — con MORPH geométrico
-     ligado a spread: remuestreo de ambos contornos a puntos equiespaciados,
-     alineado por mínima distancia e interpolación lineal por vértice. */
+  /* v15: EXACT shapes from Igor's SVG (piso_inferior_forma_poligonos.svg).
+     Two states per plate — EXPLODED (left: 4 shields around the box) and
+     COMPACT (right: diamond ring with V notches) — with geometric MORPH
+     tied to spread: resample both outlines to equispaced points,
+     aligned by minimum distance and per-vertex linear interpolation. */
   var PLATES_EXPLODED = [
     /* S */ [[0.222, 0.201], [-0.22, 0.201], [-0.385, 0.355], [-0.385, 0.459], [-0.059, 0.778], [0.056, 0.778], [0.375, 0.459], [0.375, 0.355]],
     /* N */ [[0.222, -0.268], [-0.22, -0.268], [-0.385, -0.422], [-0.385, -0.526], [-0.059, -0.845], [0.056, -0.845], [0.375, -0.526], [0.375, -0.422]],
-    /* O */ [[-0.22, -0.245], [-0.22, 0.184], [-0.385, 0.339], [-0.5, 0.339], [-0.824, 0.017], [-0.824, -0.08], [-0.5, -0.409], [-0.395, -0.409]],
+    /* W */ [[-0.22, -0.245], [-0.22, 0.184], [-0.385, 0.339], [-0.5, 0.339], [-0.824, 0.017], [-0.824, -0.08], [-0.5, -0.409], [-0.395, -0.409]],
     /* E */ [[0.225, -0.245], [0.225, 0.184], [0.39, 0.339], [0.505, 0.339], [0.829, 0.017], [0.829, -0.08], [0.505, -0.409], [0.4, -0.409]]
   ];
   var PLATES_COMPACT = [
     /* S */ [[0.394, 0.371], [0.395, 0.484], [0.065, 0.814], [-0.056, 0.815], [-0.393, 0.484], [-0.393, 0.372], [-0.325, 0.308], [0.002, 0.637], [0.331, 0.307]],
     /* N */ [[0.058, -0.882], [0.395, -0.551], [0.395, -0.439], [0.329, -0.377], [0.002, -0.704], [-0.328, -0.373], [-0.393, -0.439], [-0.393, -0.551], [-0.063, -0.882]],
-    /* O */ [[-0.412, -0.432], [-0.338, -0.363], [-0.666, -0.034], [-0.336, 0.297], [-0.401, 0.359], [-0.523, 0.359], [-0.862, 0.02], [-0.862, -0.086], [-0.524, -0.432]],
+    /* W */ [[-0.412, -0.432], [-0.338, -0.363], [-0.666, -0.034], [-0.336, 0.297], [-0.401, 0.359], [-0.523, 0.359], [-0.862, 0.02], [-0.862, -0.086], [-0.524, -0.432]],
     /* E */ [[0.518, -0.432], [0.857, -0.086], [0.857, 0.02], [0.518, 0.358], [0.397, 0.359], [0.336, 0.302], [0.671, -0.034], [0.338, -0.367], [0.407, -0.432]]
   ];
-  // v16: el conjunto de placas se CENTRA con la línea de su piso (el dibujo
-  // iba un pelín al norte por el hueco de la caja, que ya no existe)
+  // v16: the plate set is CENTERED on its floor line (the drawing sat a
+  // touch north because of the box gap, which no longer exists)
   function centerPlates(sets) {
     var minA = 1e9, maxA = -1e9, minB = 1e9, maxB = -1e9;
     sets.forEach(function (ab) { ab.forEach(function (p) {
@@ -540,8 +540,8 @@
   var PLATE_STEPS = 13, PLATE_PTS = 96;
   function plateLoop(ab) {
     var pts = roundedPolyShape(ab2uv(ab), 0.035).getSpacedPoints(PLATE_PTS);
-    if (pts.length > PLATE_PTS) pts.pop();      // el último repite el primero
-    var area = 0;                               // winding uniforme
+    if (pts.length > PLATE_PTS) pts.pop();      // the last one repeats the first
+    var area = 0;                               // uniform winding
     for (var i = 0; i < pts.length; i++) {
       var p = pts[i], q = pts[(i + 1) % pts.length];
       area += p.x * q.y - q.x * p.y;
@@ -549,7 +549,7 @@
     if (area < 0) pts.reverse();
     return pts;
   }
-  function alignLoop(ref, pts) {   // desfase cíclico de mínima distancia al ref
+  function alignLoop(ref, pts) {   // cyclic shift of minimum distance to ref
     var n = ref.length, best = 0, bestD = Infinity;
     for (var k = 0; k < n; k++) {
       var d = 0;
@@ -568,7 +568,7 @@
     var e = plateLoop(abE), c = alignLoop(e, plateLoop(PLATES_COMPACT[i]));
     var pool = [];
     for (var s = 0; s < PLATE_STEPS; s++) {
-      var t = s / (PLATE_STEPS - 1);            // 0 = explosionado … 1 = compacto
+      var t = s / (PLATE_STEPS - 1);            // 0 = exploded … 1 = compact
       var sh = new THREE.Shape();
       for (var j = 0; j < e.length; j++) {
         var x = e[j].x + (c[j].x - e[j].x) * t, y = e[j].y + (c[j].y - e[j].y) * t;
@@ -585,7 +585,7 @@
     PLATES_EXPLODED.forEach(function (ab, i) {
       var ca = 0;
       for (var k = 0; k < ab.length; k++) ca += ab[k][0];
-      ca /= ab.length;                          // gradiente izq→dcha como los tiles
+      ca /= ab.length;                          // left→right gradient like the tiles
       var mesh = registerGlass(new THREE.Mesh(plateGeoPools[i][0], glassMat(0.30 + i * 0.08, 0.5 + ca * 0.31)));
       addRim(mesh, 0.32);
       mesh.userData.hoverInfo = { kind: 'hex' };
@@ -593,7 +593,7 @@
       group.add(mesh);
       plates.push(mesh);
     });
-    // v16: SIN caja central (Igor: sobraba — no está en su SVG)
+    // v16: NO central box (Igor: redundant — not in his SVG)
     var sprite = makeLabelSprite('DATA INTEGRATION');
     group.add(sprite);
     return { group: group, sprite: sprite, plates: plates };
@@ -611,7 +611,7 @@
     L.def.group.add(L.outline);
   });
 
-  /* ---------- estado + timeline (mismos tiempos que la variante A) ---------- */
+  /* ---------- state + timeline (same timings as variant A) ---------- */
   var state = { spread: reduced ? 1 : 0, label: reduced ? 1 : 0, wave: 0 };
   var mouse = { x: 0, y: 0, cx: 0, cy: 0 };
 
@@ -629,7 +629,7 @@
     an.animate(state, { wave: 1, duration: 9000, loop: true, ease: 'linear' });
   }
 
-  /* ---------- volteos de tiles (capa superior), como en el vídeo ---------- */
+  /* ---------- tile flips (top layer), as in the video ---------- */
   function startFlip(tile) {
     if (reduced || tile.flip || !tile.mesh.visible || tile.ap < 0.99) return false;
     var an = window.anime;
@@ -651,7 +651,7 @@
     });
     return true;
   }
-  function spawnFlip() {   // ambiente: volteos esporádicos
+  function spawnFlip() {   // ambient: sporadic flips
     if (reduced || state.spread < 0.75) return;
     var active = 0, pool = [];
     for (var i = 0; i < topLayer.tiles.length; i++) {
@@ -664,7 +664,7 @@
   }
   if (!reduced) setInterval(spawnFlip, 900);
 
-  /* ---------- interacción hover: volteo / morph / elevación ---------- */
+  /* ---------- hover interaction: flip / morph / lift ---------- */
   var raycaster = new THREE.Raycaster();
   var _ndc = new THREE.Vector2();
   var _lastRay = 0;
@@ -725,12 +725,12 @@
     var dpr = Math.min(window.devicePixelRatio || 1, (window.DATACORE && DATACORE.quality.dprMax) || 2);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
-    // v26 (Igor): en MÓVIL la figura se veía diminuta (el stage 16/9 es
-    // muy bajo en pantallas estrechas y H/5.4 mandaba). El stage pasa a
-    // 5/6 por CSS y aquí subimos el coeficiente de anchura: A ×2 real.
+    // v26 (Igor): on MOBILE the figure looked tiny (the 16/9 stage is
+    // very short on narrow screens and H/5.4 won). The stage moves to
+    // 5/6 via CSS and here we raise the width coefficient: A ×2 real.
     var kW = W < 900 ? 0.205 : 0.17;
-    A = Math.min(W * kW, H / 5.4) * 1.10;   // +10% (petición de Igor)
-    var PPW = A * Math.SQRT2;              // px por unidad de mundo
+    A = Math.min(W * kW, H / 5.4) * 1.10;   // +10% (Igor's request)
+    var PPW = A * Math.SQRT2;              // px per world unit
     camera.left = -W / PPW / 2; camera.right = W / PPW / 2;
     camera.top = H / PPW / 2; camera.bottom = -H / PPW / 2;
     camera.updateProjectionMatrix();
@@ -750,22 +750,22 @@
   }
   window.addEventListener('resize', resize);
 
-  /* ---------- postprocesado: bloom sutil para el glare de los filos ---------- */
+  /* ---------- postprocessing: subtle bloom for the edge glare ---------- */
   var composer = null, bloomPass = null, fxaaPass = null, blurPasses = null;
   if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
-    renderer.setClearColor(0x000000, 1);   // la sección es negra: fondo opaco para el composer
+    renderer.setClearColor(0x000000, 1);   // the section is black: opaque background for the composer
     composer = new THREE.EffectComposer(renderer);
     composer.addPass(new THREE.RenderPass(scene, camera));
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.38, 0.5, 0.55);
     composer.addPass(bloomPass);
-    // el composer trabaja en lineal: conversión sRGB al final
+    // the composer works in linear: sRGB conversion at the end
     if (THREE.ShaderPass && THREE.GammaCorrectionShader) {
       composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
     }
-    // v22: BLUR FINAL opcional (mando DATACORE.blur). Va al final del
-    // composer, así que difumina TODA la escena pero NO las etiquetas
-    // (el overlay se dibuja después, fuera del composer). Gaussiano
-    // separable de 9 taps en dos pasadas H/V; desactivado con blur=0.
+    // v22: optional FINAL BLUR (DATACORE.blur knob). It sits at the end of
+    // the composer, so it blurs the WHOLE scene but NOT the labels
+    // (the overlay is drawn later, outside the composer). Separable
+    // 9-tap Gaussian in two H/V passes; disabled with blur=0.
     var DirBlurShader = {
       uniforms: {
         tDiffuse: { value: null },
@@ -790,19 +790,19 @@
         '}'
       ].join('\n')
     };
-    // v20: ANTIALIASING — los render targets del composer no tienen MSAA
-    // (el antialias:true del renderer solo aplica al canvas directo), así
-    // que sin esto los cantos salen pixelados. FXAA tras la pasada gamma
-    // (espera entrada sRGB); resolution se actualiza en resize().
+    // v20: ANTIALIASING — the composer render targets have no MSAA
+    // (the renderer's antialias:true applies only to the direct canvas), so
+    // without this the edges come out pixelated. FXAA after the gamma pass
+    // (expects sRGB input); resolution is updated in resize().
     if (THREE.ShaderPass && THREE.FXAAShader) {
       fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
       composer.addPass(fxaaPass);
     }
-    // v23: MSAA real a través del composer (WebGL2): sus render targets
-    // aceptan 'samples'; al cambiarlas hay que dispose para reasignar los FBO
+    // v23: real MSAA through the composer (WebGL2): its render targets
+    // accept 'samples'; on change you must dispose to reallocate the FBOs
     if (renderer.capabilities.isWebGL2) setMsaa(4);
     if (THREE.ShaderPass) {
-      // dos iteraciones H/V: blurs pequeños repetidos ≈ gaussiano sin bandas
+      // two H/V iterations: repeated small blurs ≈ Gaussian without banding
       blurPasses = [];
       for (var bi = 0; bi < 4; bi++) {
         var bp = new THREE.ShaderPass(DirBlurShader);
@@ -819,8 +819,8 @@
     n = Math.max(0, Math.min(8, Math.round(n)));
     composer.renderTarget1.samples = n;
     composer.renderTarget2.samples = n;
-    composer.renderTarget1.dispose();   // el próximo render reasigna los FBO
-    composer.renderTarget2.dispose();   // leyendo el nuevo .samples
+    composer.renderTarget1.dispose();   // next render reallocates the FBOs
+    composer.renderTarget2.dispose();   // reading the new .samples
   }
 
   /* ---------- render loop ---------- */
@@ -835,27 +835,27 @@
     root.rotation.y = -mouse.cx * 0.22;
     root.rotation.x = mouse.cy * 0.05;
 
-    // v17: compacto = UN SOLO PLANO de verdad — las líneas (solidarias a su
-    // piso) quedan a <1px y se ven como UNA; el reparto concéntrico evita que
-    // las piezas se pisen (epsilon 0.004 solo para no coplanar exacto)
+    // v17: compact = truly ONE SINGLE PLANE — the lines (bound to their
+    // floor) end up <1px apart and read as ONE; concentric spacing stops
+    // pieces overlapping (epsilon 0.004 only to avoid exact coplanarity)
     var sep = (0.004 + (1.28 - 0.004) * state.spread) * SEPK;
-    // FUSIÓN como el vídeo: al colapsar, la capa superior se abre en anillo
-    // (los tiles interiores desaparecen), la media se encoge y anida dentro
+    // FUSION like the video: on collapse the top layer opens into a ring
+    // (the inner tiles vanish), the mid one shrinks and nests inside
     var inv = 1 - state.spread;
-    // fusión concéntrica (Igor): arriba al CENTRO, media en ANILLO, abajo ALREDEDOR
-    var topScale = 1 - 0.52 * inv;      // la capa superior se encoge al centro
-    var midScale = 1 - 0.22 * inv;      // la media se encoge un poco…
-    var midHole = 0.68 * inv;           // …y vacía su núcleo (queda en anillo)
-    var plateIdx = Math.round(inv * (PLATE_STEPS - 1)); // morph escudos↔anillo (SVG de Igor)
+    // concentric fusion (Igor): top to CENTER, mid as RING, bottom AROUND
+    var topScale = 1 - 0.52 * inv;      // the top layer shrinks to the center
+    var midScale = 1 - 0.22 * inv;      // the mid one shrinks a bit…
+    var midHole = 0.68 * inv;           // …and empties its core (left as a ring)
+    var plateIdx = Math.round(inv * (PLATE_STEPS - 1)); // morph shields↔ring (Igor's SVG)
 
     for (var li = 0; li < 3; li++) {
       var L = layers[li], def = L.def;
-      var bob = reduced ? 0 : Math.sin(t * 0.6) * (0.009 + 0.003 * li) * state.spread; // fase común: flotación coordinada
+      var bob = reduced ? 0 : Math.sin(t * 0.6) * (0.009 + 0.003 * li) * state.spread; // common phase: coordinated float
       def.group.position.y = (li - 1) * sep + bob;
 
-      // v16: la línea es el SUELO transparente de su piso — va SOLIDARIA a la
-      // capa (hija del grupo, sin contra-offset): las piezas nunca se le
-      // adelantan ni atrasan; en compacto casi coinciden (sepMin 0.035)
+      // v16: the line is its floor's transparent FLOOR — it is BOUND to the
+      // layer (child of the group, no counter-offset): pieces never run
+      // ahead of or behind it; in compact they nearly coincide (sepMin 0.035)
       L.outline.position.y = 0;
 
       if (L.isHex) {
@@ -865,11 +865,11 @@
         }
       }
 
-      // v16: TODAS las etiquetas desaparecen al juntarse los pisos
+      // v16: ALL labels disappear when the floors come together
       var alpha = state.label;
       def.sprite.material.opacity = alpha;
       def.sprite.visible = alpha > 0.01;
-      var sw = def.sprite.userData.aspect, sh = 0.1275;  // v18: etiquetas +50%
+      var sw = def.sprite.userData.aspect, sh = 0.1275;  // v18: labels +50%
       def.sprite.scale.set(sh * sw, sh, 1);
       def.sprite.position.set(0, (L.isHex ? HEX_H : TILE_H) + 0.06, 0);
 
@@ -886,32 +886,32 @@
             var f = tile.flip;
             lift = Math.sin(f.p * Math.PI) * 0.16;
             var ang = f.p * Math.PI * f.dir;
-            // el cambio de forma ocurre EXACTAMENTE cuando la cara queda de canto
-            // respecto a la cámara: cruce por cero de dot(normal girada, vista)
+            // the shape swap happens EXACTLY when the face is edge-on
+            // to the camera: zero crossing of dot(rotated normal, view)
             var nDotV;
             if (f.axis === 'x') nDotV = Math.cos(ang) * VIEW.y + Math.sin(ang) * VIEW.z;
             else nDotV = Math.cos(ang) * VIEW.y - Math.sin(ang) * VIEW.x;
             if (!f.swapped && f.lastDot !== null && f.lastDot > 0 !== nDotV > 0) {
-              // de canto respecto a la cámara: montamos el ESPEJO del destino,
-              // que girado 180° se verá como el destino real
+              // edge-on to the camera: we mount the MIRROR of the target,
+              // which rotated 180° will look like the real target
               swapGeo(tile.mesh, topGeos[MIRROR[f.target]]);
               f.swapped = true;
             }
             f.lastDot = nDotV;
             tile.mesh.rotation[f.axis === 'x' ? 'x' : 'z'] = ang;
-            // encoge en mitad del giro: el swap pasa con la pieza pequeña y de canto
+            // shrink mid-flip: the swap happens with the piece small and edge-on
             sc *= 1 - 0.22 * Math.sin(f.p * Math.PI);
           }
           tile.mesh.scale.set(sc, sc, sc);
           tile.mesh.position.y = tile.cy + lift;
         }
       } else if (L.isMorph) {
-        // frontera diagonal que barre el grid (como el vídeo): a un lado círculos,
-        // al otro cuadrados; la línea oscila con state.wave
+        // diagonal front sweeping the grid (like the video): circles on one side,
+        // squares on the other; the line oscillates with state.wave
         var front = reduced ? 0.3 : Math.sin(state.wave * Math.PI * 2) * 0.85;
         for (var j = 0; j < def.tiles.length; j++) {
           var mt = def.tiles[j];
-          var aScr = (mt.u - mt.v) / 1.6;          // −1..1 eje horizontal de pantalla
+          var aScr = (mt.u - mt.v) / 1.6;          // −1..1 screen horizontal axis
           var p = Math.max(0, Math.min(1, 0.5 + (front - aScr + (mt.seed - 0.5) * 0.18) * 2.6 + mt.hoverP));
           var idx = Math.round(p * (MORPH_STEPS - 1));
           if (mt.mesh.geometry !== morphGeos[idx]) swapGeo(mt.mesh, morphGeos[idx]);
@@ -927,10 +927,10 @@
     }
     underLight.intensity = 0.5 + 0.8 * state.spread;
 
-    // aplica los mandos en vivo (window.DATACORE)
+    // apply the live knobs (window.DATACORE)
     applyTune(state.spread);
 
-    // centro de cada pieza en uv de pantalla (para la lente por pieza)
+    // center of each piece in screen uv (for the per-piece lens)
     for (var ci = 0; ci < glassMeshes.length; ci++) {
       var cm = glassMeshes[ci];
       if (!cm.visible) continue;
@@ -939,7 +939,7 @@
       cm.material.uniforms.uCenter.value.set(_wp.x * 0.5 + 0.5, _wp.y * 0.5 + 0.5);
     }
 
-    // PRE-PASE: escena con materiales simples + fondo de estudio → backRT
+    // PRE-PASS: scene with simple materials + studio backdrop → backRT
     bgQuad.visible = true;
     bgQuad.quaternion.copy(camera.quaternion);
     bgQuad.position.copy(VIEW).multiplyScalar(-8);
@@ -954,7 +954,7 @@
     renderer.setClearColor(0x000000, 1);
     renderer.clear();
     renderer.render(scene, camera);
-    // frost: difumina el backdrop en dos pasadas separables
+    // frost: blur the backdrop in two separable passes
     blurPass(backRT, blurRT1, 1, 0);
     blurPass(blurRT1, blurRT2, 0, 1);
     renderer.setRenderTarget(null);
@@ -965,7 +965,7 @@
 
     if (composer) composer.render(); else renderer.render(scene, camera);
 
-    // OVERLAY de etiquetas: capa 1, sin bloom ni cristal por delante
+    // label OVERLAY: layer 1, no bloom and no glass in front
     renderer.autoClear = false;
     renderer.clearDepth();
     camera.layers.set(1);
@@ -984,7 +984,7 @@
     mouse.y = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (window.innerHeight / 2))) * 0.6;
   }, { passive: true });
 
-  /* ---------- cursor personalizado (mismo crosshair que el globo) ---------- */
+  /* ---------- custom cursor (same crosshair as the globe) ---------- */
   var CURSOR = { color: '#000000', outline: '#ffffff', outlinePx: 1.5, sizePx: 28, strokePx: 3 };
   var FINE_POINTER = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   function crossCursorCss() {
@@ -1006,41 +1006,41 @@
   }
   if (FINE_POINTER) canvas.style.cursor = crossCursorCss();
 
-  /* ---------- MANDOS EN VIVO (edítalos en la consola): window.DATACORE ---------- */
+  /* ---------- LIVE KNOBS (edit them in the console): window.DATACORE ---------- */
   var TUNE = window.DATACORE = {
-    // defaults calibrados por Igor (2026-08-31, 3ª pasada)
-    tint:        { r: 1.8, g: 1.8, b: 1.8 },  // tinte global del cristal
-    transmission: 0.43,   // cuánto backdrop se ve a través (base)
-    transmissionSpread: 0.14, // extra al explotar
-    refract:     0.13,    // multiplicador de la refracción
-    frost:       0.61,    // blur de la refracción (0 nítido → 1 esmerilado)
-    frostRadius: 0.98,    // radio del blur
-    pieceMag:    0.71,    // lupa por pieza (<1 magnifica lo de detrás)
-    pieceShift:  0.11,    // desvío propio de cada pieza (0 = lámina única)
-    fresnel:     0.44,    // blanco lechoso de los cantos
-    topClear:    0.92,    // 1 = tapa totalmente transparente
-    topDarken:   0.43,    // brillo de lo que se ve a través de la tapa
-    edgeWhite:   0.44,    // blanco extra SOLO en el anillo del bisel
-    skyTop:      '#eef4ff', // color fresnel arriba
-    skyHorizon:  '#8e9aad', // color fresnel horizonte
-    iri:         0.08,    // iridiscencia (arcoíris)
-    body:        0.87,    // brillo del cuerpo (tapas)
-    rim:         1.16,    // multiplicador de los filos de luz
-    pre:         0.79,    // brillo de lo que se ve A TRAVÉS (escena del pre-pase)
-    backdrop:    '#e6ecf5', // tinte del fondo de estudio (multiplica su textura)
+    // defaults calibrated by Igor (2026-08-31, 3rd pass)
+    tint:        { r: 1.8, g: 1.8, b: 1.8 },  // global glass tint
+    transmission: 0.43,   // how much backdrop shows through (base)
+    transmissionSpread: 0.14, // extra on explode
+    refract:     0.13,    // refraction multiplier
+    frost:       0.61,    // refraction blur (0 sharp → 1 frosted)
+    frostRadius: 0.98,    // blur radius
+    pieceMag:    0.71,    // per-piece magnifier (<1 magnifies what is behind)
+    pieceShift:  0.11,    // each piece's own offset (0 = single sheet)
+    fresnel:     0.44,    // milky white on the edges
+    topClear:    0.92,    // 1 = fully transparent top
+    topDarken:   0.43,    // brightness of what shows through the top
+    edgeWhite:   0.44,    // extra white ONLY on the bevel ring
+    skyTop:      '#eef4ff', // fresnel color at top
+    skyHorizon:  '#8e9aad', // fresnel color at horizon
+    iri:         0.08,    // iridescence (rainbow)
+    body:        0.87,    // body brightness (tops)
+    rim:         1.16,    // light-edge multiplier
+    pre:         0.79,    // brightness of what is seen THROUGH (pre-pass scene)
+    backdrop:    '#e6ecf5', // studio backdrop tint (multiplies its texture)
     bloom:       { strength: 0.16, radius: 0.26, threshold: 0.35 },
-    // v21: mandos de nitidez — defaults de Igor (2026-09-01): FXAA off,
-    // pre-pase a resolución completa (lo ve más limpio así)
-    // msaa = MUESTRAS de multisampling reales (0/2/4/8, WebGL2) sobre el
-    // render target del composer — AA nítido, sin el suavizado del FXAA
+    // v21: sharpness knobs — Igor's defaults (2026-09-01): FXAA off,
+    // pre-pass at full resolution (he finds it cleaner that way)
+    // msaa = real multisampling SAMPLES (0/2/4/8, WebGL2) on the
+    // composer render target — sharp AA, without FXAA's softening
     quality:     { fxaa: 0, msaa: 4, dprMax: 2, preRes: 1 },
-    // v22: blur final de la escena (px) — NO afecta a las etiquetas,
-    // que se dibujan en el overlay después del composer.
-    // v24: Igor lo devuelve a 0 (el pixelado quedó arreglado con MSAA 4)
+    // v22: final scene blur (px) — does NOT affect the labels,
+    // which are drawn in the overlay after the composer.
+    // v24: Igor sets it back to 0 (pixelation fixed with MSAA 4)
     blur:        0,
     help: function () {
-      console.log('%cDATACORE — mandos en vivo','font-weight:bold', DATACORE);
-      console.log('Ej.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() para exportar');
+      console.log('%cDATACORE — live knobs','font-weight:bold', DATACORE);
+      console.log('e.g.: DATACORE.tint={r:0.85,g:0.95,b:1.3}; DATACORE.fresnel=1.1; DATACORE.refract=1.6; DATACORE.skyTop="#dbe9ff"; DATACORE.bloom.strength=0.6; DATACORE.rim=1.4; DATACORE.copy() to export');
     },
     copy: function () {
       var out = JSON.stringify(DATACORE, function (k, v) { return typeof v === 'function' ? undefined : v; }, 2);
@@ -1088,12 +1088,12 @@
       bloomPass.radius = TUNE.bloom.radius;
       bloomPass.threshold = TUNE.bloom.threshold;
     }
-    // v21: nitidez en vivo — fxaa on/off y, si cambian dpr/preRes, resize
+    // v21: live sharpness — fxaa on/off and, if dpr/preRes change, resize
     if (fxaaPass) fxaaPass.enabled = !!(+TUNE.quality.fxaa);
     if (TUNE.quality.msaa !== _lastQ.msaa) { _lastQ.msaa = TUNE.quality.msaa; setMsaa(+TUNE.quality.msaa); }
     if (blurPasses) {
       var bl = +TUNE.blur || 0;
-      var r1 = Math.min(bl, 1.4), r2 = bl * 0.55;   // iteración 2 solo en radios grandes
+      var r1 = Math.min(bl, 1.4), r2 = bl * 0.55;   // iteration 2 only at large radii
       for (var bj = 0; bj < 4; bj++) {
         var on = bj < 2 ? bl > 0.01 : bl > 1.4;
         blurPasses[bj].enabled = on;
@@ -1106,7 +1106,7 @@
     }
   }
   var _lastQ = { dprMax: 2, preRes: 1, msaa: 4 };
-  console.log('%cDATACORE%c listo: edita los materiales en vivo desde la consola. Escribe DATACORE.help()',
+  console.log('%cDATACORE%c ready: edit the materials live from the console. Type DATACORE.help()',
     'font-weight:bold;color:#5cfe50', '');
 
   window.__datacore3d = { state: state, renderer: renderer };

@@ -100,10 +100,10 @@ live site is AEM Edge Delivery, so read the blocks at
 `dist/chunks/tokens.js`, and REIMPLEMENT them in vanilla JS; then compare by sampling
 transforms every 50 ms, live vs replica, at 1440×900.
 
-Igor's rules: **nothing in Spanish in the interface** (UI in English), the context
-files (`claude_*_context.md`) in English too — only the comments inside the JS code
-are still in Spanish — and visual parameters are tuned in the DevTools console before
-being fixed in the code.
+Igor's rules: **everything is delivered in English** — UI, context files
+(`claude_*_context.md`) and code comments; orders may come in Spanish, the output does
+not. And visual parameters are tuned in the DevTools console before being fixed in the
+code.
 
 ## 6. Link it from the root index
 

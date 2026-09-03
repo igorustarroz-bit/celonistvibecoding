@@ -13,10 +13,9 @@ TECHNOLOGY (Three.js, raw WebGL, SVG, Rive, Lottie…). It describes WHAT is see
 and with which exact data, separating the design (technology-agnostic) from the
 current implementation notes. Status: v19 (2026-09-01).
 
-Igor's rule for the whole project: NOTHING in Spanish in the interface — all
-UI text in English (labels, buttons, panels). The context files
-(`claude_*_context.md`) — names and content — are in English too; only the
-comments inside the JS code are still in Spanish.
+Igor's rule for the whole project: everything is delivered in English — the
+experiments' UI, the context files (`claude_*_context.md`) and the comments
+inside the code. Orders may come in Spanish; the output does not.
 
 ## 1. What it is
 

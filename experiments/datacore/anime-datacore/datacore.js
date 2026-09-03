@@ -1,8 +1,8 @@
 /* =========================================================================
-   Experimento 3 — Celonis Data Core hero sin vídeo
-   Canvas 2D + anime.js v4. Recrea el "Data Core": tres capas de cristal
-   isométricas (Data Integration / Data Transformation / Process Query
-   Engine) que se separan y colapsan en bucle, con parallax de ratón.
+   Experiment 3 — Celonis Data Core hero without video
+   Canvas 2D + anime.js v4. Recreates the "Data Core": three isometric
+   glass layers (Data Integration / Data Transformation / Process Query
+   Engine) that separate and collapse in a loop, with mouse parallax.
    ========================================================================= */
 (function () {
   'use strict';
@@ -14,7 +14,7 @@
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ---------- deterministic pseudo-random (layout estable) ---------- */
+  /* ---------- deterministic pseudo-random (stable layout) ---------- */
   function mulberry32(a) {
     return function () {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -46,7 +46,7 @@
     return pts;
   }
   function hexPts(cx, cy, R, rot, rr, seg) {
-    // hexágono con esquinas suavizadas
+    // hexagon with softened corners
     seg = seg || 3; rr = rr || 0;
     var pts = [];
     for (var i = 0; i < 6; i++) {
@@ -55,7 +55,7 @@
       var p2 = [cx + R * Math.cos(a2), cy + R * Math.sin(a2)];
       for (var s = 0; s < seg; s++) {
         var t = s / seg;
-        // acorta cerca de vértices para simular radio
+        // shorten near vertices to fake radius
         var tt = rr > 0 ? (t * (1 - rr * 2) + rr) : t;
         pts.push([p1[0] + (p2[0] - p1[0]) * tt, p1[1] + (p2[1] - p1[1]) * tt]);
       }
@@ -85,35 +85,35 @@
     return tiles;
   }
 
-  // Capa superior: mezcla de cuadrados redondeados, "hojas" y círculos
+  // Top layer: mix of rounded squares, "leaves" and circles
   var topTiles = makeGridLayer(6, 0.8, {
     gap: 0.16,
     shape: function (ix, iy, n, rnd) {
       var r = rnd(), h;
-      if (r < 0.42) h = [0.22, 0.22, 0.22, 0.22];                 // cuadrado
-      else if (r < 0.60) h = [1, 0.12, 1, 0.12];                  // hoja /
-      else if (r < 0.78) h = [0.12, 1, 0.12, 1];                  // hoja \
-      else h = [1, 1, 1, 1];                                      // círculo
+      if (r < 0.42) h = [0.22, 0.22, 0.22, 0.22];                 // square
+      else if (r < 0.60) h = [1, 0.12, 1, 0.12];                  // leaf /
+      else if (r < 0.78) h = [0.12, 1, 0.12, 1];                  // leaf \
+      else h = [1, 1, 1, 1];                                      // circle
       return { radii: h };
     }
   });
 
-  // Capa media: morph cuadrado→círculo según posición (Data Transformation)
+  // Middle layer: square→circle morph by position (Data Transformation)
   var midTiles = makeGridLayer(10, 0.8, {
     gap: 0.18,
     shape: function (ix, iy, n) { return { radii: [0, 0, 0, 0], morph: ix / (n - 1) }; }
   });
 
-  // Capa inferior: 4 placas hexagonales + placa central (Data Integration)
-  // definidas en base (a,b): a = eje horizontal de pantalla, b = vertical
+  // Bottom layer: 4 hexagonal plates + central plate (Data Integration)
+  // defined in basis (a,b): a = screen horizontal axis, b = vertical
   var hexes = [
-    { a: 0,     b: -0.60, R: 0.40, sx: 1.05, sy: 1.0 },  // norte
-    { a: 0,     b: 0.62,  R: 0.40, sx: 1.05, sy: 1.0 },  // sur
-    { a: -0.63, b: 0.01,  R: 0.46, sx: 1.15, sy: 1.0 },  // oeste
-    { a: 0.63,  b: 0.01,  R: 0.46, sx: 1.15, sy: 1.0 }   // este
+    { a: 0,     b: -0.60, R: 0.40, sx: 1.05, sy: 1.0 },  // north
+    { a: 0,     b: 0.62,  R: 0.40, sx: 1.05, sy: 1.0 },  // south
+    { a: -0.63, b: 0.01,  R: 0.46, sx: 1.15, sy: 1.0 },  // west
+    { a: 0.63,  b: 0.01,  R: 0.46, sx: 1.15, sy: 1.0 }   // east
   ];
   function hexPlanePts(hx) {
-    // hexágono flat-top en (a,b), esquinas ligeramente cortadas
+    // flat-top hexagon in (a,b), corners slightly cut
     var pts = [], SQ = Math.SQRT1_2;
     for (var i = 0; i < 6; i++) {
       var a1 = Math.PI / 6 + i * Math.PI / 3, a2 = Math.PI / 6 + (i + 1) * Math.PI / 3;
@@ -136,9 +136,9 @@
 
   /* ---------- animated state ---------- */
   var state = {
-    spread: reduced ? 1 : 0,   // 0 = colapsado, 1 = explosionado
-    label: reduced ? 1 : 0,    // alpha de etiquetas
-    wave: 0                    // fase del barrido square→circle
+    spread: reduced ? 1 : 0,   // 0 = collapsed, 1 = exploded
+    label: reduced ? 1 : 0,    // label alpha
+    wave: 0                    // square→circle sweep phase
   };
   var mouse = { x: 0, y: 0, cx: 0, cy: 0 }; // target / current
 
@@ -150,15 +150,15 @@
     W = Math.round(r.width); H = Math.round(r.height || r.width * 9 / 16);
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-    // v26: en móvil el stage pasa a 5/6 y la figura se dobla (como en 3D)
-    A = Math.min(W * (W < 900 ? 0.205 : 0.17), H / 5.4);   // escala isométrica eje X
+    // v26: on mobile the stage goes to 5/6 and the figure doubles (as in 3D)
+    A = Math.min(W * (W < 900 ? 0.205 : 0.17), H / 5.4);   // isometric scale, X axis
     CX = W / 2;
   }
   window.addEventListener('resize', resize);
 
   /* ---------- projection ---------- */
   function project(u, v, z, out) {
-    // parallax: rotación del plano + inclinación
+    // parallax: plane rotation + tilt
     var rot = mouse.cx * 0.22;              // rad
     var cu = u * Math.cos(rot) - v * Math.sin(rot);
     var cv = u * Math.sin(rot) + v * Math.cos(rot);
@@ -178,9 +178,9 @@
       if (P[0] < minX) { minX = P[0]; iL = i; }
       if (P[0] > maxX) { maxX = P[0]; iR = i; }
     }
-    // pared frontal: quads por arista orientada hacia abajo (sin bowties)
+    // front wall: quads per downward-facing edge (no bowties)
     if (hPx > 0.5) {
-      // winding del polígono proyectado
+      // winding of the projected polygon
       var area = 0;
       for (i = 0; i < n; i++) {
         var a0 = top[i], b0 = top[(i + 1) % n];
@@ -191,7 +191,7 @@
       for (i = 0; i < n; i++) {
         var pA = top[i], pB = top[(i + 1) % n];
         var nx = (pB[1] - pA[1]) * sgn, ny = -(pB[0] - pA[0]) * sgn;
-        if (ny > 0) { // arista frontal
+        if (ny > 0) { // front edge
           ctx.moveTo(pA[0], pA[1]);
           ctx.lineTo(pB[0], pB[1]);
           ctx.lineTo(pB[0], pB[1] + hPx);
@@ -202,7 +202,7 @@
       ctx.fillStyle = style.side;
       ctx.fill();
     }
-    // cara superior
+    // top face
     ctx.beginPath();
     for (i = 0; i < n; i++) { if (i === 0) ctx.moveTo(top[i][0], top[i][1]); else ctx.lineTo(top[i][0], top[i][1]); }
     ctx.closePath();
@@ -256,10 +256,10 @@
   }
 
   function tileStyle(seed, bright, posGrad) {
-    // tops opacos oscuros (como el vídeo) + laterales de cristal claro
-    var g = posGrad === undefined ? 0.5 : posGrad;   // 0..1 (izq→dcha pantalla)
-    var lt = 14 + 26 * seed + 22 * g + bright * 255; // luminancia top
-    var ls = 46 + 34 * seed + 30 * g;                // luminancia lateral
+    // dark opaque tops (like the video) + light glass sides
+    var g = posGrad === undefined ? 0.5 : posGrad;   // 0..1 (screen left→right)
+    var lt = 14 + 26 * seed + 22 * g + bright * 255; // top luminance
+    var ls = 46 + 34 * seed + 30 * g;                // side luminance
     return {
       top: 'rgb(' + Math.round(lt) + ',' + Math.round(lt + 2) + ',' + Math.round(lt + 5) + ')',
       side: 'rgb(' + Math.round(ls) + ',' + Math.round(ls + 3) + ',' + Math.round(ls + 7) + ')',
@@ -272,7 +272,7 @@
   var t0 = performance.now();
   function render(now) {
     var t = (now - t0) / 1000;
-    // suaviza parallax
+    // smooth parallax
     mouse.cx += (mouse.x - mouse.cx) * 0.055;
     mouse.cy += (mouse.y - mouse.cy) * 0.055;
     B = A * (0.52 + mouse.cy * 0.045);
@@ -280,7 +280,7 @@
     var sepMax = A * 1.28, sepMin = A * 0.30;
     var sep = sepMin + (sepMax - sepMin) * state.spread;
     var stackH = 2 * sep;
-    CY = H / 2 + stackH * 0 + A * 0.02; // centro; las capas se reparten ±sep
+    CY = H / 2 + stackH * 0 + A * 0.02; // center; layers spread ±sep
 
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -294,23 +294,23 @@
       outlineFrame(z, 0.65 + 0.35 * state.spread);
 
       if (layer.kind === 'hex') {
-        // placas hexagonales gruesas
+        // thick hexagonal plates
         var hh = A * 0.06;
         var order = hexes.slice().sort(function (a, b) { return a.b - b.b; });
         for (i = 0; i < order.length; i++) {
           drawPrism(hexPlanePts(order[i]), z, hh, tileStyle(0.30, 0, 0.5 + order[i].a * 0.55));
         }
-        // placa central (caja del label)
+        // central plate (label box)
         var cp = roundedRectPts(0, 0, 0.34, 0.26, [0.05, 0.05, 0.05, 0.05], 4);
         drawPrism(cp, z, A * 0.16, {
           top: 'rgb(9,10,12)', side: 'rgb(60,64,70)',
           rim: 'rgba(255,255,255,0.55)', rimW: 1
         });
-        drawLabel(layer.label, z + A * 0.16, 1); // siempre visible como en el vídeo
+        drawLabel(layer.label, z + A * 0.16, 1); // always visible, as in the video
       } else {
         var tiles = layer.tiles;
         var hBase = A * 0.045;
-        // pop-in inicial
+        // initial pop-in
         for (i = 0; i < tiles.length; i++) {
           var tl = tiles[i];
           if (!reduced && tl.ap < 1) {
@@ -326,7 +326,7 @@
           var half = tile.half * (0.75 + 0.25 * tile.ap);
           var radii, seg = 4;
           if (layer.zSlot === 1) {
-            // morph cuadrado→círculo con barrido animado
+            // square→circle morph with animated sweep
             var sweep = reduced ? 0 : 0.18 * Math.sin(state.wave * Math.PI * 2 - tile.morph * 2.2);
             var p = Math.max(0, Math.min(1, (tile.morph - 0.5) * 1.9 + 0.5 + sweep));
             var rr = (0.14 + 0.86 * p) * half;
@@ -352,18 +352,18 @@
     if (reduced) return;
     var an = window.anime;
     if (!an || !an.createTimeline) {
-      // fallback simple sin anime.js
+      // simple fallback without anime.js
       state.spread = 1; state.label = 1;
       setInterval(function () { state.wave = (state.wave + 0.004) % 1; }, 16);
       return;
     }
     var tl = an.createTimeline({ loop: true, defaults: { ease: 'inOutQuart' } });
-    tl.add(state, { spread: 1, duration: 2400 }, 600)          // explosión
+    tl.add(state, { spread: 1, duration: 2400 }, 600)          // explosion
       .add(state, { label: 1, duration: 700, ease: 'outQuad' }, 1900)
       .add(state, { spread: 1, duration: 4600 }, 3000)          // hold (no-op)
       .add(state, { label: 0, duration: 500, ease: 'inQuad' }, 7600)
-      .add(state, { spread: 0, duration: 2200 }, 7900)          // colapso
-      .add(state, { spread: 0, duration: 1400 }, 10100);        // hold compacto
+      .add(state, { spread: 0, duration: 2200 }, 7900)          // collapse
+      .add(state, { spread: 0, duration: 1400 }, 10100);        // compact hold
     an.animate(state, { wave: 1, duration: 9000, loop: true, ease: 'linear' });
   }
 
@@ -377,17 +377,17 @@
     mouse.y = Math.max(-1, Math.min(1, inY)) * 0.6;
   }, { passive: true });
 
-  /* ---------- cursor personalizado (mismo crosshair que el globo) ---------- */
+  /* ---------- custom cursor (same crosshair as the globe) ---------- */
   var CURSOR = {
-    color: '#000000',    // trazo (negro, como quedó aprobado en el experimento 1)
-    outline: '#ffffff',  // borde alrededor del trazo ('' = sin borde)
-    outlinePx: 1.5,      // grosor del borde a cada lado (CSS px)
-    sizePx: 28,          // tamaño del crosshair (CSS px)
-    strokePx: 3          // grosor del trazo (CSS px)
+    color: '#000000',    // stroke (black, as approved in experiment 1)
+    outline: '#ffffff',  // border around the stroke ('' = no border)
+    outlinePx: 1.5,      // border thickness each side (CSS px)
+    sizePx: 28,          // crosshair size (CSS px)
+    strokePx: 3          // stroke thickness (CSS px)
   };
   var FINE_POINTER = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   function crossCursorCss() {
-    // crosshair de mira: 4 brazos con hueco central (sin punto) — portado de globe.js
+    // sight crosshair: 4 arms with a central gap (no dot) — ported from globe.js
     var sz = CURSOR.sizePx, half = sz / 2, sw = CURSOR.strokePx, col = CURSOR.color;
     var o = CURSOR.outline ? CURSOR.outlinePx : 0;
     var a0 = sz * 0.04 + o;

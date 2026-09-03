@@ -1,25 +1,25 @@
-/* nav-fx.js — comportamiento del menu de celonis.com en DESKTOP (>=1200px):
-   al hacer scroll hacia abajo el nav desaparece (clase nav-hidden: opacity 0
-   + pointer-events none, ya definida en header.css) dejando solo un clon del
-   CTA fijo arriba a la derecha (.cloned-cta, tambien en header.css); al hacer
-   scroll hacia arriba reaparece (nav-shown). Mismo mecanismo de clases que el
-   header.js del site real, con deteccion de direccion y guarda de 500ms.
+/* nav-fx.js — celonis.com nav behaviour on DESKTOP (>=1200px): on scroll
+   down the nav disappears (class nav-hidden: opacity 0 + pointer-events
+   none, already defined in header.css), leaving only a clone of the CTA
+   pinned top right (.cloned-cta, also in header.css); on scroll up it
+   comes back (nav-shown). Same class mechanism as the real site's
+   header.js, with direction detection and a 500ms guard.
 
-   FICHERO COMUN a todos los experimentos: vive en experiments/ y lo cargan
-   las 6 paginas como ../nav-fx.js?v=N. Antes estaba duplicado en
-   3d-globe/anime-globe/ y datacore/anime-datacore/ (unificado 2026-09-03).
-   SUBIR LA VERSION del ?v= en cada cambio.
+   COMMON FILE for all experiments: it lives in experiments/ and the 6
+   pages load it as ../nav-fx.js?v=N. It used to be duplicated in
+   3d-globe/anime-globe/ and datacore/anime-datacore/ (unified 2026-09-03).
+   BUMP THE ?v= VERSION on every change.
 
-   Especificacion completa, valores y fallos ya cometidos:
-   experiments/claude_navfx_context.md — leer ANTES de tocar este fichero.
+   Full spec, values and mistakes already made:
+   experiments/claude_navfx_context.md — read BEFORE touching this file.
 
-   v2: la comprobacion del breakpoint es EN VIVO, no solo al cargar. Antes se
-   evaluaba una unica vez en init(), asi que una ventana que empezaba ancha y
-   luego se estrechaba (o el modo responsive del navegador) seguia ocultando
-   el nav en movil y dejaba el CTA clonado flotando sobre el texto, con el
-   logo y el menu desaparecidos. Ahora: en movil/tablet no se oculta NUNCA y,
-   si se cruza el breakpoint hacia abajo, se restaura el nav y se quita el
-   clon inmediatamente. */
+   v2: the breakpoint check is LIVE, not only at load time. It used to be
+   evaluated once in init(), so a window that started wide and was then
+   narrowed (or the browser's responsive mode) kept hiding the nav on
+   mobile and left the cloned CTA floating over the text, with the logo
+   and the menu gone. Now: on mobile/tablet it NEVER hides and, if the
+   breakpoint is crossed downwards, the nav is restored and the clone is
+   removed immediately. */
 (function () {
   'use strict';
   var DESKTOP = '(min-width: 1200px)';
@@ -43,7 +43,7 @@
       setTimeout(function () { c.remove(); animating = false; }, 500);
     }
     function hide() {
-      if (!isDesktop()) return;                      // en movil, nunca
+      if (!isDesktop()) return;                      // on mobile, never
       if (animating || wrap.classList.contains('nav-hidden')) return;
       animating = true;
       wrap.classList.remove('nav-shown');
@@ -63,7 +63,7 @@
       wrap.classList.add('nav-shown');
       if (!animating) dropClone(false);
     }
-    function restoreNow() {   // vuelta a movil: nav visible y sin clon, ya
+    function restoreNow() {   // back to mobile: nav visible, clone dropped, now
       animating = false;
       wrap.classList.remove('nav-hidden');
       wrap.classList.add('nav-shown');
@@ -84,14 +84,14 @@
       });
     }
     window.addEventListener('scroll', onScroll, { passive: true });
-    /* como el original: al terminar el scroll arriba del todo, asegurar visible */
+    /* like the original: when the scroll ends at the very top, ensure visible */
     var t;
     window.addEventListener('scroll', function () {
       clearTimeout(t);
       t = setTimeout(function () { if (window.scrollY === 0) show(); }, 500);
     }, { passive: true });
 
-    /* cruce del breakpoint: al bajar de 1200px se restaura el menu completo */
+    /* breakpoint crossing: below 1200px the full menu is restored */
     var mq = window.matchMedia(DESKTOP);
     var onMq = function () { if (!isDesktop()) restoreNow(); };
     if (mq.addEventListener) mq.addEventListener('change', onMq);

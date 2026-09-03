@@ -13,9 +13,9 @@ celonis.com interface effects on top of the saved static copies.
 It complements `claude_globe_context.md` (hero globe) and the context of
 experiment 3 (`claude_datacore_context.md`).
 
-Igor's rule for the whole project: the experiment UI is in English, and the
-context files (`claude_*_context.md`) — both names and content — are in English
-too; only the comments inside the JS code remain in Spanish for now.
+Igor's rule for the whole project: everything is delivered in English — the
+experiments' UI, the context files (`claude_*_context.md`) and the comments
+inside the code. Orders may come in Spanish; the output does not.
 
 ## Files and pages
 

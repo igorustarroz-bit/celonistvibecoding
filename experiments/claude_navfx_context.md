@@ -68,7 +68,7 @@ identical: `3d-globe/original/header.css` and
 `experiments/datacore/`: `index.html`, `index3d.html`, `original.html`,
 `Data Core _ Celonis.html`.
 
-All with cache-busting `?v=27` — **BUMP THE VERSION on every change** to the JS
+All with cache-busting `?v=28` — **BUMP THE VERSION on every change** to the JS
 or GitHub Pages will serve the stale file (it caches JS for ~10 min).
 
 ## Mistakes already made — do not repeat
@@ -93,3 +93,5 @@ or GitHub Pages will serve the stale file (it caches JS for ~10 min).
 - 2026-09-03: script unified into `experiments/nav-fx.js` (a single copy),
   the 6 pages pointed at `../nav-fx.js?v=27`, and this document as the single
   source of truth.
+- 2026-09-03: comments in this file's JS translated to English (project rule:
+  everything is delivered in English); `?v=` bumped to 28 on the 6 pages.

@@ -1,8 +1,8 @@
 /* =========================================================================
-   Panel de ajuste del cristal (experimento 3, variante B).
-   Sliders y selectores de color enganchados a window.DATACORE — el render
-   loop de datacore-3d.js lee esos valores cada frame, así que todo es en
-   vivo. "Copiar" exporta el JSON de ajustes para pasármelo tal cual.
+   Glass tuning panel (experiment 3, variant B).
+   Sliders and color pickers wired to window.DATACORE — the render loop
+   in datacore-3d.js reads those values every frame, so everything is
+   live. "Copy" exports the settings JSON to hand over as-is.
    ========================================================================= */
 (function () {
   'use strict';
@@ -16,8 +16,8 @@
 
     var css = document.createElement('style');
     css.textContent = [
-      // v19: donde estaba el switch A/B (abajo-dcha), desplegado HACIA ARRIBA:
-      // column-reverse deja la cabecera abajo y el cuerpo se abre encima
+      // v19: where the A/B switch used to be (bottom-right), opening UPWARDS:
+      // column-reverse keeps the header at the bottom, body opens above it
       '#dc-tuner{position:fixed;right:18px;bottom:18px;z-index:99999;width:252px;',
       'display:flex;flex-direction:column-reverse;',
       'font-family:Poppins,Arial,sans-serif;font-size:11px;color:#eee;',
@@ -48,7 +48,7 @@
 
     var panel = document.createElement('div');
     panel.id = 'dc-tuner';
-    panel.className = 'min';   // v19: empieza plegado
+    panel.className = 'min';   // v19: starts collapsed
     panel.innerHTML = '<header><span><span class="dot">●</span> GLASS TUNER</span><span id="dc-tgl">+</span></header><div class="body"></div>';
     document.body.appendChild(panel);
     var body = panel.querySelector('.body');

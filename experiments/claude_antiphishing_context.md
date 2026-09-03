@@ -112,6 +112,16 @@ Current text in `/index.html` and in `README.md`:
 
 ---
 
+### 3.1 The meta descriptions count too
+
+2026-09-03: the 11 pages still carried `<meta name="description">` reading
+"Not affiliated with or endorsed by Celonis" — exactly the sentence section 3
+forbids, left behind because the original cleanup only fixed the visible
+disclaimer. Now replaced by "Not an official page of the brand shown, and not
+published or endorsed by them", which is true and does not name the client.
+When rewriting a page's title/description, apply the section 3 wording rules to
+the meta tags as well, not just to the visible text.
+
 ## 4. Verification sweep
 
 Run it **before every push** that touches saved HTML, and always before requesting a review

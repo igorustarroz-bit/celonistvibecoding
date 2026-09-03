@@ -1,18 +1,24 @@
 # Efectos del site de Celonis replicados — especificación completa
 
+> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
+> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
+> `experiments/`.**
+
 Contexto para Claude (o cualquier dev) que necesite mantener o REHACER los
 efectos de interfaz de celonis.com sobre las copias estáticas guardadas.
 Complementa a `claude_globe_context.md` (globo del hero) y al contexto del
-experimento 3 (`../../datacore/anime-datacore/claude_datacore_context.md`).
+experimento 3 (`claude_datacore_context.md`).
 
 Regla de Igor para todo el proyecto: NADA en español en la interfaz (textos
 de UI en inglés); documentos y comentarios de código en español.
 
 ## Ficheros y páginas
 
+Los JS de este experimento viven en `celonis-home/anime-globe/`.
+
 - `site-fx.js` — todos los efectos de bloque de la home: titular char-by-char,
   cubos verdes del hero, acordeón de Solutions, carrusel de stories, reveal de
-  grids, sprite de iconos/logo. Cargado por `../index.html` y `../original.html`
+  grids, sprite de iconos/logo. Cargado por `celonis-home/index.html` y `celonis-home/original.html`
   con cache-busting `?v=YYYYMMDD[x]` — SUBIR LA VERSIÓN en cada cambio o el
   navegador servirá el JS viejo (ya pasó y confundió una ronda entera de QA).
 - `nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
@@ -21,7 +27,8 @@ de UI en inglés); documentos y comentarios de código en español.
   cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
   aqui la informacion.
 - `scroll-fx.js` — reacción al scroll del mundo y los cubos (documentado en
-  `claude_globe_context.md`). Lo cargan index.html Y original.html.
+  `claude_globe_context.md`). Lo cargan `celonis-home/index.html` Y
+  `celonis-home/original.html`.
 
 ## Cómo se obtuvo el comportamiento original (método)
 

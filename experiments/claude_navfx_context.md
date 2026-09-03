@@ -1,8 +1,9 @@
 # nav-fx.js — efecto del menú superior en las páginas guardadas
 
 Doc de contexto ÚNICO de este efecto (convención `claude_<tema>_context.md`).
-Vive al nivel de las carpetas de experimentos porque el script es COMÚN a
-todos: `experiments/nav-fx.js`. Antes estaba duplicado en
+Todos los `claude_*_context.md` del repo viven en `experiments/`, al nivel de
+las carpetas de experimentos; **sus rutas son relativas a `experiments/`**.
+El script tambien es COMÚN: `experiments/nav-fx.js`. Antes estaba duplicado en
 `celonis-home/anime-globe/` y `datacore/anime-datacore/`; desde la
 reorganización del 2026-09-03 hay UNA sola copia y las 6 páginas la cargan
 como `../nav-fx.js?v=N`.

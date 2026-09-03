@@ -1,9 +1,13 @@
 # Estrategia anti-phishing — instrucciones para Claude
 
+> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
+> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
+> `experiments/`.**
+
 > Documento operativo para futuras sesiones de Claude en este repo.
 > Escrito el 2026-09-03, después de que Google levantase el aviso de "sitio engañoso"
 > sobre `https://igorustarroz-bit.github.io/celonisvibecoding/`.
-> Aplica a **todo el repo**, no solo a `celonis-home/`.
+> Aplica a **todo el repo**, no solo a `experiments/celonis-home/`.
 
 ---
 

@@ -1,5 +1,9 @@
 # Data Core hero de Celonis — especificación del experimento 3
 
+> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
+> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
+> `experiments/`.**
+
 Documento de referencia para mantener este hero o RECONSTRUIRLO EN OTRA
 TECNOLOGÍA (Three.js, WebGL puro, SVG, Rive, Lottie…). Describe QUÉ se ve y
 con qué datos exactos, separando el diseño (agnóstico de tecnología) de las
@@ -20,8 +24,10 @@ https://www.celonis.com/platform/datacore — originalmente el vídeo
 `<div class="auto-player-wrapper" id="datacore-stage">` (aspect-ratio 16/9).
 
 Dos variantes:
-- A (Canvas 2D + anime.js): `../index.html` + `datacore.js` — falso 3D.
-- B (3D real, la principal): `../index3d.html` + `datacore-3d.js` — la que
+- A (Canvas 2D + anime.js): `datacore/index.html` + `anime-datacore/datacore.js`
+  — falso 3D.
+- B (3D real, la principal): `datacore/index3d.html` +
+  `anime-datacore/datacore-3d.js` — la que
   describe este documento.
 
 ## 2. La escena (agnóstico de tecnología)
@@ -84,7 +90,7 @@ Al colapsar, los tres pisos se reparten EN PLANTA sin pisarse:
 ## 3. Piso inferior — DATA INTEGRATION (placas con morph)
 
 FUENTE DE VERDAD: el SVG dibujado por Igor
-`../Data Core _ Celonis_files/piso_inferior_forma_poligonos.svg` (en el
+`datacore/Data Core _ Celonis_files/piso_inferior_forma_poligonos.svg` (en el
 repo). Contiene DOS diagramas: izquierda = estado EXPLOSIONADO (4 escudos),
 derecha = estado COMPACTO (anillo-diamante con muescas en V). NO hay caja
 central: el hueco rectangular entre los escudos queda vacío, enmarcado por
@@ -264,19 +270,20 @@ aqui la informacion.
 
 ## 11. Ficheros
 
-En esta carpeta: `datacore.js` (variante A), `datacore-3d.js` (variante B),
+En `datacore/anime-datacore/`: `datacore.js` (variante A), `datacore-3d.js`
+(variante B),
 `datacore-tuner.js`, `sprite.js` (spritemap placeholder del
 experimento 1: logo real + iconos de sustitución; reescribe los <use> a
 símbolos locales), `anime.umd.min.js` (v4.5.0), `three.min.js` (r147 UMD, de
 npm — los CDN están bloqueados desde el sandbox de Cowork), `three-post.js`
 (concatenado de examples/js de r147: CopyShader, LuminosityHighPassShader,
 Pass/MaskPass/ShaderPass, RenderPass, EffectComposer, UnrealBloomPass,
-GammaCorrectionShader), y este documento.
+GammaCorrectionShader).
 
-Fuera: `../index.html` (A) y `../index3d.html` (B) — páginas guardadas y
+En `datacore/`: `index.html` (A) y `index3d.html` (B) — páginas guardadas y
 limpiadas (sin trackers ni scripts externos, URLs raíz reescritas a
-https://www.celonis.com/...); `../original.html` (copia intacta con vídeo);
-`../Data Core _ Celonis_files/` (assets, vídeo, still y el SVG de las
+https://www.celonis.com/...); `original.html` (copia intacta con vídeo);
+`Data Core _ Celonis_files/` (assets, vídeo, still y el SVG de las
 placas). SIN switch A↔B (retirado en v19; la navegación es el índice raíz).
 
 ## 12. Decisiones CERRADAS — no reabrir
@@ -303,9 +310,9 @@ placas). SIN switch A↔B (retirado en v19; la navegación es el índice raíz).
 fuentes/imágenes del propio site.
 
 GitHub Pages del repo `igorustarroz-bit/celonisvibecoding` (rama main, raíz):
-- A: https://igorustarroz-bit.github.io/celonisvibecoding/datacore/index.html
-- B: https://igorustarroz-bit.github.io/celonisvibecoding/datacore/index3d.html
-- Original: .../datacore/original.html
+- A: https://igorustarroz-bit.github.io/celonisvibecoding/experiments/datacore/index.html
+- B: https://igorustarroz-bit.github.io/celonisvibecoding/experiments/datacore/index3d.html
+- Original: .../experiments/datacore/original.html
 El índice raíz lista este experimento como "Experiment 3". Los scripts de
 index3d.html van versionados (?v=N — subir en cada publish, Pages cachea los
 JS 10 min). El token está en `github-token.txt` (gitignored — NUNCA subirlo).

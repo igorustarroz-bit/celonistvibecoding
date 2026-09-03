@@ -29,5 +29,7 @@ Index of experiments: [`index.html`](./index.html)
 - root: `index.html` (experiment index), `README.md`, `hanzo_logo.svg`, the Search Console
   verification file, `.nojekyll`.
 - `experiments/<name>/` — one folder per experiment.
-- `experiments/` also holds what is shared by all of them: `nav-fx.js` and the
-  `claude_*_context.md` notes that are not specific to a single experiment.
+- `experiments/` also holds what is shared: `nav-fx.js` (the common nav effect) and
+  **all** the `claude_*_context.md` engineering notes, one per topic, kept together at
+  that level rather than inside the experiment folders. Paths inside those notes are
+  relative to `experiments/`.

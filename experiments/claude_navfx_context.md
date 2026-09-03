@@ -1,5 +1,9 @@
 # nav-fx.js — efecto del menú superior en las páginas guardadas
 
+> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
+> limpieza anti-phishing → nav-fx → indice → publicar) esta en
+> `claude_nuevoexperimento_context.md`.
+
 Doc de contexto ÚNICO de este efecto (convención `claude_<tema>_context.md`).
 Todos los `claude_*_context.md` del repo viven en `experiments/`, al nivel de
 las carpetas de experimentos; **sus rutas son relativas a `experiments/`**.

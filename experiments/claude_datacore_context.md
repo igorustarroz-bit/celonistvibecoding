@@ -1,5 +1,9 @@
 # Data Core hero de Celonis — especificación del experimento 3
 
+> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
+> limpieza anti-phishing → nav-fx → indice → publicar) esta en
+> `claude_nuevoexperimento_context.md`.
+
 > Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
 > (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
 > `experiments/`.**

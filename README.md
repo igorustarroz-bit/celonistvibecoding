@@ -34,3 +34,6 @@ Index of experiments: [`index.html`](./index.html)
   **all** the `claude_*_context.md` engineering notes, one per topic, kept together at
   that level rather than inside the experiment folders. Paths inside those notes are
   relative to `experiments/`.
+- Start with `experiments/claude_nuevoexperimento_context.md`: it documents the whole
+  process for adding an experiment — saving the page from the browser, the mandatory
+  anti-impersonation cleanup, wiring the shared nav effect, indexing and publishing.

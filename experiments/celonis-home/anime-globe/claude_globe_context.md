@@ -250,11 +250,9 @@ bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
 
 ## Menú como el site real (nav-fx.js)
 
-`nav-fx.js` (copiado en `celonis-home/anime-globe/` y en
-`datacore/anime-datacore/`, cargado por las 6 páginas de ambos experimentos)
-replica el comportamiento del menú de celonis.com en desktop (>=1200px): al
-hacer scroll hacia abajo el nav se oculta (clase `nav-hidden` de header.css:
-opacity 0 + pointer-events none) dejando un clon fijo del CTA arriba a la
-derecha (`.cloned-cta`); al hacer scroll hacia arriba reaparece (`nav-shown`).
-Mismo mecanismo de clases que el header.js del site real, con detección de
-dirección y guarda de 500 ms.
+`nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
+Fichero COMUN unificado en `experiments/nav-fx.js`, cargado por las 6 paginas
+como `../nav-fx.js?v=N`. Especificacion completa, valores exactos y fallos ya
+cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
+aqui la informacion.
+

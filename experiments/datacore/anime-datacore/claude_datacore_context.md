@@ -256,29 +256,16 @@ dpr/preRes disparan resize() desde applyTune; viven en DATACORE.quality
 
 ## 10. Menú como el site real (nav-fx.js)
 
-`nav-fx.js` (copiado aquí y en `../../celonis-home/anime-globe/`, cargado
-por las 6 páginas de ambos experimentos): en desktop (≥1200px), al hacer
-scroll hacia abajo el nav se oculta (clase nav-hidden de header.css) dejando
-un clon fijo del CTA arriba a la derecha (.cloned-cta); al subir reaparece
-(nav-shown). Detección de dirección con guarda de 500 ms — mismo mecanismo
-de clases que el header.js del site real.
-
-OJO, dos fallos ya cometidos con esto (no repetir):
-1. El breakpoint se comprobaba UNA SOLA VEZ en init(). Una ventana que
-   empezaba ancha y luego se estrechaba (o el modo responsive) seguía
-   ocultando el nav en móvil: el logo y el menú desaparecían y quedaba el CTA
-   clonado flotando sobre el texto. v2 del script: isDesktop() se consulta en
-   cada scroll, y al cruzar el breakpoint hacia abajo (listener de matchMedia
-   + resize) restoreNow() devuelve el nav y borra el clon al instante.
-2. El <script src="anime-datacore/nav-fx.js"> de index3d.html se perdió al
-   publicar index3d.html desde un clon DESACTUALIZADO del repo. Antes de
-   tocar un index: git pull, o editar sobre la copia del portátil de Igor.
-   El menú con el logo NO se toca: estaba bien, solo necesita este efecto.
+`nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
+Fichero COMUN unificado en `experiments/nav-fx.js`, cargado por las 6 paginas
+como `../nav-fx.js?v=N`. Especificacion completa, valores exactos y fallos ya
+cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
+aqui la informacion.
 
 ## 11. Ficheros
 
 En esta carpeta: `datacore.js` (variante A), `datacore-3d.js` (variante B),
-`datacore-tuner.js`, `nav-fx.js`, `sprite.js` (spritemap placeholder del
+`datacore-tuner.js`, `sprite.js` (spritemap placeholder del
 experimento 1: logo real + iconos de sustitución; reescribe los <use> a
 símbolos locales), `anime.umd.min.js` (v4.5.0), `three.min.js` (r147 UMD, de
 npm — los CDN están bloqueados desde el sandbox de Cowork), `three-post.js`

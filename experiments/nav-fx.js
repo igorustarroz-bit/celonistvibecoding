@@ -5,6 +5,14 @@
    scroll hacia arriba reaparece (nav-shown). Mismo mecanismo de clases que el
    header.js del site real, con deteccion de direccion y guarda de 500ms.
 
+   FICHERO COMUN a todos los experimentos: vive en experiments/ y lo cargan
+   las 6 paginas como ../nav-fx.js?v=N. Antes estaba duplicado en
+   celonis-home/anime-globe/ y datacore/anime-datacore/ (unificado 2026-09-03).
+   SUBIR LA VERSION del ?v= en cada cambio.
+
+   Especificacion completa, valores y fallos ya cometidos:
+   experiments/claude_navfx_context.md — leer ANTES de tocar este fichero.
+
    v2: la comprobacion del breakpoint es EN VIVO, no solo al cargar. Antes se
    evaluaba una unica vez en init(), asi que una ventana que empezaba ancha y
    luego se estrechaba (o el modo responsive del navegador) seguia ocultando

@@ -15,13 +15,11 @@ de UI en inglés); documentos y comentarios de código en español.
   grids, sprite de iconos/logo. Cargado por `../index.html` y `../original.html`
   con cache-busting `?v=YYYYMMDD[x]` — SUBIR LA VERSIÓN en cada cambio o el
   navegador servirá el JS viejo (ya pasó y confundió una ronda entera de QA).
-- `nav-fx.js` — menú que se oculta/reaparece con el scroll. Duplicado a
-  propósito en `../../datacore/anime-datacore/nav-fx.js` para que cada
-  experimento sea autocontenido. Cargado por 6 páginas: index y original de
-  celonis-home; index, index3d, original y "Data Core _ Celonis" de datacore.
-  ⚠️ Si una sesión regenera `datacore/index3d.html` entero, debe conservar el
-  `<script src="anime-datacore/nav-fx.js"></script>` antes de `</body>` (se
-  perdió una vez, commit 28f33a9 lo repuso).
+- `nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
+  Fichero COMUN unificado en `experiments/nav-fx.js`, cargado por las 6 paginas
+  como `../nav-fx.js?v=N`. Especificacion completa, valores exactos y fallos ya
+  cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
+  aqui la informacion.
 - `scroll-fx.js` — reacción al scroll del mundo y los cubos (documentado en
   `claude_globe_context.md`). Lo cargan index.html Y original.html.
 
@@ -109,17 +107,8 @@ Tokens de movimiento del site (chunks/tokens.js):
 
 ## 4. Menú superior (nav-fx.js)
 
-- Solo desktop (≥1200 px) y si no hay `.secondary-menu-container`.
-- Scroll hacia ABAJO → `.nav-wrapper` pierde `nav-shown` y gana `nav-hidden`
-  (CSS ya en header.css: opacity 0 + pointer-events none — en el site real
-  NO hay slide animado, es un snap de opacidad; verificado en vivo) y se
-  añade un CLON del CTA ("Try for free") como `.cloned-cta` fijo arriba a la
-  derecha, con `--cta-right-offset` = distancia del CTA real al borde.
-- Scroll hacia ARRIBA → quita nav-hidden, pone nav-shown, y retira el clon
-  ~500 ms después. Guarda de 500 ms entre transiciones (como el original).
-- Al parar el scroll en Y=0 se fuerza visible (debounce 500 ms).
-- Las reglas `.nav-hidden` y `.cloned-cta` ya existen en el header.css
-  guardado de AMBOS experimentos (son idénticos): no hace falta CSS extra.
+Documentado aparte, en **`experiments/claude_navfx_context.md`** (fichero comun
+`experiments/nav-fx.js`). No se duplica aqui.
 
 ## 5. Verificación estándar
 

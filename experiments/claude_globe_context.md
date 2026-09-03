@@ -1,196 +1,196 @@
-# Globo del hero de Celonis — especificación completa
+# Celonis hero globe — full specification
 
-> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
-> limpieza anti-phishing → nav-fx → indice → publicar) esta en
-> `claude_nuevoexperimento_context.md`.
+> **New experiment?** The complete process (save the page from the browser →
+> anti-phishing cleanup → nav-fx → index → publish) is in
+> `claude_newexperiment_context.md`.
 
-> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
-> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
+> This document lives in `experiments/` alongside the other `claude_*_context.md`
+> files (all uploaded there on 2026-09-03). **The paths in this doc are relative to
 > `experiments/`.**
-> La carpeta de este experimento se llamaba `celonis-home/`;
-> desde el 2026-09-03 es `3d-globe/`.
+> This experiment's folder used to be called `celonis-home/`;
+> since 2026-09-03 it is `3d-globe/`.
 
-Contexto para Claude (o cualquier dev) que necesite mantener este globo o
-**rehacerlo en otra tecnología** (Three.js, WebGL, shaders, SVG…). Todo lo
-visual está descrito con fórmulas exactas y valores finales aprobados por
-Igor; la implementación actual (Canvas 2D + anime.js v4) es solo una de las
-posibles.
+Context for Claude (or any dev) who needs to maintain this globe or
+**rebuild it in another technology** (Three.js, WebGL, shaders, SVG…). Everything
+visual is described with exact formulas and final values approved by
+Igor; the current implementation (Canvas 2D + anime.js v4) is only one of the
+possible ones.
 
-## Qué es
+## What it is
 
-Réplica interactiva del mundo 3D en blanco y negro del hero de celonis.com
-(originalmente el vídeo `https://www.celonis.com/src/assets/videos/commercial-earth-hero.mp4`,
-1702×1702 @60fps, 13.9s — hay una copia en `3d-globe/original/`).
-Sustituye al `<video>` por un `<canvas id="earth-canvas">` dentro de `<p class="world">`.
+Interactive replica of the black-and-white 3D world in the celonis.com hero
+(originally the video `https://www.celonis.com/src/assets/videos/commercial-earth-hero.mp4`,
+1702×1702 @60fps, 13.9s — a copy is kept in `3d-globe/original/`).
+It replaces the `<video>` with a `<canvas id="earth-canvas">` inside `<p class="world">`.
 
-## Ficheros (en `3d-globe/anime-globe/`)
+## Files (in `3d-globe/anime-globe/`)
 
-- `globe.js` — renderizador + interacciones. Sin dependencias salvo anime.js y landmask.
-- `landmask.js` — máscara de continentes ACTIVA (bitfield base64, ver abajo).
-- `anime.umd.min.js` — anime.js v4.5.0 UMD; expone `window.anime` ({animate, ...}).
-- `scroll-fx.js` — reacción al scroll (réplica del home-hero.js original del site).
-- `site-fx.js` — interacciones del site restauradas: sprite/logo, titular char-by-char cíclico, cuadrado verde rotatorio, tabs+acordeón de Solutions, carrusel de stories, reveal de grids. (Sustituye al antiguo static-fixes.js.)
-- `tools/mask-tools.py` — export/filter/tojs para editar la máscara como PNG.
-- `tools/landmask-actual.png` — mapamundi completo corregido (blanco = tierra).
-- `tools/landmask-propuesta.png` — la máscara aplicada (sin islas árticas).
+- `globe.js` — renderer + interactions. No dependencies other than anime.js and landmask.
+- `landmask.js` — ACTIVE continent mask (base64 bitfield, see below).
+- `anime.umd.min.js` — anime.js v4.5.0 UMD; exposes `window.anime` ({animate, ...}).
+- `scroll-fx.js` — scroll reaction (replica of the site's original home-hero.js).
+- `site-fx.js` — restored site interactions: sprite/logo, cyclic char-by-char headline, rotating green square, Solutions tabs+accordion, stories carousel, grid reveal. (Replaces the old static-fixes.js.)
+- `tools/mask-tools.py` — export/filter/tojs to edit the mask as a PNG.
+- `tools/landmask-actual.png` — full corrected world map (white = land).
+- `tools/landmask-propuesta.png` — the applied mask (without the Arctic islands).
 
-## 1. Malla de puntos (DECISIÓN CERRADA — no cambiar sin consultar a Igor)
+## 1. Point grid (CLOSED DECISION — do not change without consulting Igor)
 
-Filas de latitud constante, como el vídeo original:
+Rows of constant latitude, like the original video:
 
 ```
-pasoLat = latStepDeg = 1.44°       // filas
-pasoLon = lonStepDeg = 1.08°       // arco entre marcas dentro de la fila
-para lat = -90+pasoLat/2 … 90, en incrementos de pasoLat:
-  n = max(1, round(360/pasoLon · cos(lat)))   // espaciado de arco uniforme
-  para k = 0 … n-1:  lon = -180 + (k+0.5)·360/n
+latStep = latStepDeg = 1.44°       // rows
+lonStep = lonStepDeg = 1.08°       // arc between marks within the row
+for lat = -90+latStep/2 … 90, in steps of latStep:
+  n = max(1, round(360/lonStep · cos(lat)))   // uniform arc spacing
+  for k = 0 … n-1:  lon = -180 + (k+0.5)·360/n
 ```
 
-Valores MEDIDOS sobre el vídeo original (2026-08-31, frames t=2s y t=6s,
-autocorrelación de bandas centrales; disco del vídeo R≈850px de 1702):
-filas cada 21.1–21.7px → 1.42–1.46°; paso en fila 16px → 1.08°. La retícula
-es anisótropa (más densa a lo largo de la fila que entre filas, ratio 3:4).
-Antes usábamos 0.8° en ambos ejes (~58k marcas); ahora ~26k marcas.
-Frames de referencia en `tools/ref-frames/`.
+Values MEASURED on the original video (2026-08-31, frames t=2s and t=6s,
+autocorrelation of the central bands; video disc R≈850px out of 1702):
+rows every 21.1–21.7px → 1.42–1.46°; in-row step 16px → 1.08°. The grid
+is anisotropic (denser along the row than between rows, ratio 3:4).
+We previously used 0.8° on both axes (~58k marks); now ~26k marks.
+Reference frames in `tools/ref-frames/`.
 
-SIN offset aleatorio por fila: las columnas quedan casi alineadas entre filas
-vecinas y eso produce el moiré característico del original. La convergencia en
-los polos se ASUME (así es el vídeo original).
+NO random per-row offset: columns end up almost aligned between neighbouring
+rows and that produces the moiré characteristic of the original. Convergence at
+the poles is ASSUMED (that is how the original video looks).
 
-Alternativas PROBADAS Y RECHAZADAS por Igor (no reintentar):
-- Espiral de Fibonacci (uniforme): deja un remolino de brazos espirales en los polos.
-- Fibonacci + jitter aleatorio: sin artefactos pero pierde el moiré ("menos placentero").
-- Columnas fijas por fila (mismo n en todas): diana de anillos sólidos en el polo.
+Alternatives TESTED AND REJECTED by Igor (do not retry):
+- Fibonacci spiral (uniform): leaves a swirl of spiral arms at the poles.
+- Fibonacci + random jitter: no artifacts but loses the moiré ("less pleasing").
+- Fixed columns per row (same n on all of them): a bullseye of solid rings at the pole.
 
-## 2. Máscara de continentes
+## 2. Continent mask
 
-Equirectangular (plate carrée) 1440×720 (0,25°/celda), 1 bit por celda,
-fila 0 = lat +90, columna 0 = lon −180. En `landmask.js` como
-`LANDMASK = {W, H, data}` con `data` = bitfield en base64 (bit i = celda
-`y·W + x`, LSB primero dentro de cada byte).
+Equirectangular (plate carrée) 1440×720 (0.25°/cell), 1 bit per cell,
+row 0 = lat +90, column 0 = lon −180. In `landmask.js` as
+`LANDMASK = {W, H, data}` with `data` = base64 bitfield (bit i = cell
+`y·W + x`, LSB first within each byte).
 
-Fuente: `world-atlas` (npm) `land-50m.json` + rasterización scanline propia.
-⚠️ TRAMPA CONOCIDA: los anillos que cruzan el antimeridiano (±180°) rompen el
-relleno par-impar ingenuo y rellenan FILAS ENTERAS en el Ártico ("tierra
-fantasma"). Solución: desenrollar las longitudes de cada anillo a un dominio
-continuo y rellenar con XOR por anillo (los agujeros se auto-anulan).
+Source: `world-atlas` (npm) `land-50m.json` + our own scanline rasterization.
+⚠️ KNOWN PITFALL: rings that cross the antimeridian (±180°) break the naive
+even-odd fill and fill WHOLE ROWS in the Arctic ("phantom land"). Fix: unwrap
+each ring's longitudes into a continuous domain and fill with per-ring XOR
+(holes cancel themselves out).
 
-Edición de la tierra visible (petición de Igor): las islas pequeñas del norte
-se tratan como agua; solo Groenlandia sobrevive en el Ártico. Filtro aplicado:
-componentes conexas (con wrap de longitud) cuyo centroide está por encima de
-58°N y cuya área REAL (celdas ponderadas por cos φ) es < 600.000 km² → agua.
+Editing the visible land (Igor's request): the small northern islands are
+treated as water; only Greenland survives in the Arctic. Applied filter:
+connected components (with longitude wrap) whose centroid is above
+58°N and whose REAL area (cells weighted by cos φ) is < 600,000 km² → water.
 
-Flujo de edición manual: `tools/landmask-*.png` (blanco = tierra) se edita en
-cualquier editor y se convierte con
+Manual editing flow: `tools/landmask-*.png` (white = land) is edited in
+any editor and converted with
 `python3 tools/mask-tools.py tojs editado.png landmask.js`.
 
-## 3. Marcas ("dashes")
+## 3. Marks ("dashes")
 
-- Forma: trazo recto con extremos redondeados; grosor = 0.0015 × lado del canvas.
-- Orientación: tangente norte de la esfera rotada 40° hacia el este sobre la
-  superficie (`dashAngleDeg`) → leen como slashes "/". Dirección 3D:
-  `d = cos(40°)·t_norte + sin(40°)·t_este`, con
+- Shape: straight stroke with rounded caps; width = 0.0015 × canvas side.
+- Orientation: the sphere's north tangent rotated 40° eastward on the
+  surface (`dashAngleDeg`) → they read as "/" slashes. 3D direction:
+  `d = cos(40°)·t_norte + sin(40°)·t_este`, with
   `t_norte = (−sinφ·sinλ, cosφ, −sinφ·cosλ)`, `t_este = (cosλ, 0, −sinλ)`.
-- Longitud: máx 0.85° de arco (`dashLenDeg`), escalada por brillo:
-  `lf = 0.22 + 0.78·min(1, brillo·1.6)` (`dotFloor` 0.22) → el agua tenue es
-  casi un punto, las costas el slash completo. Los extremos del trazo se
-  calculan en 3D (p ± d·long/2) y se proyectan, así el escorzo es correcto.
+- Length: max 0.85° of arc (`dashLenDeg`), scaled by brightness:
+  `lf = 0.22 + 0.78·min(1, brillo·1.6)` (`dotFloor` 0.22) → faint water is
+  almost a dot, coastlines the full slash. The stroke endpoints are
+  computed in 3D (p ± d·length/2) and then projected, so the foreshortening is correct.
 
-## 4. Proyección y rotación
+## 4. Projection and rotation
 
-Ortográfica. Radio = 0.4775 × lado del canvas (`radiusRatio`). Canvas cuadrado
-interno de hasta 1702px (cap por rendimiento), dpr máx 2.
-Matriz por frame: `M = Rz(roll) · Rx(tilt) · Ry(spin)` con
-- tilt = 21° (+ pitch del usuario por arrastre vertical, límites −25°…+40°)
-- roll = sin(wobble·2π) · 7°, wobble cicla en 26 s
-- spin = progreso·2π (vuelta completa en 21.6 s, lineal, loop) + dragLon del usuario
-Culling: se descartan puntos con z_vista < 0.015. Pantalla:
-`sx = cx + x·R`, `sy = cy − y·R` (+ offset de entrada).
+Orthographic. Radius = 0.4775 × canvas side (`radiusRatio`). Internal square
+canvas of up to 1702px (capped for performance), dpr max 2.
+Per-frame matrix: `M = Rz(roll) · Rx(tilt) · Ry(spin)` with
+- tilt = 21° (+ the user's pitch from vertical dragging, limits −25°…+40°)
+- roll = sin(wobble·2π) · 7°, wobble cycles in 26 s
+- spin = progress·2π (full turn in 21.6 s, linear, looping) + the user's dragLon
+Culling: points with z_view < 0.015 are discarded. Screen:
+`sx = cx + x·R`, `sy = cy − y·R` (+ entrance offset).
 
-## 5. Iluminación (blanco sobre negro; TIERRA CLARA / MAR OSCURO — decisión de Igor,
-   inversa al vídeo original)
+## 5. Lighting (white on black; LIGHT LAND / DARK SEA — Igor's decision,
+   the inverse of the original video)
 
-Brillo base por marca (semilla fija mulberry32(1337) para reproducibilidad):
-- Tierra: `0.55 · (0.45 + 1.2·v²)` con v = rand() → varianza fuerte. (landBase
-  0.30→0.55 el 2026-08-31, elegido por Igor probando 0.36/0.42/0.55.)
-  - Franja costera (celdas de tierra a ≤5 celdas del agua, distancia Chebyshev
-    en la máscara): `+ 0.85 · (1 − (d−1)/5)² · (0.6 + 0.5·rand())`.
-  - Moteado: `× (0.9 + 0.2·blotch(lon,lat))` con blotch = ruido senoidal barato.
-- Agua: `0.09 · (0.6 + 0.8·rand())` → puntitos casi invisibles.
+Base brightness per mark (fixed seed mulberry32(1337) for reproducibility):
+- Land: `0.55 · (0.45 + 1.2·v²)` with v = rand() → strong variance. (landBase
+  0.30→0.55 on 2026-08-31, chosen by Igor after trying 0.36/0.42/0.55.)
+  - Coastal band (land cells within ≤5 cells of water, Chebyshev distance
+    on the mask): `+ 0.85 · (1 − (d−1)/5)² · (0.6 + 0.5·rand())`.
+  - Mottling: `× (0.9 + 0.2·blotch(lon,lat))` with blotch = cheap sinusoidal noise.
+- Water: `0.09 · (0.6 + 0.8·rand())` → almost invisible dots.
 
-Por frame, el alfa de cada marca:
+Per frame, each mark's alpha:
 `alpha = base · (0.52 + 0.48·max(0,dot(n,L))^1.25) + (1−z)² · 0.42 · (0.5+base)`
-con luz `L = normalize(−0.30, 0.62, 0.72)` (difusa + realce de limbo tipo fresnel).
-Render por buckets: 14 niveles de alfa, un Path2D por nivel y frame.
+with light `L = normalize(−0.30, 0.62, 0.72)` (diffuse + fresnel-style limb highlight).
+Bucketed rendering: 14 alpha levels, one Path2D per level and frame.
 
 ## 6. Blur / bloom
 
-- CSS `filter: blur(0.6px)` sobre el canvas (soft focus general).
-- Bloom VECTORIAL: los buckets con brillo > 0.5 se re-trazan con grosor ×3.4 y
-  alfa `0.55·0.16·nivel` en modo `lighter` → halo alrededor de lo brillante.
-⚠️ NO usar blur gaussiano por canvas (drawImage + filter): >100 ms/frame sin
-GPU. El vectorial cuesta ~1 ms y se ve casi igual.
+- CSS `filter: blur(0.6px)` on the canvas (general soft focus).
+- VECTOR bloom: buckets with brightness > 0.5 are re-stroked with width ×3.4 and
+  alpha `0.55·0.16·nivel` in `lighter` mode → a halo around bright areas.
+⚠️ DO NOT use a per-canvas gaussian blur (drawImage + filter): >100 ms/frame without
+a GPU. The vector one costs ~1 ms and looks nearly identical.
 
-## 7. Interacción de arrastre (ratón + táctil)
+## 7. Drag interaction (mouse + touch)
 
-Pointer Events sobre el canvas, `touch-action: pan-y` (el swipe vertical táctil
-sigue haciendo scroll de página).
-- Horizontal: `dragLon += dx / R_css` (1:1 con la superficie en el ecuador).
-- Vertical: `pitch += (dy/R_css)·(180/π)·0.85`, límites −25°…+40° (se queda donde lo dejas).
-- Al agarrar se pausa el auto-spin; al soltar, INERCIA: velocidad estimada
-  sobre una ventana de posiciones de ~160 ms (robusto a frames lentos; si te
-  paras antes de soltar → velocidad 0, sin inercia). Si |v| > 0.00008 rad/ms:
-  animación de v→0 con ease out(2), duración = clamp(|v|·900000, 350, 3200) ms,
-  integrando `dragLon += v·dt` por frame. Al terminar, el auto-spin se reanuda.
+Pointer Events on the canvas, `touch-action: pan-y` (a vertical touch swipe
+still scrolls the page).
+- Horizontal: `dragLon += dx / R_css` (1:1 with the surface at the equator).
+- Vertical: `pitch += (dy/R_css)·(180/π)·0.85`, limits −25°…+40° (it stays where you leave it).
+- Grabbing pauses the auto-spin; on release, INERTIA: velocity estimated
+  over a window of positions of ~160 ms (robust against slow frames; if you
+  stop before releasing → velocity 0, no inertia). If |v| > 0.00008 rad/ms:
+  animate v→0 with ease out(2), duration = clamp(|v|·900000, 350, 3200) ms,
+  integrating `dragLon += v·dt` per frame. When it finishes, the auto-spin resumes.
 
-## 8. Foco 3D "aguja" (desktop: hover · móvil: al tocar)
+## 8. 3D "needle" focus (desktop: hover · mobile: on touch)
 
-El puntero se proyecta sobre la esfera en espacio de vista
-(`u=(x,y) → z=√(1−|u|²)`; si |u|>0.9995 se fija al limbo; si |u|>1.2 se apaga).
-Cada marca se afecta por su distancia geodésica al punto del cursor:
-`c = dot(p_vista, cursor)`; dentro del casquete (`c > cos(23°)`):
-- `f = (c − cosA)/(1 − cosA)` ∈ [0,1] (1 en el centro).
-- LUZ: `alpha += 0.3 · smoothstep(f) · (tierra ? 1 : 0.1)` — gradiente 100%→0.
-- ELEVACIÓN "aguja": `mag = 0.045 · f^400` (pico finísimo solo en el centro);
-  el punto se eleva por la normal `p → p·(1+mag)` y la marca crece ×(1+mag·1.5).
-- Todo escala con `spot.on`, que hace fade 250 ms al entrar/salir el puntero →
-  al retirarlo la retícula vuelve EXACTA a su sitio.
+The pointer is projected onto the sphere in view space
+(`u=(x,y) → z=√(1−|u|²)`; if |u|>0.9995 it is clamped to the limb; if |u|>1.2 it turns off).
+Every mark is affected by its geodesic distance to the cursor point:
+`c = dot(p_vista, cursor)`; inside the cap (`c > cos(23°)`):
+- `f = (c − cosA)/(1 − cosA)` ∈ [0,1] (1 at the centre).
+- LIGHT: `alpha += 0.3 · smoothstep(f) · (tierra ? 1 : 0.1)` — gradient 100%→0.
+- "Needle" ELEVATION: `mag = 0.045 · f^400` (an extremely sharp peak only at the centre);
+  the point is raised along the normal `p → p·(1+mag)` and the mark grows ×(1+mag·1.5).
+- Everything scales with `spot.on`, which fades over 250 ms as the pointer enters/leaves →
+  when it is withdrawn the grid returns EXACTLY to its place.
 
-Activación según el puntero (misma fórmula y misma intensidad en ambos):
-- Ratón (`pointerType === 'mouse'`, solo si `FINE_POINTER`): hover — sigue al
-  cursor en `pointermove` y se apaga en `pointerleave`.
-- Táctil / lápiz (cualquier `pointerType` distinto de mouse, sin depender de
-  FINE_POINTER, así que también funciona en portátiles con pantalla táctil):
-  se enciende en `pointerdown` DONDE se toca, sigue al dedo mientras se
-  arrastra (compartiendo el gesto con el giro del globo) y al levantar el dedo
-  se queda `spotTouchHoldMs` (900 ms) antes del fade, para que un tap suelto
-  se llegue a ver. `pointercancel` (p. ej. cuando el navegador se queda el
-  gesto para hacer scroll) también lo apaga.
-- Helpers compartidos `moveSpot(e)` y `fadeSpot(to, delayMs)`; el delay se
-  cancela solo si se vuelve a tocar antes de que expire.
+Activation depends on the pointer (same formula and same intensity in both):
+- Mouse (`pointerType === 'mouse'`, only if `FINE_POINTER`): hover — it follows the
+  cursor on `pointermove` and turns off on `pointerleave`.
+- Touch / stylus (any `pointerType` other than mouse, without depending on
+  FINE_POINTER, so it also works on laptops with a touch screen):
+  it turns on at `pointerdown` WHERE you touch, follows the finger while it is
+  dragged (sharing the gesture with the globe's rotation) and when the finger is
+  lifted it stays for `spotTouchHoldMs` (900 ms) before the fade, so that a quick tap
+  is actually visible. `pointercancel` (e.g. when the browser takes over the
+  gesture to scroll) also turns it off.
+- Shared helpers `moveSpot(e)` and `fadeSpot(to, delayMs)`; the delay is only
+  cancelled if you touch again before it expires.
 
-## 9. Entrada y scroll
+## 9. Entrance and scroll
 
-Entrada (al cargar): fade alpha 0→1, rise (offset vertical 10%→0) y scale
-0.94→1 en 1.8 s ease outCubic.
+Entrance (on load): alpha fade 0→1, rise (vertical offset 10%→0) and scale
+0.94→1 over 1.8 s ease outCubic.
 
-Scroll (`scroll-fx.js`; réplica del home-hero.js real del site, scrub lineal 1:1):
-- Elementos: `p.world` (contiene el canvas) y `.fragment-wrapper` (tarjeta stats).
-- Reposo: **desktop (≥1200px): translate(0, −500px) scale(1) — FIJO, elegido a
-  mano por Igor**; tablet: y = −vh + 434; móvil: y = −vh + 386.
-- Rango: `E = altura(.home-hero)·1.75 + 88`; `start = max(0, 4/7·E − vh)`;
+Scroll (`scroll-fx.js`; replica of the site's real home-hero.js, linear 1:1 scrub):
+- Elements: `p.world` (contains the canvas) and `.fragment-wrapper` (stats card).
+- Rest state: **desktop (≥1200px): translate(0, −500px) scale(1) — FIXED, hand-picked
+  by Igor**; tablet: y = −vh + 434; mobile: y = −vh + 386.
+- Range: `E = altura(.home-hero)·1.75 + 88`; `start = max(0, 4/7·E − vh)`;
   `end = E − vh`.
-- Con progreso p ∈ [0,1]: world `y = reposo − 0.75·vh·p`, `scale = 1 − 0.75·p`
-  (termina a 0.25); wrapper `scale = max(0, 1 − p/0.8)`.
-- rAF-throttled, listeners passive, se recalcula en resize. Hook: `window.__heroScroll`.
+- With progress p ∈ [0,1]: world `y = reposo − 0.75·vh·p`, `scale = 1 − 0.75·p`
+  (ends at 0.25); wrapper `scale = max(0, 1 − p/0.8)`.
+- rAF-throttled, passive listeners, recomputed on resize. Hook: `window.__heroScroll`.
 
-## 10. CFG final (aprobado por Igor, 2026-08-31)
+## 10. Final CFG (approved by Igor, 2026-08-31)
 
 ```
 latStepDeg 1.44 · lonStepDeg 1.08 · dashLenDeg 0.85 · dashAngleDeg 40 · dotFloor 0.22
 dashWidthRatio 0.0021 · radiusRatio 0.4775 · tiltDeg 21 · rollDeg 7
 spinPeriodMs 21600 · wobblePeriodMs 26000 · entranceMs 1800
-landBase 0.55 · oceanBase 0.09 · coastBoost 0.85 (COAST_MAX 5 celdas)
+landBase 0.55 · oceanBase 0.09 · coastBoost 0.85 (COAST_MAX 5 cells)
 softBlurPx 0.6 · bloomStrength 0.55 · bloomWidth 3.4 · bloomFrom 0.5
 spotAngleDeg 23 · spotStrength 0.3 · spotLandFactor 0.1 · spotBulge 0.045
 spotNeedlePow 400 · spotFadeMs 250 · spotTouchHoldMs 900
@@ -200,69 +200,69 @@ cursorColor #000000 · cursorOutline #ffffff · cursorOutlinePx 1.5
 cursorSizePx 28 · cursorStrokePx 3
 ```
 
-Todo expuesto en `window.__earth` (cfg, state, redraw, spinAnim, flick(v),
-rebuild(), applyCursor()). Los parámetros de construcción (latStepDeg,
-lonStepDeg, dashAngleDeg, dotFloor, landBase, oceanBase, coastBoost) se
-retocan en vivo con `__earth.cfg.X = v; __earth.rebuild()` (regenera las
-~26k marcas, semilla fija → mismo patrón); los del cursor con
-`__earth.applyCursor()`; el resto actúa solo.
+Everything is exposed on `window.__earth` (cfg, state, redraw, spinAnim, flick(v),
+rebuild(), applyCursor()). The construction parameters (latStepDeg,
+lonStepDeg, dashAngleDeg, dotFloor, landBase, oceanBase, coastBoost) are
+tweaked live with `__earth.cfg.X = v; __earth.rebuild()` (regenerates the
+~26k marks, fixed seed → same pattern); the cursor ones with
+`__earth.applyCursor()`; the rest take effect on their own.
 
-## 11. Rendimiento
+## 11. Performance
 
-~26k marcas totales (~13k visibles) con la retícula 1.44/1.08. draw() ≈ 2–5 ms en CPU pura (sin GPU);
-en un portátil moderno va sobrado a 60fps. Claves: nada de sqrt en los hot
-paths donde se pudo evitar, buckets de alfa (14 strokes por frame, no 29k),
-bloom vectorial en vez de filtros, y canvas interno capado a 1702px.
+~26k marks in total (~13k visible) with the 1.44/1.08 grid. draw() ≈ 2–5 ms on pure CPU (no GPU);
+on a modern laptop it holds 60fps with room to spare. Keys: no sqrt in the hot
+paths where it could be avoided, alpha buckets (14 strokes per frame, not 29k),
+vector bloom instead of filters, and the internal canvas capped at 1702px.
 
-## 12. Historial de decisiones (para no repetir debates)
+## 12. Decision history (so debates are not repeated)
 
-- Tierra clara / mar oscuro: decisión de Igor (el vídeo original es al revés).
-- Slashes "/" y agua como puntitos: decisión de Igor.
-- Malla de filas del original > Fibonacci/jitter: decisión de Igor.
-- 2026-08-31: densidad corregida a la del vídeo original medida en frames
-  (lat 1.44° / lon 1.08°, antes 0.8°/0.8°) y grosor de trazo 0.0021 (~4px
-  a 1702, como el vídeo). Verificado por autocorrelación sobre un render
-  headless: 1.41°/1.06°. Petición de Igor ("la retícula original tenía
-  menos elementos").
-- Islas árticas como agua, Groenlandia como tierra: decisión de Igor (filtro por área).
-- Foco pequeño con aguja f^400: valores elegidos por Igor probando en consola.
-- 2026-09-01: el foco deja de ser solo-desktop y se activa AL TOCAR en móvil
-  (petición de Igor). Se quitó el gate `FINE_POINTER` de `spotActive` en
-  draw() y se separaron los listeners por `pointerType`. El resto de efectos
-  de la página no se tocó.
-- Reposo desktop −500px fijo: valor elegido por Igor.
-- 2026-08-31: cursor personalizado sobre el canvas en desktop (pointer fino):
-  crosshair de mira SVG — 4 brazos SIN punto central (referencia visual
-  elegida por Igor, que pidió quitar el punto). Tras probar el verde Celonis
-  #5cfe50 sólido, Igor eligió NEGRO con BORDE BLANCO de 1.5px que envuelve
-  cada brazo entero (visible sobre fondo negro y sobre zonas brillantes).
-  Geometría (s=tamaño, sw=trazo, o=borde): brazo exterior en 0.04·s+o;
-  interior en a1 = s/2 − sw/2 − 3o, de modo que la separación entre el blanco
-  de un brazo y el de los perpendiculares es exactamente o (petición de Igor;
-  primero pidió 1px y luego "la misma distancia que mida el borde").
-  Hotspot centrado, fallback `crosshair`; en táctil no se toca. Mismo cursor
-  durante el arrastre (sin grab/grabbing). Para volver al verde sin borde:
+- Light land / dark sea: Igor's decision (the original video is the other way round).
+- "/" slashes and water as small dots: Igor's decision.
+- The original's row grid > Fibonacci/jitter: Igor's decision.
+- 2026-08-31: density corrected to that of the original video as measured on frames
+  (lat 1.44° / lon 1.08°, previously 0.8°/0.8°) and stroke width 0.0021 (~4px
+  at 1702, like the video). Verified by autocorrelation on a headless
+  render: 1.41°/1.06°. Igor's request ("the original grid had
+  fewer elements").
+- Arctic islands as water, Greenland as land: Igor's decision (area filter).
+- Small focus with an f^400 needle: values chosen by Igor experimenting in the console.
+- 2026-09-01: the focus is no longer desktop-only and is activated ON TOUCH on mobile
+  (Igor's request). The `FINE_POINTER` gate was removed from `spotActive` in
+  draw() and the listeners were split by `pointerType`. The rest of the page's
+  effects were left untouched.
+- Desktop rest state fixed at −500px: value chosen by Igor.
+- 2026-08-31: custom cursor over the canvas on desktop (fine pointer):
+  an SVG crosshair reticle — 4 arms with NO centre dot (visual reference
+  chosen by Igor, who asked for the dot to be removed). After trying solid Celonis
+  green #5cfe50, Igor chose BLACK with a 1.5px WHITE OUTLINE wrapping
+  each whole arm (visible against a black background and over bright areas).
+  Geometry (s=size, sw=stroke, o=outline): outer arm at 0.04·s+o;
+  inner at a1 = s/2 − sw/2 − 3o, so that the gap between one arm's white
+  and that of the perpendicular arms is exactly o (Igor's request;
+  he first asked for 1px and then for "the same distance as the outline width").
+  Hotspot centred, fallback `crosshair`; on touch it is left alone. Same cursor
+  during dragging (no grab/grabbing). To go back to green without an outline:
   cursorColor '#5cfe50', cursorOutline ''.
-- Bug histórico 1: usar variables antes de declararlas dentro de draw() → NaN
-  silencioso (el hoisting de `var` no inicializa). Calcular yOffset al principio.
-- Bug histórico 2: rasterizador del antimeridiano (ver §2).
+- Historical bug 1: using variables before declaring them inside draw() → silent
+  NaN (`var` hoisting does not initialize). Compute yOffset at the start.
+- Historical bug 2: antimeridian rasterizer (see §2).
 
-## 13. Notas para portar a otra tecnología
+## 13. Notes for porting to another technology
 
-- WebGL/Three.js: instancing de ~58k quads o gl.LINES; la máscara puede ir
-  como textura (equirect 1440×720, nearest) y TODO el modelo de brillo (§5) y
-  el foco (§8) caben en el vertex/fragment shader — el bloom pasaría a ser un
-  postprocesado real (UnrealBloomPass o similar).
-- Mantener EXACTAMENTE: la malla de filas (§1), las fórmulas de brillo (§5),
-  las curvas de scroll (§9) y los valores del CFG (§10). Son el "look".
-- El vídeo original guardado sirve como referencia visual de contraste y ritmo
-  de rotación (~100° cada 6 s).
+- WebGL/Three.js: instancing of ~58k quads or gl.LINES; the mask can be passed
+  as a texture (equirect 1440×720, nearest) and the WHOLE brightness model (§5) and
+  the focus (§8) fit in the vertex/fragment shader — the bloom would become a real
+  post-process (UnrealBloomPass or similar).
+- Keep EXACTLY: the row grid (§1), the brightness formulas (§5), the scroll
+  curves (§9) and the CFG values (§10). They are the "look".
+- The saved original video serves as a visual reference for contrast and rotation
+  rhythm (~100° every 6 s).
 
-## Menú como el site real (nav-fx.js)
+## Menu like the real site (nav-fx.js)
 
-`nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
-Fichero COMUN unificado en `experiments/nav-fx.js`, cargado por las 6 paginas
-como `../nav-fx.js?v=N`. Especificacion completa, valores exactos y fallos ya
-cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
-aqui la informacion.
+`nav-fx.js` — top menu effect (hide on scroll down + CTA clone).
+SHARED file unified in `experiments/nav-fx.js`, loaded by the 6 pages
+as `../nav-fx.js?v=N`. Full specification, exact values and mistakes already
+made: **`experiments/claude_navfx_context.md`** — read that doc, do not duplicate
+the information here.
 

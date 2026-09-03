@@ -1,0 +1,160 @@
+# How to build a new experiment — the process, end to end
+
+> This document lives in `experiments/` alongside the other `claude_*_context.md` files.
+> **Paths in this doc are relative to `experiments/`.**
+> It is the ENTRY POINT: if you are setting up a new experiment, start here.
+
+Every experiment follows the same path: **save the client page from the browser**,
+apply the **anti-phishing cleanup**, apply the **nav-fx**, build the new effect on top
+of it, and link it from the index.
+
+Docs to keep at hand (not duplicated here):
+- `claude_antiphishing_context.md` — mandatory cleanup rules + verification sweep.
+  **Not optional**: on 2026-09-02 Google flagged the site as deceptive because this
+  was skipped.
+- `claude_navfx_context.md` — the menu effect, shared by all pages.
+- The doc of whichever experiment you copy the mechanics from (`claude_globe_context.md`,
+  `claude_datacore_context.md`).
+
+---
+
+## 1. Save the page from the browser
+
+In Chrome, on the real page (e.g. `https://www.celonis.com/<path>/`):
+`Cmd+S` → format **"Webpage, Complete"**. This produces two things:
+
+```
+<Page name>.html
+<Page name>_files/        CSS, layout JS, images, video
+```
+
+- Do **not** use "HTML Only" or print to PDF: without the layout CSS/JS and the assets
+  the prototype cannot be judged in context, which is its whole purpose.
+- Save directly inside the new experiment folder (step 2).
+- If the page has a hero video, check that the `.mp4` was downloaded: it is the
+  reference for contrast and pacing when replicating it.
+
+## 2. Folder and naming
+
+The folder is named after **what the experiment IS**, in English and in kebab-case,
+never after the client page (`3d-globe`, not `celonis-home`).
+
+```
+experiments/<experiment-name>/
+  original.html        UNTOUCHED copy (with video), only stripped of tracking
+  index.html           working copy: the experiment goes here
+  original/            the browser assets (the `<Name>_files/` folder, renamed)
+  <topic>-fx/          our own JS (or anime-<topic>/, as in the current ones)
+```
+
+Both pages (`index.html` and `original.html`) share the assets folder, so they can be
+compared side by side: the original with video and the replica.
+
+⚠️ Historical variation: `datacore/` kept the browser names
+(`Data Core _ Celonis.html` + `Data Core _ Celonis_files/`) and `3d-globe/` renamed the
+folder to `original/`. For new experiments, use `original/`.
+
+## 3. Anti-phishing cleanup — BEFORE the first push
+
+Apply **all** of section 2 of `claude_antiphishing_context.md`. The most frequently
+forgotten items, in order of risk:
+
+1. The `<script type="application/ld+json">` blocks (they declare the brand identity).
+2. `<link rel="canonical">` and the `<meta property="og:*">` / `<meta name="twitter:*">` tags.
+3. `<meta name="robots" content="noindex,nofollow">` + our own `<title>`/`description`
+   (`Vibecoding prototype - <what it is> (unofficial)`).
+4. Every `<a href>` starting with `http`, `//` or `/` → `href="#"`. The
+   **login and signup ones first** (copied branding + login link = textbook phishing).
+5. Remove form and chat iframes, and **all** analytics scripts and pixels, including
+   inline snippets. Keep `aem.js`, `scripts.js`, `main.*.js`, `*.chunk.js` (layout,
+   not tracking).
+6. Tracking files are NOT deleted from disk: `git rm --cached` + an explicit rule in
+   `.gitignore` (the `.gitignore` paths carry the prefix
+   `/experiments/<name>/...`; renaming or moving a folder means updating them).
+7. Do **not** put a banner on the experiment page; the disclaimer goes only in the index.
+
+Plus the **verification sweep** from section 4 of that doc before every push, and the
+browser check that all network requests are same-origin.
+
+## 4. Apply nav-fx
+
+Add to **all** saved pages in the folder (index and original), right before `</body>`:
+
+```html
+<script src="../nav-fx.js?v=N"></script>
+```
+
+- The script is single and shared: `experiments/nav-fx.js`. Do not copy it into the folder.
+- Requirement: the saved `header.css` must already contain `.nav-hidden` and
+  `.cloned-cta` — celonis.com's does; if a new page does not have them, see
+  `claude_navfx_context.md`.
+- When you touch the JS you must **bump the `?v=`** on all 6+ pages: Pages caches for
+  about 10 min.
+
+## 5. Build the effect
+
+Our own JS goes in the experiment subfolder, loaded from `index.html` with its own
+`?v=`. The method that has always worked (detailed in `claude_sitefx_context.md`): the
+live site is AEM Edge Delivery, so read the blocks at
+`celonis.com/dist/blocks/<block>/<block>.js` and the motion tokens from
+`dist/chunks/tokens.js`, and REIMPLEMENT them in vanilla JS; then compare by sampling
+transforms every 50 ms, live vs replica, at 1440×900.
+
+Igor's rules: **nothing in Spanish in the interface** (UI in English), the context
+files (`claude_*_context.md`) in English too — only the comments inside the JS code
+are still in Spanish — and visual parameters are tuned in the DevTools console before
+being fixed in the code.
+
+## 6. Link it from the root index
+
+In `/index.html`, one block per experiment:
+
+```html
+<article class="exp">
+  <span class="date">Sep 3, 2026</span>
+  <div class="num">Experiment N</div>
+  <h2>Short title of what was done</h2>
+  <p>Two or three lines: what is being replaced and with what.</p>
+  <div class="links">
+    <a href="experiments/<name>/index.html" target="_blank" rel="noopener">Open experiment</a>
+    <a class="alt" href="experiments/<name>/original.html" target="_blank" rel="noopener">Saved original (with video)</a>
+  </div>
+</article>
+```
+
+All index links open in a **new window** (`target="_blank" rel="noopener"`). The index
+is the only navigation: experiment pages are not linked to each other.
+
+## 7. Publish
+
+```bash
+cd ~/repo/celonistvibecoding
+git add -A && git commit -m "..."
+TOK=$(tr -d ' \n\r' < github-token.txt)
+git push "https://x-access-token:${TOK}@github.com/igorustarroz-bit/celonisvibecoding.git" main
+```
+
+`github-token.txt` is a fine-grained PAT and is **never** pushed (it is in `.gitignore`).
+Resulting URL: `https://igorustarroz-bit.github.io/celonisvibecoding/experiments/<name>/index.html`.
+
+From Cowork: `rm` in the mounted folder is blocked by default (you have to request
+delete permission); `mv` and `git mv` work. And to check a recent publish, use the
+browser — WebFetch caches for 15 min per URL.
+
+## 8. Document the experiment
+
+Create `experiments/claude_<topic>_context.md` with the settled decisions, the exact
+values and the mistakes already made. **All context docs live in `experiments/`**, at
+the same level as the folders, never inside one of them, and their paths are relative
+to `experiments/`.
+
+## Final checklist before saying "published"
+
+- [ ] Anti-phishing sweep clean (section 4 of the anti-phishing doc).
+- [ ] Network requests of the published page: all same-origin.
+- [ ] `<script src="../nav-fx.js?v=N">` on every page in the folder, with the `?v=`
+      bumped if the JS was touched.
+- [ ] New links in the index, with `target="_blank" rel="noopener"`.
+- [ ] `.gitignore` rules with the correct prefix for the new folder's tracking files.
+- [ ] The published page opened in the browser and checked at 1440×900 and on mobile.
+- [ ] `experiments/claude_<topic>_context.md` written.

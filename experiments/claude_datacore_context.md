@@ -1,344 +1,346 @@
-# Data Core hero de Celonis — especificación del experimento 3
+# Celonis Data Core hero — experiment 3 specification
 
-> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
-> limpieza anti-phishing → nav-fx → indice → publicar) esta en
-> `claude_nuevoexperimento_context.md`.
+> **New experiment?** The complete process (save the page from the browser →
+> anti-phishing cleanup → nav-fx → index → publish) is in
+> `claude_newexperiment_context.md`.
 
-> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
-> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
+> This document lives in `experiments/` alongside the other `claude_*_context.md`
+> files (all uploaded there on 2026-09-03). **The paths in this doc are relative to
 > `experiments/`.**
 
-Documento de referencia para mantener este hero o RECONSTRUIRLO EN OTRA
-TECNOLOGÍA (Three.js, WebGL puro, SVG, Rive, Lottie…). Describe QUÉ se ve y
-con qué datos exactos, separando el diseño (agnóstico de tecnología) de las
-notas de implementación actuales. Estado: v19 (2026-09-01).
+Reference document for maintaining this hero or REBUILDING IT IN ANOTHER
+TECHNOLOGY (Three.js, raw WebGL, SVG, Rive, Lottie…). It describes WHAT is seen
+and with which exact data, separating the design (technology-agnostic) from the
+current implementation notes. Status: v19 (2026-09-01).
 
-Regla de Igor para todo el proyecto: NADA en español en la interfaz — todos
-los textos de UI en inglés (etiquetas, botones, paneles). Los documentos y
-comentarios de código sí van en español.
+Igor's rule for the whole project: NOTHING in Spanish in the interface — all
+UI text in English (labels, buttons, panels). The context files
+(`claude_*_context.md`) — names and content — are in English too; only the
+comments inside the JS code are still in Spanish.
 
-## 1. Qué es
+## 1. What it is
 
-Réplica animada del "Data Core" del hero de
-https://www.celonis.com/platform/datacore — originalmente el vídeo
+Animated replica of the "Data Core" from the hero of
+https://www.celonis.com/platform/datacore — originally the video
 `Data Core _ Celonis_files/media_1d4cef74d99f6c45beccfa206d959b14c6b09d142.mp4`
-(1280×720 @50fps, 17 s) con still de referencia
-`Celonis_DataCore_Still.png` (3840×2160). Sustituye al `<video>` por un
-`<canvas id="datacore-canvas">` dentro de
+(1280×720 @50fps, 17 s) with reference still
+`Celonis_DataCore_Still.png` (3840×2160). It replaces the `<video>` with a
+`<canvas id="datacore-canvas">` inside
 `<div class="auto-player-wrapper" id="datacore-stage">` (aspect-ratio 16/9).
 
-Dos variantes:
+Two variants:
 - A (Canvas 2D + anime.js): `datacore/index.html` + `anime-datacore/datacore.js`
-  — falso 3D.
-- B (3D real, la principal): `datacore/index3d.html` +
-  `anime-datacore/datacore-3d.js` — la que
-  describe este documento.
+  — fake 3D.
+- B (real 3D, the main one): `datacore/index3d.html` +
+  `anime-datacore/datacore-3d.js` — the one
+  this document describes.
 
-## 2. La escena (agnóstico de tecnología)
+## 2. The scene (technology-agnostic)
 
-Vista isométrica 2:1 de una pila de TRES PISOS de cristal ahumado casi negro
-sobre fondo negro, cada piso con su etiqueta pill. De abajo arriba:
+2:1 isometric view of a stack of THREE FLOORS of almost-black smoked glass
+on a black background, each floor with its pill label. From bottom to top:
 DATA INTEGRATION, DATA TRANSFORMATION, PROCESS QUERY ENGINE.
 
-- Cámara ortográfica isométrica: azimut 45°, elevación 31.3°.
-- Escala: A = min(anchoPx·K, altoPx/5.4) · 1.10, con K = 0.17 en desktop y
-  K = 0.205 por debajo de 900px (v26). En MÓVIL además el stage pasa de
-  16/9 a 5/6 por CSS (`@media (max-width:900px)` en el <style id=datacore-exp>
-  de ambos index): con el 16/9 la altura mandaba en el min() y la figura
-  salía diminuta (A≈40 en 390px de ancho); ahora A≈79, el doble justo, y la
-  figura ocupa ~94% del ancho. Misma regla en las dos variantes. En la variante 3D,
-  píxeles-por-unidad-de-mundo = √2·A. La separación vertical entre pisos se
-  multiplica por SEPK = 1/(cos 31.3°·√2) para igualar el alzado de la
-  variante 2D.
-- Parallax con el ratón: rota la raíz hasta ±0.22 rad en Y y ±0.05 en X,
-  suavizado lerp 0.055/frame.
-- Cursor: crosshair personalizado (4 brazos con hueco central, trazo negro
-  3px con borde blanco 1.5px, 28px, SVG data-URI); solo con puntero fino.
+- Isometric orthographic camera: azimuth 45°, elevation 31.3°.
+- Scale: A = min(widthPx·K, heightPx/5.4) · 1.10, with K = 0.17 on desktop and
+  K = 0.205 below 900px (v26). On MOBILE the stage additionally goes from
+  16/9 to 5/6 via CSS (`@media (max-width:900px)` in the <style id=datacore-exp>
+  of both index files): with 16/9 the height dominated the min() and the figure
+  came out tiny (A≈40 at 390px width); now A≈79, exactly double, and the
+  figure takes up ~94% of the width. Same rule in both variants. In the 3D variant,
+  pixels-per-world-unit = √2·A. The vertical separation between floors is
+  multiplied by SEPK = 1/(cos 31.3°·√2) to match the elevation of the
+  2D variant.
+- Mouse parallax: rotates the root up to ±0.22 rad in Y and ±0.05 in X,
+  smoothed with lerp 0.055/frame.
+- Cursor: custom crosshair (4 arms with a central gap, 3px black stroke
+  with a 1.5px white border, 28px, SVG data-URI); only with a fine pointer.
 
-### Los suelos (líneas)
+### The floors (lines)
 
-Cada piso tiene una LÍNEA-marco con forma de diamante redondeado (extent
-1.04, esquinas r 0.10) que funciona como su SUELO transparente. La línea es
-SOLIDARIA a su piso: piezas y línea se mueven siempre juntas, nada se
-adelanta ni atrasa (la línea es hija del grupo del piso, sin offsets
-propios). En la implementación es una cinta de malla de ~2px (una Line de
-1px no puede engordar en WebGL).
+Each floor has a rounded-diamond-shaped FRAME LINE (extent
+1.04, corners r 0.10) that acts as its transparent FLOOR. The line is
+RIGIDLY BOUND to its floor: pieces and line always move together, nothing
+runs ahead or lags behind (the line is a child of the floor's group, with no
+offsets of its own). In the implementation it is a ~2px mesh ribbon (a 1px
+Line cannot be thickened in WebGL).
 
-### El ciclo (timeline, loop de 11.5 s, ease inOutQuart)
+### The cycle (timeline, 11.5 s loop, ease inOutQuart)
 
-Estado `spread` 0=compacto / 1=explosionado y `label` 0/1:
-- 600→3000 ms: spread 0→1 (explosión).
-- 1900→2600 ms: label 0→1 (aparecen las TRES etiquetas).
-- hold explosionado hasta 7600 ms.
-- 7600→8100 ms: label→0 (TODOS los textos desaparecen ANTES de juntarse).
-- 7900→10100 ms: spread→0 (colapso); hold compacto hasta 11500.
-- Aparte: `wave` 0→1 en 9 s, loop lineal (motor del morph de la capa media).
-- Separación entre pisos: sep = (0.004 + (1.28 − 0.004)·spread)·SEPK.
-  En compacto 0.004 ≈ <1px: los tres pisos coinciden y las tres líneas SE VEN
-  COMO UNA SOLA (el epsilon evita el z-fighting del coplanar exacto).
-- Bob: flotación senoidal con FASE COMÚN entre pisos, amplitud
-  (0.009+0.003·li)·spread, solo explosionado.
-- Pop-in inicial (una vez, no en el loop): aparición por tile según distancia
-  Manhattan al centro, ventana 0.5 s, escala 0.75→1 + alpha.
-- `prefers-reduced-motion`: estado explosionado estático, sin animaciones.
+State `spread` 0=compact / 1=exploded and `label` 0/1:
+- 600→3000 ms: spread 0→1 (explosion).
+- 1900→2600 ms: label 0→1 (the THREE labels appear).
+- hold exploded until 7600 ms.
+- 7600→8100 ms: label→0 (ALL the texts disappear BEFORE the floors come together).
+- 7900→10100 ms: spread→0 (collapse); hold compact until 11500.
+- Separately: `wave` 0→1 over 9 s, linear loop (driver of the middle layer's morph).
+- Separation between floors: sep = (0.004 + (1.28 − 0.004)·spread)·SEPK.
+  When compact, 0.004 ≈ <1px: the three floors coincide and the three lines LOOK
+  LIKE A SINGLE ONE (the epsilon avoids z-fighting from being exactly coplanar).
+- Bob: sinusoidal floating with a COMMON PHASE across floors, amplitude
+  (0.009+0.003·li)·spread, only when exploded.
+- Initial pop-in (once, not in the loop): per-tile appearance based on Manhattan
+  distance to the center, 0.5 s window, scale 0.75→1 + alpha.
+- `prefers-reduced-motion`: static exploded state, no animations.
 
-### Fusión concéntrica (estado compacto)
+### Concentric fusion (compact state)
 
-Al colapsar, los tres pisos se reparten EN PLANTA sin pisarse:
-- Piso superior: se encoge al CENTRO (topScale = 1 − 0.52·inv, con
+On collapse, the three floors distribute themselves IN PLAN without overlapping:
+- Top floor: shrinks to the CENTER (topScale = 1 − 0.52·inv, with
   inv = 1 − spread).
-- Piso medio: se encoge un poco (midScale = 1 − 0.22·inv) y VACÍA su núcleo
-  (midHole = 0.68·inv): queda en anillo alrededor del top.
-- Piso inferior: sus placas hacen MORPH a un anillo-diamante exterior (§3).
+- Middle floor: shrinks a little (midScale = 1 − 0.22·inv) and EMPTIES its core
+  (midHole = 0.68·inv): it remains as a ring around the top floor.
+- Bottom floor: its plates MORPH into an outer diamond ring (§3).
 
-## 3. Piso inferior — DATA INTEGRATION (placas con morph)
+## 3. Bottom floor — DATA INTEGRATION (plates with morph)
 
-FUENTE DE VERDAD: el SVG dibujado por Igor
-`datacore/Data Core _ Celonis_files/piso_inferior_forma_poligonos.svg` (en el
-repo). Contiene DOS diagramas: izquierda = estado EXPLOSIONADO (4 escudos),
-derecha = estado COMPACTO (anillo-diamante con muescas en V). NO hay caja
-central: el hueco rectangular entre los escudos queda vacío, enmarcado por
-sus filos.
+SOURCE OF TRUTH: the SVG drawn by Igor
+`datacore/Data Core _ Celonis_files/piso_inferior_forma_poligonos.svg` (in the
+repo). It contains TWO diagrams: left = EXPLODED state (4 shields),
+right = COMPACT state (diamond ring with V-shaped notches). There is NO central
+box: the rectangular gap between the shields stays empty, framed by
+their edges.
 
-Normalización del SVG a coords de pantalla (a,b) ∈ [−1,1] sobre el diamante:
-a = (x − cx)/298.34, b = (y − 153)/149.17, con cx = 305.74 (diagrama izq) y
-cx = 1012.74 (dcha). Después, el conjunto de cada estado se CENTRA restando
-el centro de su bounding box (el dibujo va ~0.034 al norte). Conversión al
-plano del mundo: u = 1.04·(a+b), v = 1.04·(b−a)  [equivale a (a,b)·1.471 y
-rotar 45° con 1/√2].
+Normalization of the SVG to screen coords (a,b) ∈ [−1,1] over the diamond:
+a = (x − cx)/298.34, b = (y − 153)/149.17, with cx = 305.74 (left diagram) and
+cx = 1012.74 (right). Afterwards, each state's set is CENTERED by subtracting the
+center of its bounding box (the drawing sits ~0.034 to the north). Conversion to
+the world plane: u = 1.04·(a+b), v = 1.04·(b−a)  [equivalent to (a,b)·1.471 and
+a 45° rotation with 1/√2].
 
-Coordenadas (a,b) YA normalizadas, ANTES del centrado, orden S, N, O, E:
+Coordinates (a,b) ALREADY normalized, BEFORE centering, order S, N, W, E:
 
-EXPLOSIONADO:
+EXPLODED:
 - S: [0.222,0.201] [−0.22,0.201] [−0.385,0.355] [−0.385,0.459] [−0.059,0.778] [0.056,0.778] [0.375,0.459] [0.375,0.355]
 - N: [0.222,−0.268] [−0.22,−0.268] [−0.385,−0.422] [−0.385,−0.526] [−0.059,−0.845] [0.056,−0.845] [0.375,−0.526] [0.375,−0.422]
-- O: [−0.22,−0.245] [−0.22,0.184] [−0.385,0.339] [−0.5,0.339] [−0.824,0.017] [−0.824,−0.08] [−0.5,−0.409] [−0.395,−0.409]
+- W: [−0.22,−0.245] [−0.22,0.184] [−0.385,0.339] [−0.5,0.339] [−0.824,0.017] [−0.824,−0.08] [−0.5,−0.409] [−0.395,−0.409]
 - E: [0.225,−0.245] [0.225,0.184] [0.39,0.339] [0.505,0.339] [0.829,0.017] [0.829,−0.08] [0.505,−0.409] [0.4,−0.409]
 
-COMPACTO:
+COMPACT:
 - S: [0.394,0.371] [0.395,0.484] [0.065,0.814] [−0.056,0.815] [−0.393,0.484] [−0.393,0.372] [−0.325,0.308] [0.002,0.637] [0.331,0.307]
 - N: [0.058,−0.882] [0.395,−0.551] [0.395,−0.439] [0.329,−0.377] [0.002,−0.704] [−0.328,−0.373] [−0.393,−0.439] [−0.393,−0.551] [−0.063,−0.882]
-- O: [−0.412,−0.432] [−0.338,−0.363] [−0.666,−0.034] [−0.336,0.297] [−0.401,0.359] [−0.523,0.359] [−0.862,0.02] [−0.862,−0.086] [−0.524,−0.432]
+- W: [−0.412,−0.432] [−0.338,−0.363] [−0.666,−0.034] [−0.336,0.297] [−0.401,0.359] [−0.523,0.359] [−0.862,0.02] [−0.862,−0.086] [−0.524,−0.432]
 - E: [0.518,−0.432] [0.857,−0.086] [0.857,0.02] [0.518,0.358] [0.397,0.359] [0.336,0.302] [0.671,−0.034] [0.338,−0.367] [0.407,−0.432]
 
-MORPH ligado a spread (spread 1 = explosionado, 0 = compacto). Receta
-reproducible en cualquier tecnología:
-1. Redondear cada polígono con radio 0.035 (en unidades u,v).
-2. Remuestrear ambos contornos a 96 puntos EQUIESPACIADOS por longitud de arco.
-3. Unificar el winding (área con signo positiva en ambos).
-4. Alinear el bucle compacto contra el explosionado probando los 96 desfases
-   cíclicos y quedándose con el de mínima suma de distancias².
-5. Interpolar linealmente vértice a vértice. La implementación actual
-   precalcula 13 pasos y elige por índice round(inv·12); un morph continuo
-   también vale.
-Alto de las placas: 0.05 unidades (HEX_H), con bisel 0.018.
+MORPH tied to spread (spread 1 = exploded, 0 = compact). Reproducible recipe
+in any technology:
+1. Round each polygon with radius 0.035 (in u,v units).
+2. Resample both contours to 96 points EQUALLY SPACED by arc length.
+3. Unify the winding (positive signed area in both).
+4. Align the compact loop against the exploded one by trying all 96 cyclic
+   offsets and keeping the one with the minimum sum of squared distances.
+5. Interpolate linearly vertex by vertex. The current implementation
+   precomputes 13 steps and picks by index round(inv·12); a continuous morph
+   also works.
+Plate height: 0.05 units (HEX_H), with a 0.018 bevel.
 
-## 4. Piso medio — DATA TRANSFORMATION (morph cuadrado↔círculo)
+## 4. Middle floor — DATA TRANSFORMATION (square↔circle morph)
 
-Retícula 10×10, extent 0.8 (en u,v), gap 18%, alto de tile 0.04 (TILE_H).
-Cada tile morphea entre cuadrado redondeado y círculo (13 geometrías
-precalculadas compartidas). Una FRONTERA DIAGONAL barre el grid: círculos a
-un lado, cuadrados al otro, oscilando sola:
-p = clamp01(0.5 + (front − aScr + (seed−0.5)·0.18)·2.6 + hoverP), con
-aScr = (u−v)/1.6 (eje horizontal de pantalla) y
-front = sin(wave·2π)·0.85. En compacto los tiles con
-ring < midHole desaparecen (el núcleo se vacía en anillo).
+10×10 grid, extent 0.8 (in u,v), gap 18%, tile height 0.04 (TILE_H).
+Each tile morphs between a rounded square and a circle (13 precomputed shared
+geometries). A DIAGONAL FRONT sweeps across the grid: circles on
+one side, squares on the other, oscillating on its own:
+p = clamp01(0.5 + (front − aScr + (seed−0.5)·0.18)·2.6 + hoverP), with
+aScr = (u−v)/1.6 (horizontal screen axis) and
+front = sin(wave·2π)·0.85. When compact, tiles with
+ring < midHole disappear (the core empties out into a ring).
 
-## 5. Piso superior — PROCESS QUERY ENGINE (formas y volteos)
+## 5. Top floor — PROCESS QUERY ENGINE (shapes and flips)
 
-Retícula 6×6, extent 0.8, gap 16%. Forma por tile con RNG determinista
-(mulberry32, semilla 20260831): 42% cuadrado redondeado (r 0.22), 18% "hoja /"
-(radios de esquina [1,0.12,1,0.12]), 18% "hoja \\", 22% círculo.
+6×6 grid, extent 0.8, gap 16%. Per-tile shape from a deterministic RNG
+(mulberry32, seed 20260831): 42% rounded square (r 0.22), 18% "leaf /"
+(corner radii [1,0.12,1,0.12]), 18% "leaf \\", 22% circle.
 
-- CRECIMIENTO 4×4→6×6: radio visible reach = 0.62 + 0.52·spread contra
-  d = (|u|+|v|)/1.6 + jitter por tile; pop de escala 0.55→1 al cruzar el
-  umbral. En compacto solo queda el 4×4 interior.
-- VOLTEOS: cada ~520 ms (ambiente cada 900 ms), si spread>0.75, un tile
-  aleatorio (máx 2 a la vez) gira 180° sobre eje X o Z con lift senoidal
-  0.16, 1050 ms inOutSine; a media vuelta cambia a OTRA forma del pool.
-  SIN SALTOS: girar 180° espeja la forma (leafA↔leafB), así que en el cruce
-  de canto respecto a la cámara (cruce por cero de dot(normal girada, vista))
-  se monta el ESPEJO del destino y al aterrizar rotación→0 + forma destino
-  (silueta píxel-idéntica). La pieza se encoge ×(1−0.22·sin(pπ)) durante el
-  giro. Las geometrías van centradas en Y para poder voltear sobre su eje.
+- GROWTH 4×4→6×6: visible radius reach = 0.62 + 0.52·spread against
+  d = (|u|+|v|)/1.6 + per-tile jitter; scale pop 0.55→1 when crossing the
+  threshold. When compact, only the inner 4×4 remains.
+- FLIPS: every ~520 ms (ambient every 900 ms), if spread>0.75, a random
+  tile (max 2 at a time) rotates 180° about the X or Z axis with a sinusoidal
+  lift of 0.16, 1050 ms inOutSine; halfway through the turn it changes to
+  ANOTHER shape from the pool.
+  NO JUMPS: rotating 180° mirrors the shape (leafA↔leafB), so at the
+  edge-on crossing relative to the camera (zero crossing of dot(rotated normal, view))
+  the MIRROR of the target is installed, and on landing rotation→0 + target shape
+  (pixel-identical silhouette). The piece shrinks by ×(1−0.22·sin(pπ)) during the
+  turn. The geometries are centered in Y so they can flip about their own axis.
 
-## 6. Etiquetas
+## 6. Labels
 
-Pills con el texto en INGLÉS: fondo casi negro rgba(2,2,2,.92), borde blanco
-2.5px, Poppins 500, letter-spacing 14%, texto blanco. Una por piso, centrada
-(x=z=0), a altura piso + 0.06. Altura de la pill: 0.1275 unidades de mundo
-(+50% sobre la original 0.085); el ancho sigue el aspect del texto.
-PADDING HORIZONTAL (v25, regla de Igor): al menos la anchura de una letra
-"o" por lado. Implementado como pad = ceil(1.5·measureText('o').width) sobre
-el canvas de la pill (a fs 34 → "o" 21.7 px, pad 33 px, hueco real medido
-tinta↔borde 38 px ≈ 1.75 "o"). El 1.5 no es capricho: con menos, el texto
-empieza dentro del casquete redondeado (radio = alto/2 = 32 px) y se ve
-apretado aunque el número cumpla. Además el texto se dibuja en
-c.width/2 + letterSpacing/2: el letter-spacing añade hueco TRAS la última
-letra y descentraba la pill hacia la izquierda.
-- Las TRES siguen `state.label`: aparecen explosionado, DESAPARECEN antes de
-  que los pisos se junten. Ninguna es permanente.
-- Se dibujan en OVERLAY: nítidas encima de todo, fuera del pipeline de
-  efectos (en three: sprites en layer 1, render extra tras el composer con
+Pills with the text in ENGLISH: almost-black background rgba(2,2,2,.92), white
+2.5px border, Poppins 500, letter-spacing 14%, white text. One per floor, centered
+(x=z=0), at floor height + 0.06. Pill height: 0.1275 world units
+(+50% over the original 0.085); the width follows the text's aspect ratio.
+HORIZONTAL PADDING (v25, Igor's rule): at least the width of one letter
+"o" per side. Implemented as pad = ceil(1.5·measureText('o').width) on
+the pill's canvas (at fs 34 → "o" is 21.7 px, pad 33 px, real measured gap
+ink↔border 38 px ≈ 1.75 "o"). The 1.5 is not arbitrary: with less, the text
+starts inside the rounded cap (radius = height/2 = 32 px) and looks
+cramped even though the number checks out. Additionally the text is drawn at
+c.width/2 + letterSpacing/2: letter-spacing adds a gap AFTER the last
+letter and shifted the pill off-center to the left.
+- All THREE follow `state.label`: they appear when exploded and DISAPPEAR before
+  the floors come together. None is permanent.
+- They are drawn as an OVERLAY: crisp on top of everything, outside the effects
+  pipeline (in three: sprites on layer 1, extra render after the composer with
   autoClear=false + clearDepth).
 
-## 7. Interacción (hover, raycast con throttle 60 ms y cooldowns)
+## 7. Interaction (hover, raycast with 60 ms throttle and cooldowns)
 
-- Piso superior: hover = volteo del tile (mismo mecanismo de §5).
-- Piso medio: hover = pulso cuadrado→círculo (hoverP 0→1→0, 320/900 ms).
-- Piso inferior: hover = elevación suave de la placa (+0.11 en Y, 360/750 ms).
+- Top floor: hover = tile flip (same mechanism as §5).
+- Middle floor: hover = square→circle pulse (hoverP 0→1→0, 320/900 ms).
+- Bottom floor: hover = smooth lift of the plate (+0.11 in Y, 360/750 ms).
 
-## 8. El material (cristal) — qué debe verse
+## 8. The material (glass) — what it must look like
 
-Cristal PULIDO ahumado casi negro con FILOS DE LUZ blancos (el rasgo clave
-del vídeo): cada pieza lleva sus aristas (>20°) dibujadas en blanco
-translúcido (opacidad 0.16–0.48 por seed, multiplicador rim). Tapas
-superiores limpias y transparentes; biseles y laterales lechosos (fresnel).
-Se ve A TRAVÉS de las piezas: las piezas de detrás, refractadas y con blur
-(frost). Gradiente de luminosidad izquierda→derecha (la mitad derecha más
-clara, como el still): g = 0.5 + centroide_a·0.31 por pieza/tile. Bloom
-sutil solo para el glare de los filos. Fondo negro opaco.
+POLISHED almost-black smoked glass with white LIGHT EDGES (the key trait
+of the video): each piece draws its edges (>20°) in translucent
+white (opacity 0.16–0.48 by seed, rim multiplier). Clean, transparent top
+faces; milky bevels and sides (fresnel).
+You SEE THROUGH the pieces: the pieces behind, refracted and blurred
+(frost). Left→right luminosity gradient (the right half is
+lighter, like the still): g = 0.5 + centroid_a·0.31 per piece/tile. Subtle
+bloom only for the glare of the edges. Opaque black background.
 
-Defaults calibrados por Igor (window.DATACORE, editable en vivo):
-tint {1.8,1.8,1.8}; transmission 0.43 (+0.14 al explotar); refract 0.13;
+Defaults calibrated by Igor (window.DATACORE, editable live):
+tint {1.8,1.8,1.8}; transmission 0.43 (+0.14 when exploding); refract 0.13;
 frost 0.61; frostRadius 0.98; pieceMag 0.71; pieceShift 0.11; fresnel 0.44;
 topClear 0.92; topDarken 0.43; edgeWhite 0.44; skyTop #eef4ff;
 skyHorizon #8e9aad; iri 0.08; body 0.87; rim 1.16; pre 0.79;
 backdrop #e6ecf5; bloom {strength 0.16, radius 0.26, threshold 0.35};
-quality {fxaa 0, msaa 4, dprMax 2, preRes 1}; blur 0. CERRADO por Igor
-(2026-09-01, v24): el pixelado quedó arreglado con MSAA 4 + pre-pase a
-resolución completa, SIN FXAA y SIN blur. El mando blur (difumina la escena
-final sin tocar las etiquetas — dos iteraciones H/V de gaussiano 9-tap al
-final del composer, el overlay de etiquetas va después) queda a 0 como
-herramienta de pruebas.
+quality {fxaa 0, msaa 4, dprMax 2, preRes 1}; blur 0. CLOSED by Igor
+(2026-09-01, v24): the pixelation was fixed with MSAA 4 + a full-resolution
+pre-pass, WITHOUT FXAA and WITHOUT blur. The blur control (blurs the final
+scene without touching the labels — two H/V iterations of a 9-tap gaussian at
+the end of the composer, the label overlay comes after) stays at 0 as a
+testing tool.
 
-ANTIALIASING (v23) — dos tipos, combinables desde el tuner:
-- MSAA real por MUESTRAS (quality.msaa: 0/2/4/8, default 4): en WebGL2 los
-  render targets del composer aceptan .samples; setMsaa() las fija en
-  renderTarget1/2 y hace dispose para que el siguiente render reasigne los
-  FBO. Es el AA "de 3D": cantos nítidos sin emborronar. (El antialias:true
-  del renderer solo aplica al canvas directo, el composer lo anula — por eso
-  hizo falta esto.)
-- FXAA (quality.fxaa 0/1, default 0): pasada de post-proceso, más blanda;
-  queda como opción de comparación.
+ANTIALIASING (v23) — two types, combinable from the tuner:
+- Real sample-based MSAA (quality.msaa: 0/2/4/8, default 4): in WebGL2 the
+  composer's render targets accept .samples; setMsaa() sets them on
+  renderTarget1/2 and disposes so that the next render reallocates the
+  FBOs. This is "3D" AA: crisp edges without blurring. (The renderer's
+  antialias:true only applies to the direct canvas, the composer cancels it — hence
+  the need for this.)
+- FXAA (quality.fxaa 0/1, default 0): a post-processing pass, softer;
+  it remains as a comparison option.
 
-### Implementación actual del cristal (three.js r147) — resumen
+### Current glass implementation (three.js r147) — summary
 
-- NO es MeshPhysicalMaterial (la transmisión física con fondo negro no tiene
-  nada que refractar): es un ShaderMaterial propio con refracción en espacio
-  de pantalla sobre un PRE-PASE de la escena.
-- Pre-pase por frame a un RT (0.6×dpr): fondo de estudio procedural + piezas
-  con su gemelo simple oscuro + filos → lo que se ve A TRAVÉS del cristal.
-  Sin esto el cristal sale gris y sordo.
-- Frost: blur gaussiano separable del pre-pase a cuarto de resolución
-  (9 taps, 2 pasadas); el shader mezcla nítido/difuminado con uFrost.
-- LENTE POR PIEZA: cada pieza es su propia lente — uniforms por mesh uCenter
-  (centro proyectado a uv de pantalla, actualizado POR FRAME) y uOffset por
+- It is NOT MeshPhysicalMaterial (physical transmission with a black background has
+  nothing to refract): it is a custom ShaderMaterial with screen-space refraction
+  over a PRE-PASS of the scene.
+- Per-frame pre-pass to an RT (0.6×dpr): procedural studio background + pieces
+  with their simple dark twin + edges → what is seen THROUGH the glass.
+  Without this the glass comes out gray and dull.
+- Frost: separable gaussian blur of the pre-pass at quarter resolution
+  (9 taps, 2 passes); the shader mixes crisp/blurred with uFrost.
+- PER-PIECE LENS: each piece is its own lens — per-mesh uniforms uCenter
+  (center projected to screen uv, updated PER FRAME) and uOffset by
   seed; buv = uCenter + rel·uMag + N.xy·uRefract + uOffset·uShift.
-- Zonas por normal-mundo: topness = smoothstep(0.55,0.95,up). Tapa =
-  transparencia real; blanco lechoso SOLO en bisel/laterales; fresnel de 3
-  paradas hacia skyTop/skyHorizon atenuado en la tapa; iridiscencia como
-  paleta coseno con fase por normal.
-- Postprocesado: RenderPass + UnrealBloomPass + GammaCorrection (el composer
-  trabaja en LINEAL: sin la pasada gamma todo sale plano y oscuro); salida
-  del shader en pow(col, 2.2). Al final, pasada FXAA (v20): los render
-  targets del composer NO tienen MSAA — el antialias:true del renderer solo
-  aplica al canvas directo — así que sin FXAA los cantos salen pixelados.
-  FXAA va DESPUÉS de la gamma (espera entrada sRGB) y su uniform resolution
-  se actualiza en resize con 1/(W·dpr). devicePixelRatio con tope 2.
-- Entorno para los reflejos de biseles del plateMat: equirect procedural con
-  bandas horizontales tipo softbox; la banda y=168 es la que reflejan las
-  tapas.
+- Zones by world normal: topness = smoothstep(0.55,0.95,up). Top face =
+  real transparency; milky white ONLY on bevel/sides; a 3-stop fresnel
+  toward skyTop/skyHorizon attenuated on the top face; iridescence as a
+  cosine palette with phase by normal.
+- Post-processing: RenderPass + UnrealBloomPass + GammaCorrection (the composer
+  works in LINEAR space: without the gamma pass everything comes out flat and dark);
+  shader output in pow(col, 2.2). At the end, an FXAA pass (v20): the render
+  targets of the composer do NOT have MSAA — the renderer's antialias:true only
+  applies to the direct canvas — so without FXAA the edges come out pixelated.
+  FXAA goes AFTER the gamma pass (it expects sRGB input) and its resolution uniform
+  is updated on resize with 1/(W·dpr). devicePixelRatio capped at 2.
+- Environment for the bevel reflections of plateMat: procedural equirect with
+  horizontal softbox-style bands; the y=168 band is the one the
+  top faces reflect.
 
-## 9. Glass tuner (solo variante B)
+## 9. Glass tuner (variant B only)
 
-`datacore-tuner.js`: panel de ajuste EN INGLÉS, fixed abajo-derecha
-(right/bottom 18px), EMPIEZA PLEGADO como pill "● GLASS TUNER" y se
-DESPLIEGA HACIA ARRIBA (flex column-reverse: cabecera abajo, cuerpo
-encima, max-height 70vh). Sliders y color pickers enganchados a
-window.DATACORE (aplicado cada frame), botones Copy settings (exporta el
-JSON) y Reset. Flujo de trabajo de Igor: ajusta en vivo, exporta el JSON y
-se pega como nuevos defaults en datacore-3d.js. Sección Sharpness (v21):
-FXAA 0/1 (habilita/deshabilita la pasada), max pixel ratio (tope de dpr,
-0.5–3) y pre-pass res (resolución del RT del pre-pase, 0.2–1) — cambios de
-dpr/preRes disparan resize() desde applyTune; viven en DATACORE.quality
+`datacore-tuner.js`: tuning panel IN ENGLISH, fixed at bottom-right
+(right/bottom 18px), STARTS COLLAPSED as a "● GLASS TUNER" pill and
+EXPANDS UPWARDS (flex column-reverse: header at the bottom, body
+above, max-height 70vh). Sliders and color pickers hooked to
+window.DATACORE (applied every frame), Copy settings (exports the
+JSON) and Reset buttons. Igor's workflow: tune live, export the JSON and
+paste it as the new defaults in datacore-3d.js. Sharpness section (v21):
+FXAA 0/1 (enables/disables the pass), max pixel ratio (dpr cap,
+0.5–3) and pre-pass res (resolution of the pre-pass RT, 0.2–1) — changes to
+dpr/preRes trigger resize() from applyTune; they live in DATACORE.quality
 {fxaa:1, dprMax:2, preRes:0.6}.
 
-## 10. Menú como el site real (nav-fx.js)
+## 10. Menu like the real site (nav-fx.js)
 
-`nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
-Fichero COMUN unificado en `experiments/nav-fx.js`, cargado por las 6 paginas
-como `../nav-fx.js?v=N`. Especificacion completa, valores exactos y fallos ya
-cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
-aqui la informacion.
+`nav-fx.js` — top menu effect (hide on scroll down + CTA clone).
+A COMMON file unified in `experiments/nav-fx.js`, loaded by the 6 pages
+as `../nav-fx.js?v=N`. Full specification, exact values and mistakes already
+made: **`experiments/claude_navfx_context.md`** — read that doc, do not duplicate
+the information here.
 
-## 11. Ficheros
+## 11. Files
 
-En `datacore/anime-datacore/`: `datacore.js` (variante A), `datacore-3d.js`
-(variante B),
-`datacore-tuner.js`, `sprite.js` (spritemap placeholder del
-experimento 1: logo real + iconos de sustitución; reescribe los <use> a
-símbolos locales), `anime.umd.min.js` (v4.5.0), `three.min.js` (r147 UMD, de
-npm — los CDN están bloqueados desde el sandbox de Cowork), `three-post.js`
-(concatenado de examples/js de r147: CopyShader, LuminosityHighPassShader,
+In `datacore/anime-datacore/`: `datacore.js` (variant A), `datacore-3d.js`
+(variant B),
+`datacore-tuner.js`, `sprite.js` (placeholder spritemap from
+experiment 1: real logo + replacement icons; rewrites the <use> elements to
+local symbols), `anime.umd.min.js` (v4.5.0), `three.min.js` (r147 UMD, from
+npm — CDNs are blocked from the Cowork sandbox), `three-post.js`
+(concatenation of examples/js from r147: CopyShader, LuminosityHighPassShader,
 Pass/MaskPass/ShaderPass, RenderPass, EffectComposer, UnrealBloomPass,
 GammaCorrectionShader).
 
-En `datacore/`: `index.html` (A) y `index3d.html` (B) — páginas guardadas y
-limpiadas (sin trackers ni scripts externos, URLs raíz reescritas a
-https://www.celonis.com/...); `original.html` (copia intacta con vídeo);
-`Data Core _ Celonis_files/` (assets, vídeo, still y el SVG de las
-placas). SIN switch A↔B (retirado en v19; la navegación es el índice raíz).
+In `datacore/`: `index.html` (A) and `index3d.html` (B) — pages saved and
+cleaned (no trackers or external scripts, root URLs rewritten to
+https://www.celonis.com/...); `original.html` (untouched copy with the video);
+`Data Core _ Celonis_files/` (assets, video, still and the SVG of the
+plates). NO A↔B switch (removed in v19; navigation is the root index).
 
-## 12. Decisiones CERRADAS — no reabrir
+## 12. CLOSED decisions — do not reopen
 
-- Tops opacos en la variante A; en la B, transmission SIEMPRE baja
-  (base 0.43): con ≥0.5 explosionado los tiles se tragan el fondo y quedan
-  planos; con ≥0.4 el compacto se vuelve lechoso.
-- roughness ~0.10: el vídeo es cristal PULIDO; 0.30 "frost" agrisa y mata
-  los reflejos. El esmerilado se hace con el blur del backdrop (frost), no
-  con roughness.
-- El backdrop del pre-pase debe ser de TONOS MEDIOS: zonas blancas grandes
-  queman la pila.
-- Nada de haces de luz volumétricos visibles (probado y retirado por Igor:
-  "no afecta a los materiales, queda fatal").
-- Pared frontal de prismas 2D por ARISTA con winding (la "cadena entre
-  extremos" produce bowties).
-- Sin caja central en el piso inferior (retirada en v16).
-- Ninguna etiqueta permanente (desde v16).
-- La refracción vive del frost, no del desplazamiento (refract bajo, 0.13).
+- Opaque tops in variant A; in B, transmission ALWAYS low
+  (base 0.43): at ≥0.5 when exploded the tiles swallow the background and end up
+  flat; at ≥0.4 the compact state turns milky.
+- roughness ~0.10: the video is POLISHED glass; 0.30 "frost" grays it out and kills
+  the reflections. The frosted look is achieved with the backdrop blur (frost), not
+  with roughness.
+- The pre-pass backdrop must be in MID TONES: large white areas
+  blow out the stack.
+- No visible volumetric light beams (tried and removed by Igor:
+  "it doesn't affect the materials, it looks terrible").
+- Front wall of 2D prisms PER EDGE with winding (the "chain between
+  endpoints" produces bowties).
+- No central box on the bottom floor (removed in v16).
+- No permanent labels (since v16).
+- Refraction lives off the frost, not off the displacement (low refract, 0.13).
 
-## 13. Rendimiento y publicación
+## 13. Performance and publishing
 
-~60 fps en Chromium 1440×900. Sin dependencias de red en runtime salvo
-fuentes/imágenes del propio site.
+~60 fps in Chromium at 1440×900. No network dependencies at runtime other than
+fonts/images from the site itself.
 
-GitHub Pages del repo `igorustarroz-bit/celonisvibecoding` (rama main, raíz):
+GitHub Pages of the repo `igorustarroz-bit/celonisvibecoding` (main branch, root):
 - A: https://igorustarroz-bit.github.io/celonisvibecoding/experiments/datacore/index.html
 - B: https://igorustarroz-bit.github.io/celonisvibecoding/experiments/datacore/index3d.html
 - Original: .../experiments/datacore/original.html
-El índice raíz lista este experimento como "Experiment 3". Los scripts de
-index3d.html van versionados (?v=N — subir en cada publish, Pages cachea los
-JS 10 min). El token está en `github-token.txt` (gitignored — NUNCA subirlo).
-Nota Cowork: git no puede borrar sus .lock en la carpeta montada — mover los
-.lock obsoletos a `_to_delete/` (gitignored) antes de commit/push.
+The root index lists this experiment as "Experiment 3". The scripts of
+index3d.html are versioned (?v=N — bump it on every publish, Pages caches the
+JS for 10 min). The token is in `github-token.txt` (gitignored — NEVER upload it).
+Cowork note: git cannot delete its .lock files in the mounted folder —
+move the stale .lock files to `_to_delete/` (gitignored) before commit/push.
 
-## 14. Historial resumido
+## 14. Condensed history
 
-v12 figura +10%, contornos-cinta, primeras placas del still, hover ·
-v13 octógonos y frontera diagonal automática · v14 placas en flecha y fusión
-concéntrica · v15 formas EXACTAS del SVG de Igor + morph escudos↔anillo ·
-v16 sin caja central, placas centradas, línea=suelo solidario, etiquetas no
-permanentes · v17 pisos coincidentes en compacto (las 3 líneas = una,
-sepMin 0.004) · v18 etiquetas +50% · v19 sin switch A↔B, glass tuner
-abajo-dcha plegado hacia arriba y en inglés · nav-fx.js menú como el site ·
-v20 antialiasing: FXAA al final del composer + dpr hasta 2 (FXAAShader r147
-añadido a three-post.js) · v21 sección Sharpness en el tuner
-(DATACORE.quality: fxaa/dprMax/preRes en vivo) · v22 defaults de Igor
-(fxaa 0, preRes 1) + mando blur de escena que respeta las etiquetas ·
-v23 MSAA real por muestras (0/2/4/8, default 4) vía samples en los RT del
-composer · v24 settings FINALES de Igor: msaa 4, fxaa 0, preRes 1, blur 0 —
-pixelado resuelto · v25 padding horizontal de las pills ≥ una "o" (1.5·oW) y
-centrado corregido por el letter-spacing · v26 móvil: stage 5/6 y K 0.205
-(figura ×2 en las dos variantes) + nav-fx con breakpoint en vivo y
-restaurado en index3d.
+v12 figure +10%, ribbon outlines, first plates from the still, hover ·
+v13 octagons and automatic diagonal front · v14 arrow-shaped plates and
+concentric fusion · v15 EXACT shapes from Igor's SVG + shields↔ring morph ·
+v16 no central box, centered plates, line=rigidly bound floor, non-permanent
+labels · v17 coincident floors when compact (the 3 lines = one,
+sepMin 0.004) · v18 labels +50% · v19 no A↔B switch, glass tuner
+bottom-right collapsed and expanding upwards, in English · nav-fx.js menu like the site ·
+v20 antialiasing: FXAA at the end of the composer + dpr up to 2 (FXAAShader r147
+added to three-post.js) · v21 Sharpness section in the tuner
+(DATACORE.quality: fxaa/dprMax/preRes live) · v22 Igor's defaults
+(fxaa 0, preRes 1) + scene blur control that respects the labels ·
+v23 real sample-based MSAA (0/2/4/8, default 4) via samples on the composer's
+RTs · v24 Igor's FINAL settings: msaa 4, fxaa 0, preRes 1, blur 0 —
+pixelation resolved · v25 horizontal padding of the pills ≥ one "o" (1.5·oW) and
+centering corrected for the letter-spacing · v26 mobile: stage 5/6 and K 0.205
+(figure ×2 in both variants) + nav-fx with a live breakpoint and
+restored in index3d.

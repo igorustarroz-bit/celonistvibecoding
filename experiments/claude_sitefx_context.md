@@ -1,134 +1,139 @@
-# Efectos del site de Celonis replicados — especificación completa
+# Replicated Celonis site effects — full specification
 
-> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
-> limpieza anti-phishing → nav-fx → indice → publicar) esta en
-> `claude_nuevoexperimento_context.md`.
+> **New experiment?** The complete process (save the page from the browser →
+> anti-phishing cleanup → nav-fx → index → publish) is in
+> `claude_newexperiment_context.md`.
 
-> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
-> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
-> `experiments/`.**
+> This document lives in `experiments/` next to the other `claude_*_context.md`
+> files (all uploaded there on 2026-09-03). **The paths in this doc are relative
+> to `experiments/`.**
 
-Contexto para Claude (o cualquier dev) que necesite mantener o REHACER los
-efectos de interfaz de celonis.com sobre las copias estáticas guardadas.
-Complementa a `claude_globe_context.md` (globo del hero) y al contexto del
-experimento 3 (`claude_datacore_context.md`).
+Context for Claude (or any dev) who needs to maintain or REBUILD the
+celonis.com interface effects on top of the saved static copies.
+It complements `claude_globe_context.md` (hero globe) and the context of
+experiment 3 (`claude_datacore_context.md`).
 
-Regla de Igor para todo el proyecto: NADA en español en la interfaz (textos
-de UI en inglés); documentos y comentarios de código en español.
+Igor's rule for the whole project: the experiment UI is in English, and the
+context files (`claude_*_context.md`) — both names and content — are in English
+too; only the comments inside the JS code remain in Spanish for now.
 
-## Ficheros y páginas
+## Files and pages
 
-Los JS de este experimento viven en `3d-globe/anime-globe/`.
+The JS files for this experiment live in `3d-globe/anime-globe/`.
 
-- `site-fx.js` — todos los efectos de bloque de la home: titular char-by-char,
-  cubos verdes del hero, acordeón de Solutions, carrusel de stories, reveal de
-  grids, sprite de iconos/logo. Cargado por `3d-globe/index.html` y `3d-globe/original.html`
-  con cache-busting `?v=YYYYMMDD[x]` — SUBIR LA VERSIÓN en cada cambio o el
-  navegador servirá el JS viejo (ya pasó y confundió una ronda entera de QA).
-- `nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
-  Fichero COMUN unificado en `experiments/nav-fx.js`, cargado por las 6 paginas
-  como `../nav-fx.js?v=N`. Especificacion completa, valores exactos y fallos ya
-  cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
-  aqui la informacion.
-- `scroll-fx.js` — reacción al scroll del mundo y los cubos (documentado en
-  `claude_globe_context.md`). Lo cargan `3d-globe/index.html` Y
+- `site-fx.js` — all the home-page block effects: char-by-char headline,
+  green hero cubes, Solutions accordion, stories carousel, grid reveal,
+  icon/logo sprite. Loaded by `3d-globe/index.html` and `3d-globe/original.html`
+  with cache-busting `?v=YYYYMMDD[x]` — BUMP THE VERSION on every change or the
+  browser will serve the stale JS (this already happened and it confused a whole
+  QA round).
+- `nav-fx.js` — top menu effect (hide on scroll down + CTA clone).
+  SHARED file unified at `experiments/nav-fx.js`, loaded by all 6 pages
+  as `../nav-fx.js?v=N`. Full specification, exact values and mistakes already
+  made: **`experiments/claude_navfx_context.md`** — read that doc, do not
+  duplicate the information here.
+- `scroll-fx.js` — scroll reaction of the globe and the cubes (documented in
+  `claude_globe_context.md`). Loaded by both `3d-globe/index.html` AND
   `3d-globe/original.html`.
 
-## Cómo se obtuvo el comportamiento original (método)
+## How the original behaviour was obtained (method)
 
-El site vivo es AEM Edge Delivery: cada bloque tiene su JS en
-`https://www.celonis.com/dist/blocks/<bloque>/<bloque>.js` (home-hero,
-square-value, solutions, header) y chunks compartidos en `/dist/chunks/`
-(tokens.js, animated-words.js, animated-accordion.js). Se analizaron esos
-ficheros para extraer parámetros y se REIMPLEMENTÓ el comportamiento en
-vanilla JS (transiciones CSS en vez de GSAP). Verificación: muestrear en el
-site vivo `getComputedStyle(...).transform` de los chars cada 50 ms y
-comparar con la réplica en Playwright (viewport 1440×900, ≥1200 = desktop).
+The live site is AEM Edge Delivery: each block has its own JS at
+`https://www.celonis.com/dist/blocks/<block>/<block>.js` (home-hero,
+square-value, solutions, header) and shared chunks in `/dist/chunks/`
+(tokens.js, animated-words.js, animated-accordion.js). Those files were
+analysed to extract the parameters, and the behaviour was REIMPLEMENTED in
+vanilla JS (CSS transitions instead of GSAP). Verification: sample
+`getComputedStyle(...).transform` of the chars on the live site every 50 ms and
+compare against the replica in Playwright (viewport 1440×900, ≥1200 = desktop).
 
-Tokens de movimiento del site (chunks/tokens.js):
+Site motion tokens (chunks/tokens.js):
 - durations: quick .2s / base .3s / slow .45–.6s
 - eases: informative = linear, focused = power2.inOut, expressive = power2.out
-- stagger estándar: 0.02 s por elemento
+- standard stagger: 0.02 s per element
 
-## 1. Titular del hero (frases rotatorias char-by-char)
+## 1. Hero headline (rotating char-by-char phrases)
 
-- Cada frase `h1 .highlights` contiene `.char` (uno por letra, ya en el HTML).
-- Animación por char: transform translateY, duración 0.3 s, ease power2.out
-  (≈ `cubic-bezier(.215,.61,.355,1)`), delay k×0.02 s (k = índice del char).
-  El CSS base pone `transition:none` en los .char → forzar inline con
-  `!important`.
-- Posiciones: entra desde `lineHeight×2.25` px (abajo), sale hacia
-  `−2×lineHeight` px (arriba). lineHeight computado de la propia frase
-  (48px móvil / 80px desktop aprox — NUNCA hardcodear).
-- La frase saliente y la entrante se animan EN PARALELO (mismo instante).
-- Bucle: el siguiente swap arranca 2 s después de TERMINAR el anterior
-  (duración de un swap = 0.3 + 0.02×(nChars−1) ≈ 0.75 s → periodo ≈ 2.75 s).
-- Reset de la frase oculta: transition none → translateY(inY) → reflow →
-  restaurar transición (si no, se ve viajar de vuelta).
-- Pausa cuando el hero está fuera del viewport o document.hidden (reintento
-  cada 500 ms).
-- Entrada: la frase 0 hace el mismo in en cuanto arranca la página.
+- Each `h1 .highlights` phrase contains `.char` elements (one per letter,
+  already in the HTML).
+- Per-char animation: transform translateY, duration 0.3 s, ease power2.out
+  (≈ `cubic-bezier(.215,.61,.355,1)`), delay k×0.02 s (k = char index).
+  The base CSS sets `transition:none` on the .char elements → force it inline
+  with `!important`.
+- Positions: enters from `lineHeight×2.25` px (below), exits towards
+  `−2×lineHeight` px (above). lineHeight is computed from the phrase itself
+  (roughly 48px mobile / 80px desktop — NEVER hardcode it).
+- The outgoing and incoming phrases animate IN PARALLEL (same instant).
+- Loop: the next swap starts 2 s after the previous one FINISHES
+  (swap duration = 0.3 + 0.02×(nChars−1) ≈ 0.75 s → period ≈ 2.75 s).
+- Resetting the hidden phrase: transition none → translateY(inY) → reflow →
+  restore the transition (otherwise you see it travel back).
+- Pauses when the hero is outside the viewport or document.hidden (retry
+  every 500 ms).
+- Entrance: phrase 0 performs the same "in" as soon as the page starts.
 
-## 2. Cubos verdes del hero (square-value)
+## 2. Green hero cubes (square-value)
 
-- DOS cubos (.square-wrapper > .square-block), 4 caras-slot cada uno a
-  rotateY 0/90/180/−90 + translateZ(--square-translate-z); el bloque gira
-  con `--rotate` (transition transform 1s del CSS).
-- SINCRONÍA: los cubos rotan −90° en el MISMO instante en que arranca cada
-  swap del titular (en el original ambos cuelgan de la misma timeline GSAP).
-- El 2º cubo va 0.3 s por detrás: clase `rotation-ready` en su wrapper →
-  `transition-delay` del CSS. Solo el segundo la lleva.
-- Contenidos ciclados: el contenido entrante se coloca en el slot que va a
-  entrar (posición 1..4 → clases rotate-none/once/twice/thrice; el par
-  saliente/entrante lleva .hide/.show, que animan los .char-square 50px).
-  Cubo 1: las 4 fotos guardadas. Cubo 2: los 7 stats del site en este orden —
+- TWO cubes (.square-wrapper > .square-block), 4 face-slots each at
+  rotateY 0/90/180/−90 + translateZ(--square-translate-z); the block rotates
+  via `--rotate` (transition transform 1s from the CSS).
+- SYNC: the cubes rotate −90° at the SAME instant each headline swap starts
+  (in the original both hang off the same GSAP timeline).
+- The 2nd cube runs 0.3 s behind: class `rotation-ready` on its wrapper →
+  `transition-delay` from the CSS. Only the second one carries it.
+- Cycled contents: the incoming content is placed in the slot that is about to
+  come in (position 1..4 → classes rotate-none/once/twice/thrice; the
+  outgoing/incoming pair carries .hide/.show, which animate the .char-square
+  elements 50px).
+  Cube 1: the 4 saved photos. Cube 2: the 7 stats from the site in this order —
   66% invoices AI / 44% order processing / 20% excess inventory / 15% loan
   applications / 1,100+ automation opportunities / 70% on-time delivery /
-  $6.5bn total value — así el stat n coincide con la frase n del titular.
-- Entrada: la primera cara hace pop scale(0)→1 + opacity, 0.3 s linear, a la
-  vez que entran las letras; después limpiar los estilos inline (el inline
-  scale pisa el transform 3D de la cara; sin perspective no se nota).
-- ⚠️ TRAMPA: el snapshot guarda `--rotate` ACUMULADO (p.ej. −9090deg).
-  Resetear a 0 SIN transición (transition none + reflow) o el cubo da ~25
-  vueltas al cargar.
+  $6.5bn total value — so that stat n matches phrase n of the headline.
+- Entrance: the first face does a pop scale(0)→1 + opacity, 0.3 s linear, at the
+  same time as the letters come in; afterwards clear the inline styles (the
+  inline scale overrides the face's 3D transform; without perspective it is not
+  noticeable).
+- ⚠️ PITFALL: the snapshot saves the ACCUMULATED `--rotate` (e.g. −9090deg).
+  Reset it to 0 WITHOUT a transition (transition none + reflow) or the cube
+  spins about 25 times on load.
 
-## 3. Acordeón de Solutions (animated-accordion)
+## 3. Solutions accordion (animated-accordion)
 
-- Desktop (≥1200 px): SOLO un `<details>` abierto; los paneles
-  `[data-accordion][data-index]` (lateral con h3+enlace, y área de contenido
-  con chip+tagline) se sincronizan con la clase `.show`.
-- Barra de progreso: UNA sola `.accordion-progress`, vive DENTRO del item
-  abierto — se crea al abrir y se ELIMINA al cerrar (no una por item).
-  `.active` se añade ~100 ms después → transition transform 12s linear
-  (scaleX 0→1, CSS de solutions.css). Quitar .active = la barra salta a 0.
-- Auto-avance cada 12 s con requestAnimationFrame midiendo el tiempo (no
-  setTimeout puro). Pausa: hover sobre el panel lateral, y bloque fuera del
-  viewport (IntersectionObserver; al inicio la barra NO está activa hasta
-  que el bloque entra en pantalla).
-- Click en un item cerrado: selección + reinicio del timer. Click en el item
-  abierto: PARA el timer (así lo hace el site).
-- Móvil (<1200): todos los items abiertos, sin toggle; las pestañas de
-  arriba hacen scroll horizontal del carrusel de items y se sincronizan con
-  el scroll.
-- ⚠️ TRAMPA del snapshot: el chip de label venía como `<p><div class=
-  "labels-container">` (HTML inválido) → el parser saca el div del p y el
-  chip se ve en la lista. En el site real el chip solo se ve en el área de
-  contenido. Fix: CSS `@media (min-width:1200px){.solutions .accordion-item
-  .labels-container{display:none}}` (inyectado por site-fx).
+- Desktop (≥1200 px): ONLY one `<details>` open; the
+  `[data-accordion][data-index]` panels (the sidebar with h3+link, and the
+  content area with chip+tagline) are kept in sync with the `.show` class.
+- Progress bar: a SINGLE `.accordion-progress`, which lives INSIDE the open
+  item — it is created on open and REMOVED on close (not one per item).
+  `.active` is added ~100 ms later → transition transform 12s linear
+  (scaleX 0→1, CSS from solutions.css). Removing .active makes the bar snap
+  back to 0.
+- Auto-advance every 12 s using requestAnimationFrame to measure the time (not
+  plain setTimeout). Pauses on: hover over the side panel, and the block being
+  outside the viewport (IntersectionObserver; at the start the bar is NOT
+  active until the block enters the screen).
+- Click on a closed item: selection + timer restart. Click on the open item:
+  STOPS the timer (that is what the site does).
+- Mobile (<1200): all items open, no toggle; the tabs at the top scroll the
+  item carousel horizontally and stay in sync with the scroll.
+- ⚠️ SNAPSHOT PITFALL: the label chip came through as `<p><div class=
+  "labels-container">` (invalid HTML) → the parser lifts the div out of the p
+  and the chip shows up in the list. On the real site the chip is only visible
+  in the content area. Fix: CSS `@media (min-width:1200px){.solutions .accordion-item
+  .labels-container{display:none}}` (injected by site-fx).
 
-## 4. Menú superior (nav-fx.js)
+## 4. Top menu (nav-fx.js)
 
-Documentado aparte, en **`experiments/claude_navfx_context.md`** (fichero comun
-`experiments/nav-fx.js`). No se duplica aqui.
+Documented separately, in **`experiments/claude_navfx_context.md`** (shared file
+`experiments/nav-fx.js`). Not duplicated here.
 
-## 5. Verificación estándar
+## 5. Standard verification
 
-Con Playwright (chromium local) sirviendo la carpeta por http.server:
-1. Titular: muestrear translateY del primer char de cada frase cada 50 ms →
-   debe verse out e in simultáneos (~300 ms) y periodo ~2.7 s.
-2. Cubos: `--rotate` debe ir 0 → −90 → −180 … solo en los swaps, sin saltos
-   al cargar; `rotation-ready` solo en el 2º wrapper.
-3. Acordeón: 1 sola .accordion-progress, en el item abierto; .active al
-   entrar en viewport; click en otro item la mueve.
-4. Nav: wheel abajo → nav-hidden + .cloned-cta fixed; wheel arriba →
-   nav-shown y el clon desaparece.
+With Playwright (local chromium) serving the folder over http.server:
+1. Headline: sample the translateY of the first char of each phrase every 50 ms →
+   out and in must be seen simultaneously (~300 ms) with a period of ~2.7 s.
+2. Cubes: `--rotate` must go 0 → −90 → −180 … only on the swaps, with no jumps
+   on load; `rotation-ready` only on the 2nd wrapper.
+3. Accordion: a single .accordion-progress, inside the open item; .active when
+   it enters the viewport; clicking another item moves it.
+4. Nav: wheel down → nav-hidden + .cloned-cta fixed; wheel up →
+   nav-shown and the clone disappears.

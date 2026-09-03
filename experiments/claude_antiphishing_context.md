@@ -1,106 +1,107 @@
-# Estrategia anti-phishing — instrucciones para Claude
+# Anti-phishing strategy — instructions for Claude
 
-> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
-> limpieza anti-phishing → nav-fx → indice → publicar) esta en
-> `claude_nuevoexperimento_context.md`.
+> **New experiment?** The full process (save the page from the browser →
+> anti-phishing cleanup → nav-fx → index → publish) is in
+> `claude_newexperiment_context.md`.
 
-> Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
-> (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
+> This document lives in `experiments/` alongside the other `claude_*_context.md`
+> files (all uploaded there on 2026-09-03). **The paths in this doc are relative to
 > `experiments/`.**
 
-> Documento operativo para futuras sesiones de Claude en este repo.
-> Escrito el 2026-09-03, después de que Google levantase el aviso de "sitio engañoso"
-> sobre `https://igorustarroz-bit.github.io/celonisvibecoding/`.
-> Aplica a **todo el repo**, no solo a `experiments/3d-globe/`.
+> Operational document for future Claude sessions in this repo.
+> Written on 2026-09-03, after Google lifted the "deceptive site" warning
+> on `https://igorustarroz-bit.github.io/celonisvibecoding/`.
+> Applies to **the whole repo**, not just `experiments/3d-globe/`.
 
 ---
 
-## 1. Qué pasó
+## 1. What happened
 
-El 2026-09-02 Chrome empezó a marcar el site como peligroso. La causa **no** eran los
-enlaces salientes (esa fue la primera hipótesis del usuario y era falsa). La causa era que
-las copias guardadas de celonis.com **se presentaban como el sitio original**:
+On 2026-09-02 Chrome started flagging the site as dangerous. The cause was **not** the
+outbound links (that was the user's first hypothesis and it was wrong). The cause was that
+the saved copies of celonis.com **presented themselves as the original site**:
 
 - `<link rel="canonical" href="https://www.celonis.com/">`
-- `og:title` / `og:url` / `twitter:*` con títulos y URLs de Celonis
-- JSON-LD (`schema.org` Organization / WebSite / VideoObject) declarando la identidad de la marca
-- `<meta name="robots" content="index">`, o sea indexable
-- logo, imágenes y textos de marca servidos desde un dominio gratuito ajeno
-- un enlace "Account" a `id.celonis.cloud/user/ui/login` y un "Try for free" a `signup.celonis.com`
-- un iframe con formulario de captación (Pardot) y widgets de terceros con píxeles
+- `og:title` / `og:url` / `twitter:*` carrying Celonis titles and URLs
+- JSON-LD (`schema.org` Organization / WebSite / VideoObject) declaring the brand's identity
+- `<meta name="robots" content="index">`, i.e. indexable
+- brand logo, images and copy served from an unrelated free domain
+- an "Account" link to `id.celonis.cloud/user/ui/login` and a "Try for free" link to `signup.celonis.com`
+- an iframe with a lead-capture form (Pardot) and third-party widgets with pixels
 
-Marca copiada + enlace a login + captura de datos + indexable = la firma exacta que busca
-el clasificador de ingeniería social de Safe Browsing. Se resolvió eliminando la
-suplantación, no los enlaces.
+Copied branding + login link + data capture + indexable = the exact signature the Safe
+Browsing social-engineering classifier looks for. It was fixed by removing the
+impersonation, not the links.
 
 ---
 
-## 2. Reglas obligatorias al guardar una página nueva del cliente
+## 2. Mandatory rules when saving a new client page
 
-Cada vez que se baje una copia nueva de una página de celonis.com para un experimento,
-aplicar **todo** esto antes del primer push:
+Every time a new copy of a celonis.com page is downloaded for an experiment,
+apply **all** of this before the first push:
 
-### 2.1 Identidad — lo que dispara el clasificador
+### 2.1 Identity — what triggers the classifier
 
-1. Borrar `<link rel="canonical">` y cualquier `<link>` cuyo `href` apunte a
-   `celonis.com` / `celonis.cloud` (incluye `rel="alternate"` con hreflang).
-2. Borrar todos los `<meta property="og:*">` y `<meta name="twitter:*">`.
-3. Borrar **todos** los bloques `<script type="application/ld+json">`. Este es el que se
-   olvida: declara Organization / WebSite / VideoObject con nombre y URL de la marca.
-4. Poner `<meta name="robots" content="noindex,nofollow">` en cada página.
-5. `<title>` y `<meta name="description">` propios, del tipo
-   `Vibecoding prototype - <qué es> (unofficial)`.
+1. Delete `<link rel="canonical">` and any `<link>` whose `href` points to
+   `celonis.com` / `celonis.cloud` (including `rel="alternate"` with hreflang).
+2. Delete every `<meta property="og:*">` and `<meta name="twitter:*">`.
+3. Delete **all** `<script type="application/ld+json">` blocks. This is the one that gets
+   forgotten: it declares Organization / WebSite / VideoObject with the brand's name and URL.
+4. Set `<meta name="robots" content="noindex,nofollow">` on every page.
+5. Use your own `<title>` and `<meta name="description">`, along the lines of
+   `Vibecoding prototype - <what it is> (unofficial)`.
 
-### 2.2 Enlaces
+### 2.2 Links
 
-6. Todos los `<a href>` que empiecen por `http://`, `https://`, `//` o `/` pasan a
-   `href="#"`. Los root-relative también, porque en GitHub Pages resuelven contra la raíz
-   del host y dan 404.
-7. Prioridad absoluta: los enlaces a `id.celonis.cloud` ("Account") y `signup.celonis.com`
-   ("Try for free"). Marca copiada + enlace de login es phishing de manual.
-8. **No** tocar `src` de imágenes/vídeo ni `<link rel="stylesheet">` ni `<use href>` de SVG:
-   sin ellos los prototipos no se pueden juzgar y no son señal de suplantación.
+6. Every `<a href>` starting with `http://`, `https://`, `//` or `/` becomes
+   `href="#"`. Root-relative ones too, because on GitHub Pages they resolve against the
+   host root and return 404.
+7. Absolute priority: the links to `id.celonis.cloud` ("Account") and `signup.celonis.com`
+   ("Try for free"). Copied branding + a login link is textbook phishing.
+8. Do **not** touch image/video `src`, `<link rel="stylesheet">` or SVG `<use href>`:
+   without them the prototypes cannot be judged, and they are not an impersonation signal.
 
-### 2.3 Captura de datos y terceros
+### 2.3 Data capture and third parties
 
-9. Fuera los iframes de: formulario Pardot (`3nkvm5.html`), chat de Qualified
-   (`messenger.html`, `q-messenger-frame`), CrazyEgg (`saved_resource*.html`), reproductor
-   de Vidyard (`cq3Rs2m6ZoJGv1b3krtPze*.html`). Los HTML de esos iframes se sustituyen por
-   un stub con `noindex` que dice "Third-party widget disabled in this unofficial design prototype."
-10. Fuera **todos** los scripts y píxeles de analítica y publicidad, tanto los
-    `<script src>` locales dentro de `*_files/` u `original/` como **los snippets inline**:
+9. Remove the iframes for: the Pardot form (`3nkvm5.html`), the Qualified chat
+   (`messenger.html`, `q-messenger-frame`), CrazyEgg (`saved_resource*.html`), the Vidyard
+   player (`cq3Rs2m6ZoJGv1b3krtPze*.html`). The HTML files behind those iframes are replaced
+   by a `noindex` stub reading "Third-party widget disabled in this unofficial design prototype."
+10. Remove **all** analytics and advertising scripts and pixels, both the local
+    `<script src>` files inside `*_files/` or `original/` and **the inline snippets**:
     Adobe Launch (`_satellite["_runScriptN"]`), Facebook (`fbq`), LinkedIn Insight
     (`_linkedin_partner_id`, `lintrk`), Bing UET (`uetq`), AdRoll, RudderStack, StackAdapt,
-    Oktopost, HockeyStack, Qualtrics, factors.ai, OneTrust/Optanon, píxeles `<img>` a
-    `px.ads.linkedin.com` y compañía.
-11. Se **conservan** solo: `aem.js`, `scripts.js`, `main.*.js` y `*.chunk.js` — son la
-    maquetación del site, no tracking.
-12. Los ficheros de tracking no se borran del disco, se dejan de publicar:
-    `git rm --cached` + lista explícita en `.gitignore`. En la limpieza original fueron 184.
+    Oktopost, HockeyStack, Qualtrics, factors.ai, OneTrust/Optanon, `<img>` pixels pointing to
+    `px.ads.linkedin.com` and the like.
+11. Only these are **kept**: `aem.js`, `scripts.js`, `main.*.js` and `*.chunk.js` — they are the
+    site's layout code, not tracking.
+12. The tracking files are not deleted from disk, they just stop being published:
+    `git rm --cached` + an explicit list in `.gitignore`. In the original cleanup there were 184.
 
-### 2.4 Aviso visible
+### 2.4 Visible notice
 
-13. El índice (`/index.html`) lleva el descargo completo en texto, arriba y visible.
-14. Las páginas de experimento **no** llevan banner. Se probó un banner fijo en cada página
-    y el usuario lo quitó porque estropea la valoración visual del prototipo. No volver a
-    ponerlo sin que lo pida.
+13. The index (`/index.html`) carries the full disclaimer as text, at the top and visible.
+14. Experiment pages carry **no** banner. A fixed banner on every page was tried and the
+    user removed it because it spoils the visual assessment of the prototype. Do not put it
+    back unless asked.
 
 ---
 
-## 3. Cómo redactar el descargo
+## 3. How to word the disclaimer
 
-Hanzo (hanzo.es) es el estudio de diseño que construyó celonis.com; Celonis es cliente.
-Eso cambia la redacción:
+Hanzo (hanzo.es) is the design studio that built celonis.com; Celonis is a client.
+That changes the wording:
 
-- **NO** escribir "not affiliated with, authorised by, or endorsed by Celonis SE". Es falso.
-- **NO** afirmar que Celonis ha autorizado esta publicación. No hay nada por escrito.
-- **SÍ**, y es cierto y suficiente: son experimentos de diseño de Hanzo sobre una web de
-  cliente, **no es una página oficial de la marca y no la publica ni la respalda**.
-- En el banner público **no se nombra al cliente** (decisión del usuario: publicar una
-  referencia de cliente necesita su visto bueno). En el formulario de Google sí, porque ese
-  formulario es privado.
+- Do **NOT** write "not affiliated with, authorised by, or endorsed by Celonis SE". It is false.
+- Do **NOT** claim that Celonis has authorised this publication. There is nothing in writing.
+- **DO** say this, which is true and sufficient: these are Hanzo design experiments on a
+  client website, **it is not an official brand page and the brand neither publishes nor
+  endorses it**.
+- The public banner **does not name the client** (the user's decision: publishing a client
+  reference needs their sign-off). In the Google form it is named, because that form is
+  private.
 
-Texto vigente en `/index.html` y en el `README.md`:
+Current text in `/index.html` and in `README.md`:
 
 > Unofficial prototype. Front-end design experiments by Hanzo exploring improvements to a
 > client website. This is not an official page of the brand shown, it is not published or
@@ -111,11 +112,12 @@ Texto vigente en `/index.html` y en el `README.md`:
 
 ---
 
-## 4. Barrido de verificación
+## 4. Verification sweep
 
-Ejecutar **antes de cada push** que toque HTML guardado, y siempre antes de pedir una
-revisión a Google. Debe salir limpio: solo el fichero de verificación de Google
-(sin robots, es correcto) y el índice (3 enlaces externos legítimos: hanzo.es x2 y el repo).
+Run it **before every push** that touches saved HTML, and always before requesting a review
+from Google. It must come out clean: only Google's verification file
+(no robots tag, which is correct) and the index (4 legitimate external links: hanzo.es x2,
+animejs.com and the repo).
 
 ```bash
 cd ~/repo/celonistvibecoding && python3 - <<'PY'
@@ -133,38 +135,38 @@ for f in files:
     ext=re.findall(r'<a [^>]*href="((?:https?:|//|/)[^"]*)"',h,re.I)
     rob=len(re.findall(r'name="robots"',h,re.I))
     flags=["%s:%d"%(k,v) for k,v in ck.items() if v]
-    if not rob: flags.append("SIN-ROBOTS")
+    if not rob: flags.append("NO-ROBOTS")
     if ext: flags.append("ext:%d %s"%(len(ext),ext[:3]))
     if flags: bad+=1; print("  !!",f,"->"," | ".join(flags))
-print("\nhtml publicados: %d | con senales: %d"%(len(files),bad))
+print("\npublished html: %d | with signals: %d"%(len(files),bad))
 PY
 ```
 
-Comprobación complementaria, más fiable que leer el HTML: abrir la página publicada en el
-navegador y mirar las peticiones de red. **Todas deben ser same-origin.** Si aparece
-cualquier host de terceros, ha quedado tracking.
+A complementary check, more reliable than reading the HTML: open the published page in the
+browser and look at the network requests. **They must all be same-origin.** If any
+third-party host shows up, some tracking is still there.
 
 ---
 
-## 5. El proceso con Google Search Console
+## 5. The process with Google Search Console
 
-Lo que funcionó, en este orden:
+What worked, in this order:
 
-1. **Limpiar primero.** No pedir revisión con algo pendiente: una revisión denegada cuesta
-   días y arriesga el estado de *Repeat Offender*.
-2. **Verificar la propiedad.** Prefijo de URL `https://igorustarroz-bit.github.io/celonisvibecoding/`,
-   método "Archivo HTML". El fichero (`google2f66358341be38aa.html`) va a la raíz del repo y
-   se sirve en `/celonisvibecoding/google....html`. **No borrarlo nunca**: si se borra, la
-   propiedad se desverifica.
-   - Nota: para verificar la raíz del host `https://igorustarroz-bit.github.io/` haría falta
-     un repo llamado exactamente `igorustarroz-bit.github.io`. No fue necesario.
-   - Propiedad de dominio (`github.io`) es imposible: el DNS no es de Igor.
-3. **Leer Problemas de seguridad** (Seguridad y acciones manuales) y comprobar que las URLs
-   de ejemplo caen todas bajo `/celonisvibecoding/`. Hay cuatro Pages más en el mismo host
+1. **Clean up first.** Do not request a review with anything outstanding: a denied review
+   costs days and risks *Repeat Offender* status.
+2. **Verify ownership.** URL prefix `https://igorustarroz-bit.github.io/celonisvibecoding/`,
+   "HTML file" method. The file (`google2f66358341be38aa.html`) goes in the repo root and is
+   served at `/celonisvibecoding/google....html`. **Never delete it**: if it is deleted, the
+   property becomes unverified.
+   - Note: verifying the host root `https://igorustarroz-bit.github.io/` would require a
+     repo named exactly `igorustarroz-bit.github.io`. It was not necessary.
+   - A domain property (`github.io`) is impossible: the DNS is not Igor's.
+3. **Read Security issues** (Security & Manual Actions) and check that the example URLs all
+   fall under `/celonisvibecoding/`. There are four more Pages sites on the same host
    (`joselito-design-to-code`, `Joselito-Opus-version`, `template-cowork-001`,
-   `Test-IA-update`); si alguna URL de ejemplo apuntase ahí, habría que limpiar esa también.
-4. **Solicitar revisión** describiendo el problema y las medidas. El texto que se envió,
-   para reutilizar si vuelve a pasar:
+   `Test-IA-update`); if any example URL pointed there, that one would have to be cleaned too.
+4. **Request a review** describing the problem and the measures taken. The text that was
+   submitted, to reuse if it happens again:
 
 > I work at Hanzo (hanzo.es), the design studio that built the website in question. This
 > repository holds internal front-end prototypes in which we explore proposed improvements
@@ -185,78 +187,80 @@ Lo que funcionó, en este orden:
 > pixels. The pages now issue no third-party network requests and collect no user data of
 > any kind. There is no login, sign-up or payment flow anywhere on the site.
 
-5. **Esperar sin tocar las páginas publicadas.** Resuelto en ~1 día.
+5. **Wait without touching the published pages.** Resolved in ~1 day.
 
 ---
 
-## 6. Errores que Claude no debe repetir
+## 6. Mistakes Claude must not repeat
 
-- **No poner un login en JavaScript.** Se pidió (`hanzo` / `hanzo2026`) y se rechazó, con
-  razón: en GitHub Pages no hay servidor, así que las credenciales van en el código fuente
-  y los ficheros siguen siendo accesibles por URL directa. Pero sobre todo, **una pantalla
-  de login delante de páginas que replican celonis.com es exactamente la firma del
-  phishing**: habría tumbado la revisión. Si vuelve a surgir, la respuesta es Basic Auth
-  real en otro host, nunca un formulario en HTML aquí.
-- **No apagar GitHub Pages con una revisión pendiente.** Claude lo recomendó y tuvo que
-  rectificar: el revisor necesita recrawlear y ver las páginas ya limpias. Si devuelven 404,
-  se lo pones difícil.
-- **No crear un repo nuevo ni una dirección nueva para escapar del aviso.** La marca opera
-  a nivel de host (`igorustarroz-bit.github.io`), no de ruta, porque `github.io` está en la
-  Public Suffix List. Un repo nuevo bajo la misma cuenta sale marcado igual. Y una cuenta
-  nueva tampoco: el clasificador mira el contenido.
-- **No usar "no me sale el aviso en Safari/Chrome" como prueba de nada.** Safari trabaja
-  contra una copia local de prefijos de hash con la cadencia de Apple y va desfasado en
-  ambos sentidos. La fuente de verdad es Search Console.
-- **Cuidado con el Repeat Offender**: alternar entre publicar y quitar la suplantación
-  bloquea la posibilidad de pedir revisión durante 30 días.
-- **No decir al cliente que se salte el interstitial.** Si el cliente tiene que abrirlo en
-  su equipo, la única salida válida es que la marca esté levantada o servirlo desde un host
-  limpio con autenticación.
-
----
-
-## 7. Si hay que compartirlo con el cliente sin exponerlo en público
-
-Pendiente de montar, decidido pero no hecho:
-
-- **Cloudflare Pages** con Basic Auth en `functions/_middleware.js`. Gratis, host nuevo sin
-  historial, y la contraseña en variable de entorno de Cloudflare — **nunca en el repo**.
-- **Dominio `labs.hanzo.es`**, no el `*.pages.dev` por defecto: un filtro corporativo deja
-  pasar un subdominio de empresa con reputación mucho antes que un `pages.dev` aleatorio.
-- **Basic Auth nativo del navegador**, no un formulario maquetado. El diálogo del navegador
-  sobre un dominio de Hanzo se lee como "el proveedor protege su entorno".
-- Avisar al contacto del cliente por otro canal antes de mandar el enlace. Un empleado de
-  Celonis recibiendo un link que parece Celonis y le pide contraseña va a pensar lo peor.
+- **Do not add a JavaScript login.** It was requested (`hanzo` / `hanzo2026`) and rejected,
+  rightly so: on GitHub Pages there is no server, so the credentials end up in the source
+  code and the files remain reachable by direct URL. But above all, **a login screen in
+  front of pages that replicate celonis.com is exactly the phishing signature**: it would
+  have sunk the review. If it comes up again, the answer is real Basic Auth on another host,
+  never an HTML form here.
+- **Do not turn GitHub Pages off while a review is pending.** Claude recommended it and had
+  to backtrack: the reviewer needs to recrawl and see the already-cleaned pages. If they get
+  a 404, you are making it harder for them.
+- **Do not create a new repo or a new address to escape the warning.** The flag operates at
+  host level (`igorustarroz-bit.github.io`), not path level, because `github.io` is on the
+  Public Suffix List. A new repo under the same account gets flagged the same way. And a new
+  account will not help either: the classifier looks at the content.
+- **Do not use "I don't see the warning in Safari/Chrome" as evidence of anything.** Safari
+  works against a local copy of hash prefixes on Apple's refresh cadence and lags in both
+  directions. The source of truth is Search Console.
+- **Watch out for Repeat Offender status**: flip-flopping between publishing and removing
+  the impersonation blocks the ability to request a review for 30 days.
+- **Do not tell the client to skip the interstitial.** If the client has to open it on their
+  own machine, the only valid option is for the flag to be lifted, or to serve it from a
+  clean host with authentication.
 
 ---
 
-## 8. Notas operativas del repo
+## 7. If it has to be shared with the client without exposing it publicly
 
-- El repo publicado es **`celonisvibecoding`**; la carpeta local es **`celonistvibecoding`**
-  (con T). El enlace del pie del índice apunta al correcto — no "arreglarlo" al revés.
-- `github-token.txt` está en `.gitignore` y **nunca entró en el historial** (verificado con
-  `git log --all -- github-token.txt`). No subirlo jamás.
+Decided but not yet built:
+
+- **Cloudflare Pages** with Basic Auth in `functions/_middleware.js`. Free, a new host with
+  no history, and the password in a Cloudflare environment variable — **never in the repo**.
+- **The `labs.hanzo.es` domain**, not the default `*.pages.dev`: a corporate filter will let
+  a company subdomain with reputation through long before a random `pages.dev`.
+- **Native browser Basic Auth**, not a styled form. The browser dialog on a Hanzo domain
+  reads as "the vendor is protecting its environment".
+- Warn the client contact through another channel before sending the link. A Celonis
+  employee receiving a link that looks like Celonis and asks for a password is going to
+  think the worst.
+
+---
+
+## 8. Repo operational notes
+
+- The published repo is **`celonisvibecoding`**; the local folder is **`celonistvibecoding`**
+  (with a T). The link in the index footer points to the correct one — do not "fix" it the
+  other way round.
+- `github-token.txt` is in `.gitignore` and **never entered the history** (verified with
+  `git log --all -- github-token.txt`). Never push it.
 - Push:
   ```bash
   T=$(tr -d ' \n\r' < github-token.txt)
   git push "https://x-access-token:$T@github.com/igorustarroz-bit/celonisvibecoding.git" main
   ```
-  El token es un PAT *fine-grained*: **no puede crear repositorios** (403). Si hace falta un
-  repo nuevo, lo crea Igor a mano.
-- En la carpeta montada git no puede borrar ficheros. Cuando aparezca `.git/index.lock`:
+  The token is a *fine-grained* PAT: **it cannot create repositories** (403). If a new repo
+  is needed, Igor creates it by hand.
+- In the mounted folder git cannot delete files. When `.git/index.lock` shows up:
   ```bash
   mv .git/index.lock _to_delete/index.lock.$(date +%s)
   ```
-  antes de seguir. Los `warning: unable to unlink .git/objects/tmp_obj_*` son inocuos.
-- GitHub Pages tarda ~60 s en reconstruir. Para comprobar la URL publicada hay que usar el
-  navegador: `curl` a `github.io` no sale ni desde el equipo local ni desde el contenedor.
+  before continuing. The `warning: unable to unlink .git/objects/tmp_obj_*` messages are harmless.
+- GitHub Pages takes ~60 s to rebuild. To check the published URL you have to use the
+  browser: `curl` to `github.io` does not work from the local machine or from the container.
 
 ---
 
-## 9. Estado a 2026-09-03
+## 9. Status as of 2026-09-03
 
-- Aviso de Safe Browsing **levantado**.
-- 34 páginas HTML publicadas: 0 canonical, 0 og/twitter, 0 JSON-LD, 0 iframes, 0
-  formularios, 0 campos de usuario o contraseña, `noindex,nofollow` en todas.
-- Únicos enlaces salientes: hanzo.es y el repo de GitHub, ambos en el índice.
-- Cero peticiones a terceros en las páginas publicadas (verificado en el navegador).
+- Safe Browsing warning **lifted**.
+- 34 published HTML pages: 0 canonical, 0 og/twitter, 0 JSON-LD, 0 iframes, 0
+  forms, 0 username or password fields, `noindex,nofollow` on all of them.
+- Only outbound links: hanzo.es and the GitHub repo, both in the index.
+- Zero third-party requests on the published pages (verified in the browser).

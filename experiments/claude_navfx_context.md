@@ -1,92 +1,95 @@
-# nav-fx.js — efecto del menú superior en las páginas guardadas
+# nav-fx.js — top menu effect on the saved pages
 
-> **Experimento nuevo?** El proceso completo (guardar la pagina del navegador →
-> limpieza anti-phishing → nav-fx → indice → publicar) esta en
-> `claude_nuevoexperimento_context.md`.
+> **New experiment?** The full process (save the page from the browser →
+> anti-phishing cleanup → nav-fx → index → publish) is in
+> `claude_newexperiment_context.md`.
 
-Doc de contexto ÚNICO de este efecto (convención `claude_<tema>_context.md`).
-Todos los `claude_*_context.md` del repo viven en `experiments/`, al nivel de
-las carpetas de experimentos; **sus rutas son relativas a `experiments/`**.
-El script tambien es COMÚN: `experiments/nav-fx.js`. Antes estaba duplicado en
-`3d-globe/anime-globe/` y `datacore/anime-datacore/`; desde la
-reorganización del 2026-09-03 hay UNA sola copia y las 6 páginas la cargan
-como `../nav-fx.js?v=N`.
+SINGLE context doc for this effect (`claude_<topic>_context.md` convention).
+All the repo's `claude_*_context.md` files live in `experiments/`, at the same
+level as the experiment folders; **their paths are relative to `experiments/`**.
+The script is SHARED too: `experiments/nav-fx.js`. It used to be duplicated in
+`3d-globe/anime-globe/` and `datacore/anime-datacore/`; since the
+2026-09-03 reorganization there is ONE single copy and the 6 pages load it
+as `../nav-fx.js?v=N`.
 
-## Qué hace
+## What it does
 
-Replica el comportamiento del menú de celonis.com en DESKTOP: al hacer scroll
-hacia abajo el nav desaparece y queda solo un clon fijo del CTA arriba a la
-derecha; al hacer scroll hacia arriba el nav reaparece. Mismo mecanismo de
-clases que el `header.js` del site real (no es una reimplementación libre: son
-las clases que ya trae el `header.css` guardado).
+Replicates the behavior of the celonis.com menu on DESKTOP: on scroll down the
+nav disappears and only a fixed clone of the CTA remains in the top right
+corner; on scroll up the nav reappears. Same class mechanism as the real site's
+`header.js` (not a free reimplementation: these are the classes the saved
+`header.css` already ships with).
 
-## Valores exactos (v2 + v27, 95 líneas, vanilla JS, IIFE)
+## Exact values (v2 + v27, 95 lines, vanilla JS, IIFE)
 
-- Breakpoint desktop: `(min-width: 1200px)` vía `matchMedia`, consultado EN
-  VIVO (`isDesktop()`) en cada scroll — no una sola vez en `init()`.
-- Enganche: `document.querySelector('.header .nav-wrapper')`. Si no existe,
-  el script no hace nada. Si existe `.secondary-menu-container`, TAMPOCO se
-  activa (páginas con menú secundario).
-- CTA de origen: `.header .nav-tools .button-container:last-of-type a`
+- Desktop breakpoint: `(min-width: 1200px)` via `matchMedia`, queried LIVE
+  (`isDesktop()`) on every scroll — not once in `init()`.
+- Hook: `document.querySelector('.header .nav-wrapper')`. If it does not exist,
+  the script does nothing. If `.secondary-menu-container` exists, it does NOT
+  activate either (pages with a secondary menu).
+- Source CTA: `.header .nav-tools .button-container:last-of-type a`
   ("Try for free").
-- Scroll ABAJO (`y > lastY`) → `hide()`: quita `nav-shown`, pone `nav-hidden`
-  y añade `cta.cloneNode(true)` con clase `.cloned-cta` como hijo de
-  `wrap.parentElement`, fijando `--cta-right-offset` =
+- Scroll DOWN (`y > lastY`) → `hide()`: removes `nav-shown`, adds `nav-hidden`
+  and appends `cta.cloneNode(true)` with class `.cloned-cta` as a child of
+  `wrap.parentElement`, setting `--cta-right-offset` =
   `window.innerWidth - cta.getBoundingClientRect().right`.
-- Scroll ARRIBA (`y < lastY`) → `show()`: quita `nav-hidden`, pone
-  `nav-shown`, y retira el clon 500 ms después (`dropClone(false)`).
-- Guarda `animating` de **500 ms** entre transiciones (como el original): un
-  `hide()` durante la guarda se ignora.
-- Al PARAR el scroll, si `scrollY === 0` se fuerza visible. Debounce 500 ms,
-  en un segundo listener independiente.
-- Throttle con `requestAnimationFrame` (flag `ticking`), listeners
+- Scroll UP (`y < lastY`) → `show()`: removes `nav-hidden`, adds
+  `nav-shown`, and removes the clone 500 ms later (`dropClone(false)`).
+- **500 ms** `animating` guard between transitions (as in the original): a
+  `hide()` during the guard is ignored.
+- When scrolling STOPS, if `scrollY === 0` visibility is forced. Debounce 500 ms,
+  in a separate independent listener.
+- Throttled with `requestAnimationFrame` (`ticking` flag), listeners
   `{passive:true}`.
-- Cruce del breakpoint hacia abajo (`matchMedia change` + `resize`) →
-  `restoreNow()`: nav visible y clon fuera al instante, sin guarda.
-- Arranque: `DOMContentLoaded` si el documento aún carga, si no `init()` ya.
+- Crossing the breakpoint downwards (`matchMedia change` + `resize`) →
+  `restoreNow()`: nav visible and clone removed instantly, no guard.
+- Startup: `DOMContentLoaded` if the document is still loading, otherwise
+  `init()` right away.
 
-## CSS: no hace falta añadir nada
+## CSS: nothing needs to be added
 
-Las reglas viven ya en el `header.css` guardado de los experimentos (los dos
-ficheros son idénticos: `3d-globe/original/header.css` y
+The rules already live in the experiments' saved `header.css` (both files are
+identical: `3d-globe/original/header.css` and
 `datacore/Data Core _ Celonis_files/header.css`):
 
-- `.header .nav-wrapper{opacity:1;position:fixed;...}` y
-  `.header .nav-wrapper.nav-hidden{opacity:0;pointer-events:none}` — en el
-  site real NO hay slide animado, es un SNAP de opacidad (verificado en vivo);
-  la única `transition` del wrapper es de `background-color`.
+- `.header .nav-wrapper{opacity:1;position:fixed;...}` and
+  `.header .nav-wrapper.nav-hidden{opacity:0;pointer-events:none}` — on the
+  real site there is NO animated slide, it is an opacity SNAP (verified live);
+  the wrapper's only `transition` is on `background-color`.
 - `.header .cloned-cta{position:fixed;top:var(--fnd-spacing-06);z-index:3}`
-  con el `right` por breakpoint: `--cta-right-offset` entre 1200 y 1599 px,
-  `--fnd-spacing-10` desde 1600, `calc(50% - 736px)` desde 1920.
-- ⚠️ `nav-shown` NO tiene regla CSS: es solo una clase marcador (el estado
-  visible es el default). No la busques en el CSS.
+  with `right` per breakpoint: `--cta-right-offset` between 1200 and 1599 px,
+  `--fnd-spacing-10` from 1600, `calc(50% - 736px)` from 1920.
+- ⚠️ `nav-shown` has NO CSS rule: it is only a marker class (the visible state
+  is the default). Do not look for it in the CSS.
 
-## Páginas que lo cargan (6)
+## Pages that load it (6)
 
 `experiments/3d-globe/`: `index.html`, `original.html`.
 `experiments/datacore/`: `index.html`, `index3d.html`, `original.html`,
 `Data Core _ Celonis.html`.
 
-Todas con cache-busting `?v=27` — **SUBIR LA VERSIÓN en cada cambio** del JS
-o GitHub Pages servirá el fichero viejo (cachea los JS ~10 min).
+All with cache-busting `?v=27` — **BUMP THE VERSION on every change** to the JS
+or GitHub Pages will serve the stale file (it caches JS for ~10 min).
 
-## Fallos ya cometidos — no repetir
+## Mistakes already made — do not repeat
 
-1. **Breakpoint evaluado una sola vez en `init()`** (v1). Una ventana que
-   empezaba ancha y luego se estrechaba, o el modo responsive de DevTools,
-   seguía ocultando el nav en móvil: desaparecían logo y menú y quedaba el CTA
-   clonado flotando sobre el texto. Arreglado en v2 con `isDesktop()` por
-   scroll + `restoreNow()` al cruzar el breakpoint.
-2. **El `<script>` se perdió al regenerar `index3d.html`** desde un clon
-   DESACTUALIZADO del repo (repuesto en el commit 28f33a9). Si una sesión
-   regenera un index completo, debe conservar
-   `<script src="../nav-fx.js?v=N"></script>` antes de `</body>`. Antes de
-   tocar un index: `git pull`, o editar sobre la copia del portátil de Igor.
-3. El menú con el logo **no se toca**: estaba bien, solo necesita este efecto.
+1. **Breakpoint evaluated only once in `init()`** (v1). A window that started
+   wide and was then narrowed, or DevTools responsive mode, kept hiding the nav
+   on mobile: the logo and menu disappeared and the cloned CTA was left
+   floating over the text. Fixed in v2 with `isDesktop()` per scroll +
+   `restoreNow()` when crossing the breakpoint.
+2. **The `<script>` was lost when regenerating `index3d.html`** from an
+   OUTDATED clone of the repo (restored in commit 28f33a9). If a session
+   regenerates a full index, it must keep
+   `<script src="../nav-fx.js?v=N"></script>` before `</body>`. Before
+   touching an index: `git pull`, or edit on the copy on Igor's laptop.
+3. The menu with the logo **must not be touched**: it was fine, it only needs
+   this effect.
 
-## Historial
+## History
 
-- v1: primera versión, breakpoint solo en `init()`.
-- v2: breakpoint en vivo + `restoreNow()` al bajar de 1200 px.
-- 2026-09-03: script unificado en `experiments/nav-fx.js` (una sola copia),
-  las 6 páginas a `../nav-fx.js?v=27`, y este documento como fuente única.
+- v1: first version, breakpoint only in `init()`.
+- v2: live breakpoint + `restoreNow()` when dropping below 1200 px.
+- 2026-09-03: script unified into `experiments/nav-fx.js` (a single copy),
+  the 6 pages pointed at `../nav-fx.js?v=27`, and this document as the single
+  source of truth.

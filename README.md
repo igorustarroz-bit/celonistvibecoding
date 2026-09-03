@@ -7,7 +7,7 @@ WebGL animations, scroll-driven video scrubbing, and similar ideas.
 **These pages are not official pages of the brand shown, and they are neither published
 nor endorsed by them.**
 
-The HTML pages under `experiments/` (`celonis-home/`, `datacore/`, `Concept-Video-Scroll/`) are
+The HTML pages under `experiments/` (`3d-globe/`, `datacore/`, `Concept-Video-Scroll/`) are
 locally saved copies of public web pages, kept only as a static visual backdrop so the
 animation prototypes can be judged in context. They are **not** functional websites:
 
@@ -28,7 +28,8 @@ Index of experiments: [`index.html`](./index.html)
 
 - root: `index.html` (experiment index), `README.md`, `hanzo_logo.svg`, the Search Console
   verification file, `.nojekyll`.
-- `experiments/<name>/` — one folder per experiment.
+- `experiments/<name>/` — one folder per experiment (`3d-globe/`, `datacore/`,
+  `Concept-Video-Scroll/`). `3d-globe/` was named `celonis-home/` until 2026-09-03.
 - `experiments/` also holds what is shared: `nav-fx.js` (the common nav effect) and
   **all** the `claude_*_context.md` engineering notes, one per topic, kept together at
   that level rather than inside the experiment folders. Paths inside those notes are

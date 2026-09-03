@@ -3,6 +3,8 @@
 > Este documento vive en `experiments/` junto a los demas `claude_*_context.md`
 > (todos subidos ahi el 2026-09-03). **Las rutas de este doc son relativas a
 > `experiments/`.**
+> La carpeta de este experimento se llamaba `celonis-home/`;
+> desde el 2026-09-03 es `3d-globe/`.
 
 Contexto para Claude (o cualquier dev) que necesite mantener este globo o
 **rehacerlo en otra tecnología** (Three.js, WebGL, shaders, SVG…). Todo lo
@@ -14,10 +16,10 @@ posibles.
 
 Réplica interactiva del mundo 3D en blanco y negro del hero de celonis.com
 (originalmente el vídeo `https://www.celonis.com/src/assets/videos/commercial-earth-hero.mp4`,
-1702×1702 @60fps, 13.9s — hay una copia en `celonis-home/original/`).
+1702×1702 @60fps, 13.9s — hay una copia en `3d-globe/original/`).
 Sustituye al `<video>` por un `<canvas id="earth-canvas">` dentro de `<p class="world">`.
 
-## Ficheros (en `celonis-home/anime-globe/`)
+## Ficheros (en `3d-globe/anime-globe/`)
 
 - `globe.js` — renderizador + interacciones. Sin dependencias salvo anime.js y landmask.
 - `landmask.js` — máscara de continentes ACTIVA (bitfield base64, ver abajo).

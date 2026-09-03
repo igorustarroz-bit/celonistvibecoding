@@ -7,7 +7,7 @@
 > Documento operativo para futuras sesiones de Claude en este repo.
 > Escrito el 2026-09-03, después de que Google levantase el aviso de "sitio engañoso"
 > sobre `https://igorustarroz-bit.github.io/celonisvibecoding/`.
-> Aplica a **todo el repo**, no solo a `experiments/celonis-home/`.
+> Aplica a **todo el repo**, no solo a `experiments/3d-globe/`.
 
 ---
 

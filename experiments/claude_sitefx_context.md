@@ -14,11 +14,11 @@ de UI en inglés); documentos y comentarios de código en español.
 
 ## Ficheros y páginas
 
-Los JS de este experimento viven en `celonis-home/anime-globe/`.
+Los JS de este experimento viven en `3d-globe/anime-globe/`.
 
 - `site-fx.js` — todos los efectos de bloque de la home: titular char-by-char,
   cubos verdes del hero, acordeón de Solutions, carrusel de stories, reveal de
-  grids, sprite de iconos/logo. Cargado por `celonis-home/index.html` y `celonis-home/original.html`
+  grids, sprite de iconos/logo. Cargado por `3d-globe/index.html` y `3d-globe/original.html`
   con cache-busting `?v=YYYYMMDD[x]` — SUBIR LA VERSIÓN en cada cambio o el
   navegador servirá el JS viejo (ya pasó y confundió una ronda entera de QA).
 - `nav-fx.js` — efecto del menu superior (ocultar al bajar + clon del CTA).
@@ -27,8 +27,8 @@ Los JS de este experimento viven en `celonis-home/anime-globe/`.
   cometidos: **`experiments/claude_navfx_context.md`** — leer ese doc, no duplicar
   aqui la informacion.
 - `scroll-fx.js` — reacción al scroll del mundo y los cubos (documentado en
-  `claude_globe_context.md`). Lo cargan `celonis-home/index.html` Y
-  `celonis-home/original.html`.
+  `claude_globe_context.md`). Lo cargan `3d-globe/index.html` Y
+  `3d-globe/original.html`.
 
 ## Cómo se obtuvo el comportamiento original (método)
 

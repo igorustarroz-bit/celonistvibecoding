@@ -4,7 +4,7 @@ Doc de contexto ÚNICO de este efecto (convención `claude_<tema>_context.md`).
 Todos los `claude_*_context.md` del repo viven en `experiments/`, al nivel de
 las carpetas de experimentos; **sus rutas son relativas a `experiments/`**.
 El script tambien es COMÚN: `experiments/nav-fx.js`. Antes estaba duplicado en
-`celonis-home/anime-globe/` y `datacore/anime-datacore/`; desde la
+`3d-globe/anime-globe/` y `datacore/anime-datacore/`; desde la
 reorganización del 2026-09-03 hay UNA sola copia y las 6 páginas la cargan
 como `../nav-fx.js?v=N`.
 
@@ -44,7 +44,7 @@ las clases que ya trae el `header.css` guardado).
 ## CSS: no hace falta añadir nada
 
 Las reglas viven ya en el `header.css` guardado de los experimentos (los dos
-ficheros son idénticos: `celonis-home/original/header.css` y
+ficheros son idénticos: `3d-globe/original/header.css` y
 `datacore/Data Core _ Celonis_files/header.css`):
 
 - `.header .nav-wrapper{opacity:1;position:fixed;...}` y
@@ -59,7 +59,7 @@ ficheros son idénticos: `celonis-home/original/header.css` y
 
 ## Páginas que lo cargan (6)
 
-`experiments/celonis-home/`: `index.html`, `original.html`.
+`experiments/3d-globe/`: `index.html`, `original.html`.
 `experiments/datacore/`: `index.html`, `index3d.html`, `original.html`,
 `Data Core _ Celonis.html`.
 

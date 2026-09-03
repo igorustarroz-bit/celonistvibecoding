@@ -7,7 +7,7 @@
 
    FICHERO COMUN a todos los experimentos: vive en experiments/ y lo cargan
    las 6 paginas como ../nav-fx.js?v=N. Antes estaba duplicado en
-   celonis-home/anime-globe/ y datacore/anime-datacore/ (unificado 2026-09-03).
+   3d-globe/anime-globe/ y datacore/anime-datacore/ (unificado 2026-09-03).
    SUBIR LA VERSION del ?v= en cada cambio.
 
    Especificacion completa, valores y fallos ya cometidos:

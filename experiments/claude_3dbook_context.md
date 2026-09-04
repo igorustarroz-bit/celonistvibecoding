@@ -249,8 +249,19 @@ Changing `coverColor`/`accent`/`pageColor`/`green` redraws the cover and the spr
 `camera.*`, `fit` take effect on the next frame (the camera re-fits itself live). The camera is the knob to
 match the photo more closely: `BOOK.camera.az = -45` turns toward the bottom edge, `el`
 raises/lowers the photographer, `fov` is the amount of perspective (11 ≈ almost none).
-The spread copy is `window.BOOK_SPREAD` + `BOOK_REDRAW()`. There is no tuner panel
-(unlike the Data Core) — add one only if Igor asks.
+The spread copy is `window.BOOK_SPREAD` + `BOOK_REDRAW()`.
+
+**Book tuner (v7, Igor asked for it):** `book-fx/book-tuner.js`, same recipe as the Data
+Core's glass tuner — fixed bottom-right, starts collapsed as "● BOOK TUNER", expands
+upwards, sliders wired to `window.BOOK`, Copy settings (JSON to paste as defaults) and
+Reset. Sections: Presented pose (rise to camera, **book opening in degrees** — the total
+angle between the two pages, 180° = flat, stored as `presentV = (180 − opening)/2` —,
+lean back, rise lag), Table pose (V per half), Camera (azimuth, elevation, focal, fit,
+smoothing), Motion (open time, leaves, leaf lag, hover lift, float), Look (edges,
+environment, lights, cover roughness/clearcoat, paper and green colours), Bloom &
+sharpness. An "Open / close book" button at the top drives the same toggle as the click
+(`window.BOOK_TOGGLE`). Loaded after `book-3d.js` in `index.html` only (not in
+`index-v5.html`).
 
 ## 4. Implementation notes (three.js r147)
 

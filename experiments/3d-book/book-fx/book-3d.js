@@ -26,7 +26,8 @@
    back, both pages angled toward the viewer), the camera zooming in on it —
    to sell the 3D turn. TUNE.present 0 → v5 behaviour (stays flat on the table).
 
-   Live knobs: window.BOOK (edit in the DevTools console, applied every frame).
+   Live knobs: window.BOOK (edit in the DevTools console, applied every frame) —
+   or use the BOOK TUNER panel (book-tuner.js, bottom-right, like the Data Core's).
    Spread copy: window.BOOK_SPREAD (edit, then BOOK_REDRAW()).
    ========================================================================= */
 (function () {
@@ -576,6 +577,8 @@
   }
   var _frozenNow = 0;
   function toggleOpen(now) { fromOpen = openAt(now); isOpen = !isOpen; clickAt = now; }
+  window.BOOK_TOGGLE = function () { toggleOpen(performance.now() - t0); };   // used by the tuner
+  window.BOOK_IS_OPEN = function () { return isOpen; };
   // test hook (frame-by-frame checks from a headless browser): freeze the open
   // fraction at t, in the "opening" (closing=false) or "closing" leaf regime
   var frozen = null;

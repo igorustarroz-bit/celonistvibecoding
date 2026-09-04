@@ -123,6 +123,20 @@ Add to **all** saved pages in the folder (index and original), right before `</b
 > behaviour: `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()`) and
 > `datacore/anime-datacore/datacore-tuner.js` (+ `DATACORE_INFO()`).
 
+> **IGOR'S RULE (2026-09-04) — every experiment must work LOCALLY too, opened from
+> `file://` (double-click on the .html), not only on GitHub Pages.** The trap: Chrome
+> gives every `file://` document a unique origin, so an image loaded from a sibling file
+> and drawn on a canvas TAINTS it, and three.js cannot upload a tainted canvas as a
+> texture → black cover / no photos locally while the published page is fine (exactly
+> what happened with the 3D book). Therefore any image used as a WebGL texture (or drawn
+> on a canvas that becomes one) is shipped as a **data URI** in a small JS bundle:
+> `python3 bundle-assets.py <out.js> <GLOBAL> <files…>` (script in `experiments/`),
+> loaded before the experiment's script; the code reads `window.<GLOBAL>[basename]` and
+> falls back to the plain file. Keep the plain JPGs next to the bundle for editing and
+> re-run the bundler after replacing one. CSS-loaded assets (stylesheets, `@font-face`
+> woff2, `<img>` tags) are NOT affected and need nothing. Before delivering, open the
+> page from `file://` as well as the Pages URL.
+
 ## 5. Build the effect
 
 Our own JS goes in the experiment subfolder, loaded from `index.html` with its own
@@ -189,4 +203,5 @@ to `experiments/`.
 - [ ] New links in the index, with `target="_blank" rel="noopener"`.
 - [ ] `.gitignore` rules with the correct prefix for the new folder's tracking files.
 - [ ] The published page opened in the browser and checked at 1440×900 and on mobile.
+- [ ] The page also opened LOCALLY from `file://` — textures visible (data-URI bundle).
 - [ ] `experiments/claude_<topic>_context.md` written.

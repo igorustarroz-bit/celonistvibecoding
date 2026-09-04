@@ -5,15 +5,19 @@
 
    Replaces the flat product shot (a rendered PNG of the eBook) with a real
    3D book built with the Data Core technology: near-black material lit by the
-   same banded softbox environment, translucent white light edges, a floor
-   frame line, MSAA 4 through the composer, subtle bloom, mouse parallax and
-   the crosshair cursor. v2 (Igor): the camera is a PERSPECTIVE one placed
-   like the photographer of the original product shot (from the book's
-   lower-left, high up), not the Data Core isometric view; there is no label;
-   and the book only opens when you CLICK it (click again to close) — the
-   first leaves follow the cover with a lag.
+   same banded softbox environment, translucent white light edges, MSAA 4
+   through the composer, subtle bloom, mouse parallax and the crosshair cursor.
+
+   v3 (Igor's second review): a CLICK opens the book AT THE MIDDLE and shows a
+   two-page editorial spread (canvas textures: text + two photos from the site);
+   another click closes it. Near-orthographic perspective camera placed like the
+   photographer of the original product shot (from the book's lower-left, high
+   up), no floor line, no label. The front cover + the upper half of the page
+   block flip 180° about the spine as one piece; a few loose leaves turn with a
+   lag, always staying between the two halves so nothing pokes through the cover.
 
    Live knobs: window.BOOK (edit in the DevTools console, applied every frame).
+   Spread copy: window.BOOK_SPREAD (edit, then BOOK_REDRAW()).
    ========================================================================= */
 (function () {
   'use strict';
@@ -24,36 +28,37 @@
   if (!canvas) return;
   var stage = document.getElementById('book-stage') || canvas.parentElement;
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var BASE = (function () {                    // folder of this script, for the photos
+    var s = document.currentScript && document.currentScript.src;
+    return s ? s.slice(0, s.lastIndexOf('/') + 1) : 'book-fx/';
+  })();
 
   /* ---------- LIVE KNOBS: window.BOOK ---------- */
   var TUNE = window.BOOK = {
-    openAngle: 62,          // degrees the cover lifts when open (click)
-    openMs: 1100,           // duration of the open / close transition
-    hoverLift: 5,           // extra degrees while the pointer is over the book (0 = none)
-    leaves: 6,              // loose leaves that follow the cover
-    leafFollow: 0.74,       // top leaf angle as a fraction of the cover angle
-    leafStep: 0.105,        // each leaf below opens this much less
-    leafLag: 95,            // ms of lag per leaf
-    bob: 0.010,             // floating amplitude while open (world units)
-    camera: { az: -50, el: 50, fov: 24 }, // photographer's position: az from +z toward +x (deg), elevation (deg)
-    target: { x: 0, y: 0.06, z: 0 },      // point the camera looks at (world)
-    edgeOpacity: 0.34,      // white light edges
-    floorOpacity: 0.30,     // floor frame line
-    floorMargin: 0.16,      // distance from the book to the frame line
+    openMs: 1400,           // duration of the open / close transition
+    hoverLift: 4,           // degrees the front cover lifts while the pointer is over the closed book (0 = none)
+    leaves: 5,              // loose leaves that turn with the flipping half
+    leafLag: 110,           // ms of lag per leaf
+    bob: 0.006,             // floating amplitude while open (world units)
+    edgeOpacity: 0.30,      // white light edges
     coverColor: '#0d0d0f',
-    pageColor: '#d9d9d9',
+    pageColor: '#e6e4df',   // paper
     accent: '#0f5bff',      // the blue disc on the cover
+    green: '#5cfe50',       // the site's accent green, used in the spread
     clearcoat: 0.45,
     roughness: 0.52,
     envIntensity: 0.65,
     keyLight: 0.55,
-    ambient: 0.10,
-    bloom: { strength: 0.16, radius: 0.26, threshold: 0.72 },
-    fit: 0.86,              // 1 = the book (closed + open cover) fills the stage
+    ambient: 0.12,
+    bloom: { strength: 0.14, radius: 0.26, threshold: 0.78 },
+    camera: { az: -50, el: 50, fov: 11 },  // photographer's position: az from +z toward +x (deg), elevation (deg); small fov = little perspective
+    target: { x: 0, y: 0.04, z: 0 },       // point the camera looks at (world)
+    fit: 0.90,              // 1 = the closed book fills the stage
+    fitOpen: 0.97,          // the open spread must fit within this
     quality: { msaa: 4, dprMax: 2 }
   };
 
-  /* ---------- renderer / scene / camera (same setup as datacore-3d.js) ---------- */
+  /* ---------- renderer / scene ---------- */
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
   renderer.setClearColor(0x000000, 1);          // the media box is black, like the product shot
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -63,9 +68,7 @@
   var scene = new THREE.Scene();
   var root = new THREE.Group();                 // parallax rotates this group
   scene.add(root);
-
-  // perspective camera; position and distance are set in resize() (fitCamera)
-  var camera = new THREE.PerspectiveCamera(TUNE.camera.fov, 1.5, 0.1, 100);
+  var camera = new THREE.PerspectiveCamera(TUNE.camera.fov, 1.5, 0.1, 200);
 
   /* ---------- environment: banded softboxes (same as the Data Core) ---------- */
   function makeEnvTexture() {
@@ -83,7 +86,7 @@
     }
     stripe(78, 34, 0.95);
     stripe(78, 34, 0.9, 96, 480);
-    stripe(168, 30, 0.55, 520, 1010);           // the band the flat cover reflects
+    stripe(168, 30, 0.55, 520, 1010);
     function blob(x, y, r, a) {
       var rg = g.createRadialGradient(x, y, 0, x, y, r);
       rg.addColorStop(0, 'rgba(255,255,255,' + a + ')');
@@ -104,25 +107,51 @@
   var ambient = new THREE.AmbientLight(0xffffff, TUNE.ambient);
   scene.add(ambient);
 
-  /* ---------- the cover artwork (canvas texture, redrawn once fonts are ready) ---------- */
-  // Portrait 1 : 1.38 like the printed guide. Near-black paper, a chain of
-  // overlapping rings (the "supply chain"), one blue disc, title and subtitle.
+  /* ---------- canvas helpers ---------- */
+  var FONT = 'Poppins, ui-sans-serif, system-ui, sans-serif';
+  function makeTex(c) {
+    var t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    return t;
+  }
+  // word-wrap: draws `text` from (x, y) inside `width`, returns the y after the last line
+  function para(g, text, x, y, width, lh) {
+    var words = text.split(' '), line = '';
+    for (var i = 0; i < words.length; i++) {
+      var test = line ? line + ' ' + words[i] : words[i];
+      if (g.measureText(test).width > width && line) { g.fillText(line, x, y); y += lh; line = words[i]; }
+      else line = test;
+    }
+    if (line) { g.fillText(line, x, y); y += lh; }
+    return y;
+  }
+  // cover-fit an image into a rect (dark placeholder until it loads)
+  function coverImg(g, img, x, y, w, h) {
+    if (!img || !img.width) { g.fillStyle = '#1a1c20'; g.fillRect(x, y, w, h); return; }
+    var s = Math.max(w / img.width, h / img.height), sw = img.width * s, sh = img.height * s;
+    g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+    g.drawImage(img, x + (w - sw) / 2, y + (h - sh) / 2, sw, sh); g.restore();
+  }
+  function loadImg(name, cb) {
+    var im = new Image();
+    im.onload = function () { cb(im); }; im.onerror = function () { cb(null); };
+    im.src = BASE + 'spread/' + name;
+  }
+
+  /* ---------- the cover artwork ---------- */
   var COVER_W = 1024, COVER_H = 1414;
   var coverCanvas = document.createElement('canvas');
   coverCanvas.width = COVER_W; coverCanvas.height = COVER_H;
-  var coverTex = new THREE.CanvasTexture(coverCanvas);
-  coverTex.encoding = THREE.sRGBEncoding;
-  coverTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  var coverTex = makeTex(coverCanvas);
 
   function drawCover() {
     var g = coverCanvas.getContext('2d');
     g.clearRect(0, 0, COVER_W, COVER_H);
     g.fillStyle = TUNE.coverColor; g.fillRect(0, 0, COVER_W, COVER_H);
-    // faint paper grain
     var grain = g.createLinearGradient(0, 0, COVER_W, COVER_H);
     grain.addColorStop(0, 'rgba(255,255,255,0.045)'); grain.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grain; g.fillRect(0, 0, COVER_W, COVER_H);
-
     // rings: overlapping outlines, like the chain of links on the printed cover
     var r = 118, stroke = 3.2;
     var rings = [
@@ -133,29 +162,134 @@
     var ox = 30, oy = 60;
     g.strokeStyle = 'rgba(255,255,255,0.92)'; g.lineWidth = stroke;
     rings.forEach(function (p) { g.beginPath(); g.arc(p[0] + ox, p[1] + oy, r, 0, Math.PI * 2); g.stroke(); });
-    // the blue disc (left ring of the middle row)
     g.beginPath(); g.arc(rings[4][0] + ox, rings[4][1] + oy, r * 0.42, 0, Math.PI * 2);
     g.fillStyle = TUNE.accent; g.fill();
-
-    // title
-    g.fillStyle = '#ffffff';
-    g.textBaseline = 'alphabetic';
-    g.font = '600 66px Poppins, ui-sans-serif, system-ui, sans-serif';
+    g.fillStyle = '#ffffff'; g.textBaseline = 'alphabetic';
+    g.font = '600 66px ' + FONT;
     var y = 920;
     ['The Realist’s Guide', 'to Sustainable', 'Supply Chains'].forEach(function (l) { g.fillText(l, 96, y); y += 78; });
-    g.font = '400 31px Poppins, ui-sans-serif, system-ui, sans-serif';
-    g.fillStyle = 'rgba(255,255,255,0.86)';
+    g.font = '400 31px ' + FONT; g.fillStyle = 'rgba(255,255,255,0.86)';
     y += 30;
     ['How to turn vision', 'into action, and drive', 'meaningful change'].forEach(function (l) { g.fillText(l, 96, y); y += 42; });
-
     // small mark bottom-right (neutral stand-in, not the brand logo)
     g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 3;
     g.beginPath(); g.arc(COVER_W - 96, COVER_H - 106, 26, 0, Math.PI * 2); g.stroke();
     g.beginPath(); g.arc(COVER_W - 96, COVER_H - 106, 8, 0, Math.PI * 2); g.fillStyle = '#ffffff'; g.fill();
     coverTex.needsUpdate = true;
   }
-  drawCover();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawCover);
+
+  /* ---------- the spread: two editorial pages (invented content, English) ---------- */
+  // Portrait pages 1024 × 1414, like the cover. Left = a full-bleed photo with a
+  // chapter opener; right = body copy in two columns, a pull quote, a KPI strip
+  // and a second photo. Copy is fictional, about process-driven sustainable
+  // supply chains, in the register of the real guide. Photos: two images saved
+  // with the celonis.com home page (experiment 1), copied to book-fx/spread/.
+  var PAGE_W = 1024, PAGE_H = 1414, M = 84;    // margin
+  var leftCanvas = document.createElement('canvas'), rightCanvas = document.createElement('canvas');
+  leftCanvas.width = rightCanvas.width = PAGE_W; leftCanvas.height = rightCanvas.height = PAGE_H;
+  var leftTex = makeTex(leftCanvas), rightTex = makeTex(rightCanvas);
+  // the LEFT page is the −y face of the flipped half: after the 180° turn that
+  // face's u runs along −x and its v along +z, so the texture is turned 180°
+  leftTex.center.set(0.5, 0.5); leftTex.rotation = Math.PI;
+  var photos = { containers: null, solar: null };
+
+  var SPREAD = window.BOOK_SPREAD = {
+    runningHead: 'THE REALIST’S GUIDE TO SUSTAINABLE SUPPLY CHAINS',
+    chapterNo: '03',
+    chapterTitle: 'Where the emissions actually hide',
+    standfirst: 'Most sustainability targets are set at the top of the organisation and missed at the bottom of a purchase order. The gap is not ambition. It is visibility into the processes that move goods every day.',
+    caption: 'Rotterdam, 06:40. A single delayed customs document adds a truck, a reroute and 1.8 t of CO₂e to a shipment that was “on plan” an hour earlier.',
+    pageLeft: '24',
+    pageRight: '25',
+    body: [
+      'Ask a supply chain leader where the carbon in their network comes from and the answer is usually a category: freight, packaging, suppliers. Ask where it comes from this week and the room goes quiet. Emission factors describe averages; operations happen in exceptions — the expedited air shipment, the half-empty truck, the order split in three because a plant ran out of stock.',
+      'Process mining changes the question. Instead of estimating emissions per category, you read them off the event log: every order, every touch, every hand-over, with its timestamp and its cause. The green line stops being a reporting exercise and becomes a property of the process, measured the same way as cost or lead time.',
+      'The organisations in this guide did not start with a new strategy. They started with one process — order-to-cash, procure-to-pay, inbound logistics — and one uncomfortable number.'
+    ],
+    quote: '“We knew our Scope 3 number to two decimals and had no idea which process produced it.”',
+    quoteBy: 'Head of Logistics, European consumer goods manufacturer',
+    kpis: [['−12%', 'transport emissions in the first two quarters'], ['3.4 days', 'shorter inbound lead time, same fleet'], ['1 process', 'to start with — not a programme']],
+    caption2: 'Sustainability and yield are the same conversation on a plant floor: fewer rushes, fuller loads, fewer touches.'
+  };
+
+  function drawLeftPage() {
+    var g = leftCanvas.getContext('2d');
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.fillStyle = TUNE.pageColor; g.fillRect(0, 0, PAGE_W, PAGE_H);
+    var ph = Math.round(PAGE_H * 0.58);                    // full-bleed photo, top 58 %
+    coverImg(g, photos.containers, 0, 0, PAGE_W, ph);
+    var gr = g.createLinearGradient(0, ph - 360, 0, ph);   // so the chapter opener reads on it
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.72)');
+    g.fillStyle = gr; g.fillRect(0, ph - 360, PAGE_W, 360);
+    g.fillStyle = TUNE.green; g.font = '600 26px ' + FONT;
+    g.fillText('CHAPTER ' + SPREAD.chapterNo, M, ph - 232);
+    g.fillStyle = '#ffffff'; g.font = '600 62px ' + FONT;
+    para(g, SPREAD.chapterTitle, M, ph - 160, PAGE_W - 2 * M, 70);
+    g.fillStyle = 'rgba(0,0,0,0.55)'; g.font = '500 17px ' + FONT;   // running head
+    g.fillText(SPREAD.runningHead, M, ph + 52);
+    g.fillRect(M, ph + 66, PAGE_W - 2 * M, 1.5);
+    g.fillStyle = '#111'; g.font = '500 33px ' + FONT;                // standfirst
+    var y = para(g, SPREAD.standfirst, M, ph + 128, PAGE_W - 2 * M, 44);
+    g.fillStyle = '#5c5a55'; g.font = '400 20px ' + FONT;             // caption
+    para(g, SPREAD.caption, M, y + 34, PAGE_W - 2 * M - 220, 27);
+    g.fillStyle = TUNE.green; g.fillRect(M, PAGE_H - 96, 46, 4);      // folio
+    g.fillStyle = '#111'; g.font = '500 20px ' + FONT;
+    g.fillText(SPREAD.pageLeft, M, PAGE_H - 56);
+    leftTex.needsUpdate = true;
+  }
+
+  function drawRightPage() {
+    var g = rightCanvas.getContext('2d');
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.fillStyle = TUNE.pageColor; g.fillRect(0, 0, PAGE_W, PAGE_H);
+    g.fillStyle = 'rgba(0,0,0,0.55)'; g.font = '500 17px ' + FONT;   // running head
+    g.textAlign = 'right'; g.fillText(SPREAD.runningHead, PAGE_W - M, 96); g.textAlign = 'left';
+    g.fillRect(M, 110, PAGE_W - 2 * M, 1.5);
+    var colW = (PAGE_W - 2 * M - 40) / 2, x1 = M, x2 = M + colW + 40, lh = 30;
+    g.fillStyle = '#1a1a1a'; g.font = '400 21px ' + FONT;             // column 1
+    var y1 = para(g, SPREAD.body[0], x1, 160, colW, lh) + 14;
+    y1 = para(g, SPREAD.body[1], x1, y1, colW, lh);
+    g.fillStyle = TUNE.green; g.fillRect(x2, 156, 4, 190);            // pull quote, column 2
+    g.fillStyle = '#111'; g.font = '500 30px ' + FONT;
+    var y2 = para(g, SPREAD.quote, x2 + 28, 186, colW - 28, 38);
+    g.fillStyle = '#5c5a55'; g.font = '400 17px ' + FONT;
+    y2 = para(g, SPREAD.quoteBy, x2 + 28, y2 + 6, colW - 28, 22);
+    g.fillStyle = '#1a1a1a'; g.font = '400 21px ' + FONT;
+    y2 = para(g, SPREAD.body[2], x2, y2 + 34, colW, lh);
+    var ky = Math.max(y1, y2) + 44;                                    // KPI strip
+    g.fillStyle = '#111'; g.fillRect(M, ky, PAGE_W - 2 * M, 1.5);
+    var kw = (PAGE_W - 2 * M) / 3;
+    for (var i = 0; i < SPREAD.kpis.length; i++) {
+      var kx = M + kw * i;
+      g.fillStyle = '#111'; g.font = '600 44px ' + FONT; g.fillText(SPREAD.kpis[i][0], kx, ky + 66);
+      g.fillStyle = '#5c5a55'; g.font = '400 17px ' + FONT; para(g, SPREAD.kpis[i][1], kx, ky + 98, kw - 30, 22);
+    }
+    var py = ky + 170, ph = PAGE_H - 130 - py;                         // second photo + caption
+    var pw = Math.round((PAGE_W - 2 * M) * 0.58);
+    coverImg(g, photos.solar, PAGE_W - M - pw, py, pw, ph);
+    g.fillStyle = '#5c5a55'; g.font = '400 18px ' + FONT;
+    para(g, SPREAD.caption2, M, py + 8, PAGE_W - 2 * M - pw - 36, 25);
+    g.fillStyle = TUNE.green; g.fillRect(PAGE_W - M - 46, PAGE_H - 96, 46, 4);   // folio
+    g.fillStyle = '#111'; g.font = '500 20px ' + FONT; g.textAlign = 'right';
+    g.fillText(SPREAD.pageRight, PAGE_W - M, PAGE_H - 56); g.textAlign = 'left';
+    rightTex.needsUpdate = true;
+  }
+
+  // a loose leaf: faint text lines (both sides share the texture)
+  function makeLeafTexture() {
+    var c = document.createElement('canvas'); c.width = 512; c.height = 707;
+    var g = c.getContext('2d');
+    g.fillStyle = TUNE.pageColor; g.fillRect(0, 0, 512, 707);
+    g.fillStyle = 'rgba(0,0,0,0.10)';
+    for (var y = 90; y < 640; y += 14) g.fillRect(44, y, (y % 3 === 0 ? 300 : 420) + (y % 7) * 6, 3);
+    return makeTex(c);
+  }
+  function drawAll() { drawCover(); drawLeftPage(); drawRightPage(); }
+  window.BOOK_REDRAW = drawAll;
+  drawAll();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+  loadImg('containers.jpg', function (im) { photos.containers = im; drawLeftPage(); });
+  loadImg('solar.jpg', function (im) { photos.solar = im; drawRightPage(); });
 
   /* ---------- page-edge texture (the stacked sheets seen on the fore-edge) ---------- */
   function makeEdgeTexture() {
@@ -166,21 +300,26 @@
       g.fillStyle = (i % 2) ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.16)';
       g.fillRect(0, i, 64, 1);
     }
-    var tex = new THREE.CanvasTexture(c);
-    tex.encoding = THREE.sRGBEncoding;
+    var tex = makeTex(c);
     tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
     return tex;
   }
   var edgeTex = makeEdgeTexture();
 
   /* ---------- geometry ----------
-     Built in the book's natural frame: width along X (spine at x = −W/2,
-     fore-edge at +W/2), height along −Z (top of the cover at z = −H/2), lying
-     on y = 0. The cover hinges about Z at the spine (+rotation.z lifts the
-     fore-edge). The camera is placed on the book's lower-left side
-     (TUNE.camera.az < 0), high up, so the spine sits lower-left and the title
-     reads rising to the right, like the product shot it replaces. */
+     Natural frame: width along X (spine at x = −BW/2, fore-edge at +BW/2),
+     height along −Z (top of the cover at z = −BH/2), lying on y = 0.
+       back cover        y ∈ [0, CT]                         fixed
+       lower half pages  y ∈ [CT, CT + PT/2]                 fixed  — its TOP face is the RIGHT page
+       flip group        pivot (−BW/2, CT + PT/2, 0), rotation.z 0 → π
+         upper half      local y ∈ [0, PT/2]                        — its BOTTOM face is the LEFT page
+         front cover     local y ∈ [PT/2, PT/2 + CT], own pivot for the hover lift
+       leaves            own pivots at the same height, rotation.z 0 → π with lag
+     Rotating the flip group by π about the spine puts the front cover on the
+     floor at x ∈ [−1.5, −0.5] and the upper half on top of it, so both pages
+     end up at the same height, y = CT + PT/2. */
   var BW = 1.0, BH = 1.38, PT = 0.062, CT = 0.009, INSET = 0.012;
+  var HALF = PT / 2, PW = BW - INSET, PH = BH - INSET * 2;
 
   var book = new THREE.Group();
   root.add(book);
@@ -189,90 +328,82 @@
     color: new THREE.Color(TUNE.coverColor), roughness: TUNE.roughness, metalness: 0.0,
     clearcoat: TUNE.clearcoat, clearcoatRoughness: 0.42, envMapIntensity: TUNE.envIntensity
   });
-  var coverTopMat = coverMat.clone();
-  coverTopMat.map = coverTex;
-  coverTopMat.color.set('#ffffff');            // the artwork carries the colour
-  var pageMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(TUNE.pageColor), roughness: 0.95, metalness: 0, envMapIntensity: 0.25 });
-  var pageEdgeMat = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
-  var leafMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.92, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.25 });
+  var coverTopMat = coverMat.clone(); coverTopMat.map = coverTex; coverTopMat.color.set('#ffffff');
+  var paperMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(TUNE.pageColor), roughness: 0.95, metalness: 0, envMapIntensity: 0.25 });
+  var edgeMatP = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
+  var leftMat = new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.9, metalness: 0, envMapIntensity: 0.25 });
+  var rightMat = new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.9, metalness: 0, envMapIntensity: 0.25 });
+  var leafMat = new THREE.MeshStandardMaterial({ map: makeLeafTexture(), roughness: 0.92, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.25 });
   var edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: TUNE.edgeOpacity, blending: THREE.AdditiveBlending, depthWrite: false });
-
-  function edges(geo) { return new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), edgeMat); }
+  function edges(geo, opacityMul) {
+    var l = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), edgeMat.clone());
+    l.userData.mul = opacityMul || 1;
+    return l;
+  }
+  var edgeLines = [];
 
   // back cover
-  var backGeo = new THREE.BoxGeometry(BW, CT, BH);
-  var back = new THREE.Mesh(backGeo, coverMat);
+  var coverGeo = new THREE.BoxGeometry(BW, CT, BH);
+  var back = new THREE.Mesh(coverGeo, coverMat);
   back.position.set(0, CT / 2, 0);
   book.add(back);
-  var backEdges = edges(backGeo); backEdges.position.copy(back.position); book.add(backEdges);
+  var e1 = edges(coverGeo, 1); e1.position.copy(back.position); book.add(e1); edgeLines.push(e1);
 
-  // page block (BoxGeometry material order: +x −x +y −y +z −z)
-  var pagesGeo = new THREE.BoxGeometry(BW - INSET, PT, BH - INSET * 2);
-  var pages = new THREE.Mesh(pagesGeo, [pageEdgeMat, pageMat, pageMat, pageMat, pageEdgeMat, pageEdgeMat]);
-  pages.position.set(-INSET / 2, CT + PT / 2, 0);
-  book.add(pages);
-  var pagesEdges = edges(pagesGeo); pagesEdges.position.copy(pages.position);
-  pagesEdges.material = edgeMat.clone(); pagesEdges.material.opacity = TUNE.edgeOpacity * 0.5;
-  book.add(pagesEdges);
+  // lower half of the page block (right page on top). Box material order: +x −x +y −y +z −z
+  var halfGeo = new THREE.BoxGeometry(PW, HALF, PH);
+  var lower = new THREE.Mesh(halfGeo, [edgeMatP, paperMat, rightMat, paperMat, edgeMatP, edgeMatP]);
+  lower.position.set(-BW / 2 + PW / 2, CT + HALF / 2, 0);
+  book.add(lower);
 
-  // spine
-  var spineGeo = new THREE.BoxGeometry(CT, PT + CT * 2, BH);
+  // spine: pivots at its bottom edge by half the opening angle, so it flattens with the book
+  var SP_H = PT + CT * 2 + 0.002;
+  var spineGeo = new THREE.BoxGeometry(CT, SP_H, BH);
+  var spinePivot = new THREE.Group(); spinePivot.position.set(-BW / 2, 0.001, 0);
   var spine = new THREE.Mesh(spineGeo, coverMat);
-  spine.position.set(-BW / 2 - CT / 2, (PT + CT * 2) / 2, 0);
-  book.add(spine);
+  spine.position.set(-CT / 2, SP_H / 2, 0);
+  spinePivot.add(spine); book.add(spinePivot);
 
-  // front cover: pivot on the spine edge, at the top of the page block
-  var coverPivot = new THREE.Group();
-  coverPivot.position.set(-BW / 2, CT + PT, 0);
-  book.add(coverPivot);
-  var coverGeo = new THREE.BoxGeometry(BW, CT, BH);
+  // flip group: upper half + front cover
+  var flip = new THREE.Group();
+  flip.position.set(-BW / 2, CT + HALF, 0);
+  book.add(flip);
+  var upper = new THREE.Mesh(halfGeo, [edgeMatP, paperMat, paperMat, leftMat, edgeMatP, edgeMatP]);
+  upper.position.set(PW / 2, HALF / 2, 0);
+  flip.add(upper);
+  var coverPivot = new THREE.Group();                 // hover-lift hinge, at the spine
+  coverPivot.position.set(0, HALF, 0);
+  flip.add(coverPivot);
   var cover = new THREE.Mesh(coverGeo, [coverMat, coverMat, coverTopMat, coverMat, coverMat, coverMat]);
   cover.position.set(BW / 2, CT / 2, 0);
   coverPivot.add(cover);
-  var coverEdges = edges(coverGeo); coverEdges.position.copy(cover.position); coverPivot.add(coverEdges);
+  var e2 = edges(coverGeo, 1); e2.position.copy(cover.position); coverPivot.add(e2); edgeLines.push(e2);
+  var e3 = edges(halfGeo, 0.5); e3.position.copy(upper.position); flip.add(e3); edgeLines.push(e3);
+  var e4 = edges(halfGeo, 0.5); e4.position.copy(lower.position); book.add(e4); edgeLines.push(e4);
 
-  // loose leaves under the cover (their own pivots on the spine)
+  // loose leaves, hinged at the spine at the split height
   var leaves = [];
-  var leafGeo = new THREE.PlaneGeometry(BW - INSET, BH - INSET * 2);
+  var leafGeo = new THREE.PlaneGeometry(PW, PH);
   for (var li = 0; li < 8; li++) {
     var pv = new THREE.Group();
-    pv.position.set(-BW / 2, CT + PT - 0.0012 * (li + 1), 0);
+    pv.position.set(-BW / 2, CT + HALF, 0);          // hinge exactly at the split
     var leaf = new THREE.Mesh(leafGeo, leafMat);
     leaf.rotation.x = -Math.PI / 2;
-    leaf.position.set((BW - INSET) / 2, 0, 0);
+    // the offset lives on the LEAF, not the pivot: +ε above the split when
+    // closed (inside the upper half) becomes −ε after the 180° turn (inside the
+    // flipped half). An offset on the pivot would not mirror and the leaves
+    // would end up lying on top of the left page.
+    leaf.position.set(PW / 2, 0.0009 * (li + 1), 0);
     pv.add(leaf);
     pv.visible = li < TUNE.leaves;
     book.add(pv);
     leaves.push(pv);
   }
 
-  // floor frame line: rounded rectangle ribbon around the book (the Data Core "floor")
-  var floorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: TUNE.floorOpacity, depthWrite: false, side: THREE.DoubleSide });
-  var floor = null, floorMargin = -1;
-  function rrect(w2, h2, rad) {
-    var s = new THREE.Shape();
-    s.moveTo(-w2 + rad, -h2);
-    s.lineTo(w2 - rad, -h2); s.absarc(w2 - rad, -h2 + rad, rad, -Math.PI / 2, 0, false);
-    s.lineTo(w2, h2 - rad); s.absarc(w2 - rad, h2 - rad, rad, 0, Math.PI / 2, false);
-    s.lineTo(-w2 + rad, h2); s.absarc(-w2 + rad, h2 - rad, rad, Math.PI / 2, Math.PI, false);
-    s.lineTo(-w2, -h2 + rad); s.absarc(-w2 + rad, -h2 + rad, rad, Math.PI, Math.PI * 1.5, false);
-    return s;
-  }
-  function buildFloor() {
-    if (floor) { book.remove(floor); floor.geometry.dispose(); }
-    var m = TUNE.floorMargin, w = BW + CT + 2 * m, h = BH + 2 * m, rr = 0.12, t = 0.0085;
-    var outer = rrect(w / 2, h / 2, rr);
-    var inner = rrect(w / 2 - t, h / 2 - t, rr - t);
-    outer.holes.push(new THREE.Path(inner.getPoints(24)));
-    floor = new THREE.Mesh(new THREE.ShapeGeometry(outer, 24), floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(-CT / 2, 0.0006, 0);
-    book.add(floor);
-    floorMargin = m;
-  }
-  buildFloor();
-
-  /* ---------- sizing ---------- */
+  /* ---------- sizing / camera placement ----------
+     The camera sits on the direction given by TUNE.camera (az/el); its distance
+     is solved so that the CLOSED book fills TUNE.fit of the stage, unless the
+     OPEN spread would then not fit within TUNE.fitOpen — then the spread rules.
+     The target is recentred on the union of both states so nothing clips. */
   var W = 0, H = 0;
   function resize() {
     var r = stage.getBoundingClientRect();
@@ -287,21 +418,13 @@
   }
   window.addEventListener('resize', resize);
 
-  /* ---------- camera placement ----------
-     The camera sits on the direction given by TUNE.camera (az/el) and its
-     distance is solved so that the closed book, the floor line AND the cover
-     at its open angle all fit inside the stage with the margin TUNE.fit.
-     Three iterations of "project the key points, rescale the distance and
-     recentre the target" converge for a perspective camera. */
-  var _camKey = '';
-  var _pts = [], _v = new THREE.Vector3();
+  var _camKey = '', _v = new THREE.Vector3();
   function fitPoints() {
-    var m = TUNE.floorMargin, a = TUNE.openAngle * Math.PI / 180;
-    var xs = [-BW / 2 - CT - m, BW / 2 + m], zs = [-BH / 2 - m, BH / 2 + m], top = CT + PT + CT;
-    var closed = [], open = [];
-    xs.forEach(function (x) { zs.forEach(function (z) { closed.push([x, 0, z]); closed.push([x, top, z]); }); });
-    // open cover: fore-edge corners lifted about the spine
-    zs.forEach(function (z) { open.push([-BW / 2 + Math.cos(a) * BW, CT + PT + Math.sin(a) * BW, z * 0.9]); });
+    var top = CT + PT + CT, closed = [], open = [];
+    [-BW / 2 - CT, BW / 2].forEach(function (x) { [-BH / 2, BH / 2].forEach(function (z) { closed.push([x, 0, z]); closed.push([x, top, z]); }); });
+    // open: the flipped half lies at x ∈ [−1.5·BW, −0.5·BW]; mid-flip the block stands up to y ≈ BW
+    [-BW * 1.5 - CT, BW / 2].forEach(function (x) { [-BH / 2, BH / 2].forEach(function (z) { open.push([x, 0, z]); }); });
+    [-BH / 2, BH / 2].forEach(function (z) { open.push([-BW / 2, CT + HALF + BW * 0.8, z * 0.85]); });
     return { closed: closed, open: open };
   }
   function bounds(pts) {
@@ -313,31 +436,46 @@
     }
     return b;
   }
+  // camera state: distance + two targets (closed / open); per frame the camera
+  // pans between them with the open fraction, so the closed book is centred and
+  // the open spread is centred too
+  var cam = { D: 10, dir: new THREE.Vector3(0, 1, 0), tClosed: new THREE.Vector3(), tOpen: new THREE.Vector3() };
+  function recentre(target, b, D) {
+    var halfH = Math.tan(camera.fov * Math.PI / 360) * D, halfW = halfH * camera.aspect;
+    var right = new THREE.Vector3(), up = new THREE.Vector3();
+    camera.matrixWorld.extractBasis(right, up, _v);
+    target.addScaledVector(right, (b.minX + b.maxX) / 2 * halfW).addScaledVector(up, (b.minY + b.maxY) / 2 * halfH);
+  }
+  function placeCamera(target, D) {
+    camera.position.copy(target).addScaledVector(cam.dir, D);
+    // TIGHT near/far: the composer's multisampled render targets get a 16-bit
+    // depth renderbuffer, and with a long-lens camera (small fov → distance
+    // ~9) a 0.1…200 range cannot separate the 9 mm cover from the page block
+    // under it — the cover z-fights into stripes. ±2.5 units around the book.
+    camera.near = Math.max(0.05, D - 2.5); camera.far = D + 2.5;
+    camera.lookAt(target); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  }
   function fitCamera() {
     if (!W) return;
     var c = TUNE.camera, az = c.az * Math.PI / 180, el = c.el * Math.PI / 180;
-    var dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+    cam.dir.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
     var target = new THREE.Vector3(TUNE.target.x, TUNE.target.y, TUNE.target.z);
-    var D = 6, pts = fitPoints(), all = pts.closed.concat(pts.open);
+    var D = 10, pts = fitPoints(), all = pts.closed.concat(pts.open);
     camera.fov = c.fov; camera.aspect = W / H;
-    var right = new THREE.Vector3(), up = new THREE.Vector3();
-    for (var it = 0; it < 4; it++) {
-      camera.position.copy(target).addScaledVector(dir, D);
-      camera.lookAt(target); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
-      // size: the CLOSED book (+ floor line) fills TUNE.fit of the stage…
-      var bc = bounds(pts.closed);
+    for (var it = 0; it < 5; it++) {
+      placeCamera(target, D);
+      var bc = bounds(pts.closed), ba = bounds(all);
       var ext = Math.max(bc.maxX - bc.minX, bc.maxY - bc.minY) / 2;
-      // …unless the OPEN cover would not fit at all: then the union rules
-      var ba = bounds(all);
       var extAll = Math.max(ba.maxX - ba.minX, ba.maxY - ba.minY) / 2;
-      D *= Math.max(ext / TUNE.fit, extAll / 0.98);
-      // recentre on the union so both states stay inside the stage
-      var halfH = Math.tan(camera.fov * Math.PI / 360) * D, halfW = halfH * camera.aspect;
-      camera.matrixWorld.extractBasis(right, up, _v);
-      target.addScaledVector(right, (ba.minX + ba.maxX) / 2 * halfW).addScaledVector(up, (ba.minY + ba.maxY) / 2 * halfH);
+      D *= Math.max(ext / TUNE.fit, extAll / TUNE.fitOpen);
+      recentre(target, ba, D);
     }
-    camera.position.copy(target).addScaledVector(dir, D);
-    camera.lookAt(target); camera.updateProjectionMatrix();
+    cam.D = D;
+    // open target: centred on the union (spread + mid-flip); closed target: centred on the closed book
+    cam.tOpen.copy(target);
+    placeCamera(target, D);
+    cam.tClosed.copy(target); recentre(cam.tClosed, bounds(pts.closed), D);
+    placeCamera(cam.tClosed, D);
   }
 
   /* ---------- post-processing: RenderPass + bloom + gamma, MSAA on the composer RTs ---------- */
@@ -357,56 +495,43 @@
     if (n === msaaNow) return;
     msaaNow = n;
     composer.renderTarget1.samples = n; composer.renderTarget2.samples = n;
-    composer.renderTarget1.dispose(); composer.renderTarget2.dispose();   // next render reallocates the FBOs
+    composer.renderTarget1.dispose(); composer.renderTarget2.dispose();
   }
 
-  /* ---------- timeline (same cycle as the Data Core: 11.5 s, inOutQuart) ---------- */
+  /* ---------- open / close state (click) ---------- */
   function inOutQuart(t) { return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2; }
   function seg(t, a, b, from, to) {
     if (t <= a) return from; if (t >= b) return to;
     return from + (to - from) * inOutQuart((t - a) / (b - a));
   }
-  // The book opens on CLICK and closes on the next click. `openAt(ms)` gives
-  // the open fraction at time ms: eased from the state before the click to
-  // the state after it, over TUNE.openMs. Leaves ask for earlier times (lag).
   var isOpen = false, clickAt = -1e9, fromOpen = 0;
-  function openAt(ms) {
-    var to = isOpen ? 1 : 0;
-    return seg(ms, clickAt, clickAt + TUNE.openMs, fromOpen, to);
-  }
-  function toggleOpen(now) {
-    fromOpen = openAt(now);
-    isOpen = !isOpen; clickAt = now;
-  }
+  function openAt(ms) { return seg(ms, clickAt, clickAt + (reduced ? 1 : TUNE.openMs), fromOpen, isOpen ? 1 : 0); }
+  function toggleOpen(now) { fromOpen = openAt(now); isOpen = !isOpen; clickAt = now; }
 
-  /* ---------- interaction: hovering the book lifts the cover a little ---------- */
+  /* ---------- interaction ---------- */
   var mouse = { x: 0, y: 0 }, hover = 0, hoverTarget = 0;
-  var raycaster = new THREE.Raycaster();
-  var ndc = new THREE.Vector2();
-  var lastRay = 0;
+  var raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2(), lastRay = 0;
+  var hitList = [cover, upper, lower, back, spine];
+  function hitAt(e) {
+    var r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    return raycaster.intersectObjects(hitList, false).length > 0;
+  }
   canvas.addEventListener('pointermove', function (e) {
     var now = performance.now();
-    if (now - lastRay < 60) return;               // 60 ms throttle, like the Data Core
+    if (now - lastRay < 60) return;                 // 60 ms throttle, like the Data Core
     lastRay = now;
-    var r = canvas.getBoundingClientRect();
-    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    raycaster.setFromCamera(ndc, camera);
-    hoverTarget = raycaster.intersectObjects([cover, pages, back], false).length ? 1 : 0;
+    hoverTarget = hitAt(e) ? 1 : 0;
   }, { passive: true });
   canvas.addEventListener('pointerleave', function () { hoverTarget = 0; });
-  canvas.addEventListener('click', function (e) {
-    var r = canvas.getBoundingClientRect();
-    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    raycaster.setFromCamera(ndc, camera);
-    if (raycaster.intersectObjects([cover, pages, back, spine], false).length) toggleOpen(performance.now() - t0);
-  });
+  canvas.addEventListener('click', function (e) { if (hitAt(e)) toggleOpen(performance.now() - t0); });
   canvas.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(performance.now() - t0); } });
   canvas.setAttribute('tabindex', '0');
   canvas.setAttribute('role', 'button');
-  canvas.setAttribute('aria-label', 'eBook — click to open the cover');
+  canvas.setAttribute('aria-label', 'eBook — click to open it at the middle');
 
-  /* ---------- parallax (same as the Data Core) ---------- */
-  window.addEventListener('pointermove', function (e) {
+  window.addEventListener('pointermove', function (e) {   // parallax (same as the Data Core)
     var r = canvas.getBoundingClientRect();
     if (!r.width) return;
     mouse.x = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (window.innerWidth / 2))) * 0.6;
@@ -437,37 +562,34 @@
   if (FINE_POINTER) canvas.style.cursor = crossCursorCss();
 
   /* ---------- apply the live knobs every frame ---------- */
-  var lastCoverKey = TUNE.coverColor + '|' + TUNE.accent;
+  var lastArtKey = '';
   function applyTune() {
     coverMat.roughness = coverTopMat.roughness = TUNE.roughness;
     coverMat.clearcoat = coverTopMat.clearcoat = TUNE.clearcoat;
     coverMat.envMapIntensity = coverTopMat.envMapIntensity = TUNE.envIntensity;
     coverMat.color.set(TUNE.coverColor);
-    pageMat.color.set(TUNE.pageColor);
+    paperMat.color.set(TUNE.pageColor);
     key.intensity = TUNE.keyLight; ambient.intensity = TUNE.ambient;
-    edgeMat.opacity = TUNE.edgeOpacity; pagesEdges.material.opacity = TUNE.edgeOpacity * 0.5;
-    floorMat.opacity = TUNE.floorOpacity;
+    for (var i = 0; i < edgeLines.length; i++) edgeLines[i].material.opacity = TUNE.edgeOpacity * edgeLines[i].userData.mul;
     if (bloomPass) { bloomPass.strength = TUNE.bloom.strength; bloomPass.radius = TUNE.bloom.radius; bloomPass.threshold = TUNE.bloom.threshold; }
     setMsaa(TUNE.quality.msaa);
-    for (var i = 0; i < leaves.length; i++) leaves[i].visible = i < TUNE.leaves;
-    var ck = TUNE.coverColor + '|' + TUNE.accent;
-    if (ck !== lastCoverKey) { lastCoverKey = ck; drawCover(); }
-    if (Math.abs(floorMargin - TUNE.floorMargin) > 1e-6) buildFloor();
-    var ck2 = [TUNE.camera.az, TUNE.camera.el, TUNE.camera.fov, TUNE.target.x, TUNE.target.y, TUNE.target.z, TUNE.fit, TUNE.openAngle, TUNE.floorMargin].join('|');
-    if (ck2 !== _camKey) { _camKey = ck2; fitCamera(); }
+    for (i = 0; i < leaves.length; i++) leaves[i].visible = i < TUNE.leaves;
+    var ak = [TUNE.coverColor, TUNE.accent, TUNE.pageColor, TUNE.green].join('|');
+    if (lastArtKey && ak !== lastArtKey) drawAll();
+    lastArtKey = ak;
+    var ck = [TUNE.camera.az, TUNE.camera.el, TUNE.camera.fov, TUNE.target.x, TUNE.target.y, TUNE.target.z, TUNE.fit, TUNE.fitOpen].join('|');
+    if (ck !== _camKey) { _camKey = ck; fitCamera(); }
   }
 
   /* ---------- render loop ---------- */
   var t0 = performance.now();
   var popDone = false;
-  var _wp = new THREE.Vector3();
   function render(now) {
     var ms = now - t0;
     applyTune();
     if (!W) resize();
 
-    // pop-in once: scale 0.75→1 over 600 ms
-    if (!popDone) {
+    if (!popDone) {                             // pop-in once: scale 0.75→1 over 600 ms
       var pop = reduced ? 1 : Math.min(1, ms / 600);
       root.scale.setScalar(0.75 + 0.25 * inOutQuart(pop));
       if (pop >= 1) { popDone = true; root.scale.setScalar(1); }
@@ -475,23 +597,27 @@
 
     hover += (hoverTarget - hover) * 0.08;
     var open = openAt(ms);
-    var openAngle = TUNE.openAngle * Math.PI / 180;
-    var extra = TUNE.hoverLift * Math.PI / 180 * hover;
-    // a slow wobble while it stays open, so the cover never freezes
-    var wobble = reduced ? 0 : Math.sin(ms / 1400) * 0.025 * open;
-    coverPivot.rotation.z = open * openAngle + extra + wobble;     // +z lifts the fore-edge (+x)
+    flip.rotation.z = open * Math.PI;                       // +z lifts the fore-edge (+x)
+    spinePivot.rotation.z = open * Math.PI / 2;              // the spine flattens with the book
+    // hover: the front cover alone lifts a little while the book is closed
+    coverPivot.rotation.z = TUNE.hoverLift * Math.PI / 180 * hover * (1 - open);
+    // leaves turn with a lag, but NEVER beyond the flipping half: opening they
+    // trail it, closing they run ahead of it — so they always sit between the
+    // two halves and never poke through a closed cover
     for (var i = 0; i < leaves.length; i++) {
-      var o = reduced ? open : openAt(ms - TUNE.leafLag * (i + 1));   // lag per leaf
-      var f = Math.max(0, TUNE.leafFollow - TUNE.leafStep * i);
-      leaves[i].rotation.z = o * openAngle * f + extra * f * 0.8;
+      var lag = TUNE.leafLag * (i + 1);
+      var o = reduced ? open : Math.min(open, openAt(isOpen ? ms - lag : ms + lag));
+      leaves[i].rotation.z = o * Math.PI;
     }
-    // floating while open (common phase with the wobble)
     book.position.y = reduced ? 0 : TUNE.bob * Math.sin(ms / 1400) * open;
 
-    // parallax: rotate the root, smoothed
     par.x += ((reduced ? 0 : mouse.y) * 0.05 - par.x) * 0.055;
     par.y += ((reduced ? 0 : mouse.x) * 0.22 - par.y) * 0.055;
     root.rotation.x = par.x; root.rotation.y = par.y;
+
+    // the camera pans from the closed framing to the open framing
+    _v.copy(cam.tClosed).lerp(cam.tOpen, open);
+    placeCamera(_v, cam.D);
 
     if (composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);

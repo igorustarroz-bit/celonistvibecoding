@@ -8,14 +8,35 @@
 > This document lives in `experiments/` alongside the other `claude_*_context.md`
 > files. **Paths in this doc are relative to `experiments/`.**
 
-Status: v2, 2026-09-04. v1 (`ec88f1a`) was reviewed by Igor the same day and changed in
-three ways (§0). Awaiting his visual tuning of v2.
+Status: v3, 2026-09-04. v1 (`ec88f1a`) and v2 (`7c54417`) were both reviewed by Igor the
+same day; §0 lists what he closed. Awaiting his visual tuning of v3.
 
 Igor's rule for the whole project: everything is delivered in English — the
 experiments' UI, the context files and the comments inside the code. Orders may
 come in Spanish; the output does not.
 
-## 0. v1 → v2 — Igor's review (2026-09-04), CLOSED decisions
+## 0. Igor's reviews (2026-09-04), CLOSED decisions
+
+### v2 → v3 (second review)
+
+- **Less perspective.** The camera is a long lens: `fov 11` (was 24), i.e. almost
+  orthographic but still a photo, not the isometric Data Core view. Consequence for the
+  code: the composer's multisampled render targets carry a 16-bit depth buffer, and at
+  the resulting distance (~9 units) a 0.1…200 near/far range cannot separate the 9 mm
+  cover from the page block — the cover z-fought into stripes. `placeCamera()` now sets
+  near/far to ±2.5 around the book. Keep it if the camera is ever changed.
+- **No floor line.** The rounded-rectangle ribbon under the book is gone (code removed).
+- **Bug fixed: pages showing above the closed cover.** The loose leaves lagged behind
+  the cover on close, so they were still turning when the cover was flat. Rule now:
+  a leaf's angle is always ≤ the flipping half's angle — opening they trail it, closing
+  they run ahead of it (`Math.min(open, openAt(isOpen ? ms − lag : ms + lag))`).
+- **Click opens the book AT THE MIDDLE and shows a two-page spread** with invented
+  editorial content (§2b). The front cover and the upper half of the page block flip
+  180° about the spine as one piece; the loose leaves turn behind it; the spine
+  flattens (pivots by half the angle). Another click closes it. The camera pans from a
+  framing centred on the closed book to one centred on the open spread.
+
+### v1 → v2 (first review)
 
 - **No pill label.** The "EBOOK · ENGLISH" sprite is gone (code removed, not hidden).
 - **Not the isometric Data Core angle.** The book must respect the point of view of the
@@ -26,8 +47,8 @@ come in Spanish; the output does not.
   near corner is the biggest. The Data Core look stays in the MATERIALS and effects
   (softbox environment, light edges, floor line, bloom), not in the camera.
 - **The book only opens on CLICK** (and closes on the next click; Enter/Space on the
-  focused canvas do the same). No loop. Hover only lifts the cover 5° as an
-  affordance (`hoverLift`, set to 0 to remove it).
+  focused canvas do the same). No loop. Hover only lifts the cover a few degrees as an
+  affordance (`hoverLift`, now 4°, set to 0 to remove it).
 - **The forms come back as inert replicas** (page-level decision, see the anti-phishing
   doc rule 9 and `lib/inert-form.*`): the gated download form in the `.pnf` block and
   the footer newsletter, typable but with no `<form>`, no action, no names, no
@@ -44,7 +65,7 @@ the Data Core, applied to a content asset.
 
 - Folder: `3d-book/` — `original.html` (saved copy, cleaned), `index.html` (the
   experiment), `original/` (the browser's assets, 17 files published, 75 tracking files
-  gitignored), `book-fx/book-3d.js` (our code).
+  gitignored), `book-fx/book-3d.js` (our code), `book-fx/spread/` (the two photos of the spread).
 - URLs: https://igorustarroz-bit.github.io/celonisvibecoding/experiments/3d-book/index.html
   and `.../3d-book/original.html`. Listed in the root index as **Experiment 4**.
 - In the page: the `<picture>` inside `.detail-page-hero-media-container` becomes
@@ -71,48 +92,93 @@ lower-left, the title reads rising to the right, the near corner is the biggest.
   verbatim) so the flat cover picks up the same soft light band. Pages `#d9d9d9`,
   fore-edge with a horizontal line texture (the stacked sheets).
 - Data Core traits carried over: translucent **white light edges** on the covers and the
-  page block (EdgesGeometry, additive, opacity 0.34 / 0.17), a **floor frame line**
-  (rounded-rectangle ribbon 0.0085 wide, margin 0.16 around the book, opacity 0.30),
-  subtle bloom (0.16 / 0.26 / threshold 0.72), MSAA 4 through the composer's render
-  targets (WebGL2), dpr capped at 2, mouse parallax (root ±0.22 rad Y, ±0.05 X, lerp
-  0.055), the crosshair cursor, pop-in scale 0.75→1 over 600 ms.
-- Sizing (`fitCamera`): the camera sits on the az/el direction and its distance is
-  solved iteratively (4 passes) so the CLOSED book + floor line fill `fit` (0.86) of the
-  stage; if the open cover would not fit, the union rules; the target is recentred on
-  the union of both states so nothing clips when it opens. Refit on resize and whenever
-  a camera/fit/openAngle/floorMargin knob changes.
+  page halves (EdgesGeometry, additive, opacity 0.30 / 0.15), subtle bloom (0.14 / 0.26
+  / threshold 0.78), MSAA 4 through the composer's render targets (WebGL2), dpr capped
+  at 2, mouse parallax (root ±0.22 rad Y, ±0.05 X, lerp 0.055), the crosshair cursor,
+  pop-in scale 0.75→1 over 600 ms. (The floor frame line of v1/v2 was removed by Igor.)
+- Sizing (`fitCamera`): the camera sits on the az/el direction (`az −50, el 50, fov
+  11`) and its distance is solved iteratively (5 passes) so the CLOSED book fills `fit`
+  (0.90) of the stage, unless the open spread (plus the half standing up mid-flip)
+  would not fit within `fitOpen` (0.97) — then the spread rules. Two targets are kept,
+  one centred on the closed book and one on the open spread; each frame the camera pans
+  between them with the open fraction. Refit on resize and whenever a camera/fit knob
+  changes. near/far are ±2.5 around the book (see §0).
+
+### Structure of the book (for the flip)
+
+```
+back cover        y ∈ [0, CT]                       fixed
+lower half pages  y ∈ [CT, CT+PT/2]                 fixed — its TOP face is the RIGHT page
+flip group        pivot (−BW/2, CT+PT/2), rotation.z 0 → π
+  upper half      local y ∈ [0, PT/2]                     — its BOTTOM face is the LEFT page
+  front cover     local y ∈ [PT/2, PT/2+CT], own hinge for the hover lift
+leaves (5)        hinge at (−BW/2, CT+PT/2), leaf offset +ε ON THE LEAF (so it mirrors to −ε)
+spine             hinge at its bottom edge, rotation.z = open·π/2 (flattens with the book)
+```
+
+Rotating the flip group by π puts the front cover face-down on the floor at
+x ∈ [−1.5, −0.5] and the upper half on it, so both pages end at y = CT+PT/2. The left
+page texture is turned 180° (`leftTex.rotation = π`) because the −y face's u runs along
+−x after the flip. Two mistakes already made: an offset on the leaf PIVOT does not
+mirror (the leaves ended up lying on top of the left page); and a leaf that lags the
+cover on close pokes through it (see §0).
 
 ### Motion
 
-- Click on the book (raycast on cover/pages/back/spine) toggles open ↔ closed:
-  the cover goes 0→62° over 1100 ms (inOutQuart), the first 6 loose leaves follow it,
-  each with 95 ms more lag than the previous one and a smaller share of the angle
-  (0.74 − 0.105·i), so they fan. Closing reverses it from wherever it is.
-- While open: a slow wobble of the cover (±0.025 rad, 1.4 s) and a float of the whole
-  book (amplitude 0.010), common phase.
-- Hover (raycast, 60 ms throttle) lifts the cover an extra 5° — the only motion
-  before the click. Mouse parallax and the pop-in are kept.
-- `prefers-reduced-motion`: no parallax, no wobble/float, no pop-in; the click still
-  works.
+- Click on the book (raycast on cover / halves / back / spine) toggles open ↔ closed:
+  the flip group goes 0→180° over 1400 ms (inOutQuart), the 5 loose leaves follow it
+  with 110 ms more lag each, never beyond it. Closing reverses from wherever it is.
+- While open: a slight float of the whole book (amplitude 0.006). The camera pans to
+  the open framing.
+- Hover (raycast, 60 ms throttle) lifts the front cover 4° while closed — the only
+  motion before the click. Mouse parallax and the pop-in are kept.
+- `prefers-reduced-motion`: no parallax, no float, no pop-in, the open/close is
+  instant on click.
+
+## 2b. The spread (invented editorial content — English)
+
+Two portrait canvas textures 1024×1414, drawn with the same helpers as the cover
+(`para()` word-wrap, `coverImg()` cover-fit). All copy lives in **`window.BOOK_SPREAD`**
+(edit it in the console, then `BOOK_REDRAW()`); colours in `BOOK.pageColor` (paper
+`#e6e4df`) and `BOOK.green` (the site's CTA green `#5cfe50`, used for the chapter
+label, the pull-quote rule and the folio rules).
+
+- **Left page (24):** full-bleed photo on the top 58 % with a dark gradient, "CHAPTER 03"
+  in green, headline "Where the emissions actually hide" (Poppins 600 62 px), running
+  head + hairline, a standfirst (500 33 px), a photo caption. Photo:
+  `book-fx/spread/containers.jpg` — aerial of a container terminal.
+- **Right page (25):** running head, two columns of body copy (400 21 px / 30), a pull
+  quote with a green rule and attribution, a three-KPI strip (−12 % transport
+  emissions · 3.4 days shorter inbound lead time · 1 process to start with), a second
+  photo bottom-right with a caption to its left. Photo: `book-fx/spread/solar.jpg` — a
+  worker on a solar array.
+- The photos are two images that came down with the celonis.com home page saved for
+  experiment 1 (`3d-globe/original/Image_Photo_commercial_squareValue_supply_chain.jpeg`
+  and `…_manufacturing.jpeg`, 750×750), copied here. They load from
+  `book-fx/spread/`; until they load a dark placeholder is drawn. To swap them, drop
+  new JPGs with the same names (any size — they are cover-fitted).
+- The copy is fictional and deliberately in the register of the real guide
+  (process mining, event log, "green line", Scope 3, order-to-cash / procure-to-pay).
+  No real customer, person or figure is quoted.
+- The loose leaves carry a generic "text lines" texture on both sides.
 
 ## 3. Live knobs — `window.BOOK` (edit in the DevTools console)
 
 Applied every frame, Igor's workflow (tune live, then paste the values as the new
 defaults in `book-fx/book-3d.js`):
 
-`openAngle 62 · openMs 1100 · hoverLift 5 · leaves 6 · leafFollow 0.74 · leafStep 0.105 ·
-leafLag 95 · bob 0.010 · camera {az −50, el 50, fov 24} · target {x 0, y 0.06, z 0} ·
-edgeOpacity 0.34 · floorOpacity 0.30 · floorMargin 0.16 · coverColor #0d0d0f ·
-pageColor #d9d9d9 · accent #0f5bff · clearcoat 0.45 · roughness 0.52 · envIntensity
-0.65 · keyLight 0.55 · ambient 0.10 · bloom {strength 0.16, radius 0.26, threshold 0.72}
-· fit 0.86 · quality {msaa 4, dprMax 2}`
+`openMs 1400 · hoverLift 4 · leaves 5 · leafLag 110 · bob 0.006 · edgeOpacity 0.30 ·
+coverColor #0d0d0f · pageColor #e6e4df · accent #0f5bff · green #5cfe50 · clearcoat
+0.45 · roughness 0.52 · envIntensity 0.65 · keyLight 0.55 · ambient 0.12 · bloom
+{strength 0.14, radius 0.26, threshold 0.78} · camera {az −50, el 50, fov 11} · target
+{x 0, y 0.04, z 0} · fit 0.90 · fitOpen 0.97 · quality {msaa 4, dprMax 2}`
 
-Changing `coverColor`/`accent` redraws the cover texture; `floorMargin` rebuilds the
-floor line; `camera.*`, `target.*`, `fit`, `openAngle` refit the camera. The camera is
-the knob to match the photo more closely: `BOOK.camera.az = -45` turns toward the
-bottom edge, `el` raises/lowers the photographer, `fov` changes the perspective
-exaggeration. There is no tuner panel (unlike the Data Core) — add one only if Igor
-asks.
+Changing `coverColor`/`accent`/`pageColor`/`green` redraws the cover and the spread;
+`camera.*`, `target.*`, `fit`, `fitOpen` refit the camera. The camera is the knob to
+match the photo more closely: `BOOK.camera.az = -45` turns toward the bottom edge, `el`
+raises/lowers the photographer, `fov` is the amount of perspective (11 ≈ almost none).
+The spread copy is `window.BOOK_SPREAD` + `BOOK_REDRAW()`. There is no tuner panel
+(unlike the Data Core) — add one only if Igor asks.
 
 ## 4. Implementation notes (three.js r147)
 
@@ -185,8 +251,12 @@ It is applied to `original.html` in place; `index.html` is then derived from it.
 
 ## 8. Open points / ideas for the next pass
 
-- Igor has not tuned v2 yet: camera az/el/fov against the photo, open angle, leaf
-  count, edge/floor opacity, whether the hover lift stays.
+- Igor has not tuned v3 yet: camera az/el/fov against the photo, leaf count, edge
+  opacity, whether the hover lift stays, and the spread's copy/photos (both editable
+  without touching the geometry: `BOOK_SPREAD` and `book-fx/spread/*.jpg`).
+- The spread is legible on a retina screen at 1440 px; on the page it is small by
+  nature (the hero image is ~540 px wide). A "zoom into the spread" on second click
+  would be the natural next step if the content matters.
 - The saved page keeps the "■" square before the description (`.white-square`
   relies on a gif under `/src/assets/images/` that was not saved) — cosmetic, same in
   `original.html`.

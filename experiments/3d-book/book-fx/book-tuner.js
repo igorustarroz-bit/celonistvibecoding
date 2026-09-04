@@ -2,8 +2,9 @@
    Book tuning panel (experiment 4) — same recipe as the Data Core's glass tuner:
    sliders wired to window.BOOK, which book-3d.js reads every frame, so
    everything is live. Bottom-right, starts collapsed as a "● BOOK TUNER" pill,
-   expands upwards. "Copy settings" exports the JSON to paste as the new
-   defaults in book-3d.js; "Reset" restores the shipped values.
+   expands upwards; the × in its header hides it completely (press T, or call
+   BOOK_TUNER.show(), to bring it back). "Copy settings" exports the JSON to
+   paste as the new defaults in book-3d.js; "Reset" restores the shipped values.
    Igor's workflow: tune live in the page, copy, hand over the JSON.
    ========================================================================= */
 (function () {
@@ -22,10 +23,15 @@
       'display:flex;flex-direction:column-reverse;',
       'font-family:Poppins,Arial,sans-serif;font-size:11px;color:#eee;',
       'background:rgba(6,6,8,.92);border:1px solid rgba(255,255,255,.25);',
-      'border-radius:12px;backdrop-filter:blur(6px);user-select:none}',
-      '#bk-tuner header{display:flex;justify-content:space-between;align-items:center;',
-      'padding:9px 12px;cursor:pointer;font-weight:600;letter-spacing:.6px}',
-      '#bk-tuner header span.dot{color:#5cfe50}',
+      // no backdrop-filter (with a border + radius Chrome drew the corners wrong) and
+      // a plain <div> for the header: the site's CSS gives every <header> 88 px
+      'border-radius:12px;overflow:hidden;user-select:none;line-height:1.3}',
+      '#bk-tuner .hd{display:flex;justify-content:space-between;align-items:center;',
+      'padding:9px 12px;cursor:pointer;font-weight:600;letter-spacing:.6px;height:auto;min-height:0}',
+      '#bk-tuner .hd span.dot{color:#5cfe50}',
+      '#bk-tuner .hd .ctl{display:flex;gap:10px;align-items:center}',
+      '#bk-tuner .hd .ctl span{cursor:pointer;padding:0 2px;color:#aaa}',
+      '#bk-tuner .hd .ctl span:hover{color:#5cfe50}',
       '#bk-tuner .body{padding:2px 12px 10px;max-height:70vh;overflow:auto}',
       '#bk-tuner .row{display:grid;grid-template-columns:96px 1fr 38px;gap:6px;',
       'align-items:center;margin:5px 0}',
@@ -50,12 +56,23 @@
     var panel = document.createElement('div');
     panel.id = 'bk-tuner';
     panel.className = 'min';   // starts collapsed
-    panel.innerHTML = '<header><span><span class="dot">●</span> BOOK TUNER</span><span id="bk-tgl">+</span></header><div class="body"></div>';
+    panel.innerHTML = '<div class="hd"><span><span class="dot">●</span> BOOK TUNER</span>' +
+      '<span class="ctl"><span id="bk-tgl" title="Expand / collapse">+</span><span id="bk-hide" title="Hide the panel (press T to bring it back)">×</span></span></div><div class="body"></div>';
     document.body.appendChild(panel);
     var body = panel.querySelector('.body');
-    panel.querySelector('header').addEventListener('click', function () {
+    panel.querySelector('.hd').addEventListener('click', function (e) {
+      if (e.target.id === 'bk-hide') { hide(); return; }
       panel.classList.toggle('min');
       panel.querySelector('#bk-tgl').textContent = panel.classList.contains('min') ? '+' : '—';
+    });
+    // hide / show: the × in the header hides the panel entirely (Igor: it must be able
+    // to disappear for a clean look); the T key or BOOK_TUNER.show() brings it back
+    function hide() { panel.style.display = 'none'; }
+    function show() { panel.style.display = ''; }
+    window.BOOK_TUNER = { show: show, hide: hide, toggle: function () { panel.style.display === 'none' ? show() : hide(); } };
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey &&
+          !/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) window.BOOK_TUNER.toggle();
     });
 
     function get(path) { return path.split('.').reduce(function (o, k) { return o[k]; }, T); }

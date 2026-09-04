@@ -8,11 +8,12 @@
 > This document lives in `experiments/` alongside the other `claude_*_context.md`
 > files. **Paths in this doc are relative to `experiments/`.**
 
-Status: v6, 2026-09-04 — the "final test" pose. **v5 is the SAVED reference version**
-(Igor: "guarda esta versión para volver a ella"): git tag `3d-book-v5` (commit
-`4c00fc3`), and a frozen copy that still runs on Pages: `3d-book/index-v5.html` +
-`book-fx/book-3d-v5.js` (linked from the root index). v6 is `index.html` +
-`book-fx/book-3d.js`; setting `BOOK.present = 0` in v6 gives the v5 behaviour.
+Status: **DEFINITIVE — v8 (2026-09-04, Igor: "esta es la versión definitiva del libro").**
+`index.html` + `book-fx/book-3d.js` + `book-fx/book-tuner.js`. The other versions were
+removed from the repo on Igor's instruction (the frozen v5 copy `index-v5.html` /
+`book-3d-v5.js` and its link in the root index); history keeps them: git tag
+`3d-book-v5` (commit `4c00fc3`) and the commits below. `BOOK.present = 0` still gives
+the v5 flat-lay behaviour from the definitive build.
 v1 `ec88f1a`, v2 `7c54417`, v3 `33388d0`, v4 `1903e1f`, v5 `4c00fc3`.
 
 Igor's rule for the whole project: everything is delivered in English — the
@@ -275,8 +276,11 @@ lean back, rise lag), Table pose (V per half), Camera (azimuth, elevation, focal
 smoothing), Motion (open time, leaves, leaf lag, hover lift, float), Look (edges,
 environment, lights, cover roughness/clearcoat, paper and green colours), Bloom &
 sharpness. An "Open / close book" button at the top drives the same toggle as the click
-(`window.BOOK_TOGGLE`). Loaded after `book-3d.js` in `index.html` only (not in
-`index-v5.html`).
+(`window.BOOK_TOGGLE`). Loaded after `book-3d.js` in `index.html`. v9 of the panel:
+the × in the header HIDES it completely (Igor wants to be able to make it disappear),
+the **T key** or `BOOK_TUNER.show()` brings it back; header is a `<div>` (the site's CSS
+gives every `<header>` element 88 px, which made the collapsed pill tall) and there is
+no `backdrop-filter` any more (with border + radius Chrome drew broken corners).
 
 ## 4. Implementation notes (three.js r147)
 

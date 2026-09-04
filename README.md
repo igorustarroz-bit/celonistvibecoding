@@ -29,8 +29,10 @@ Index of experiments: [`index.html`](./index.html)
 - root: `index.html` (experiment index), `README.md`, `hanzo_logo.svg`, the Search Console
   verification file, `.nojekyll`.
 - `experiments/<name>/` — one folder per experiment (`3d-globe/`, `datacore/`,
-  `Concept-Video-Scroll/`). `3d-globe/` was named `celonis-home/` until 2026-09-03.
-- `experiments/` also holds what is shared: `nav-fx.js` (the common nav effect) and
+  `Concept-Video-Scroll/`, `3d-book/`). `3d-globe/` was named `celonis-home/` until 2026-09-03.
+- `experiments/` also holds what is shared: `nav-fx.js` (the common nav effect),
+  `lib/` (three.js r147 + post-processing, the placeholder spritemap, Poppins),
+  `clean-saved-page.py` (the anti-impersonation cleanup as a script) and
   **all** the `claude_*_context.md` engineering notes, one per topic, kept together at
   that level rather than inside the experiment folders. Paths inside those notes are
   relative to `experiments/`.

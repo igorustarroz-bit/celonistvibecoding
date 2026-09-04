@@ -276,14 +276,17 @@ the information here.
 ## 11. Files
 
 In `datacore/anime-datacore/`: `datacore.js` (variant A), `datacore-3d.js`
-(variant B),
-`datacore-tuner.js`, `sprite.js` (placeholder spritemap from
-experiment 1: real logo + replacement icons; rewrites the <use> elements to
-local symbols), `anime.umd.min.js` (v4.5.0), `three.min.js` (r147 UMD, from
-npm — CDNs are blocked from the Cowork sandbox), `three-post.js`
-(concatenation of examples/js from r147: CopyShader, LuminosityHighPassShader,
-Pass/MaskPass/ShaderPass, RenderPass, EffectComposer, UnrealBloomPass,
-GammaCorrectionShader).
+(variant B), `datacore-tuner.js`, `anime.umd.min.js` (v4.5.0).
+
+SHARED, in `lib/` since 2026-09-04 (moved with `git mv` when experiment 4 started
+using them; the pages load them as `../lib/...`): `sprite.js` (placeholder
+spritemap from experiment 1: real logo + replacement icons; rewrites the <use>
+elements to local symbols), `three.min.js` (r147 UMD, from npm — CDNs are
+blocked from the Cowork sandbox), `three-post.js` (concatenation of examples/js
+from r147: CopyShader, LuminosityHighPassShader, Pass/MaskPass/ShaderPass,
+RenderPass, EffectComposer, UnrealBloomPass, GammaCorrectionShader, FXAAShader).
+`lib/poppins.css` (+ `lib/fonts/`) is also there; the datacore pages do NOT load
+it yet — see `claude_3dbook_context.md` §5.
 
 In `datacore/`: `index.html` (A) and `index3d.html` (B) — pages saved and
 cleaned (no trackers or external scripts, root URLs rewritten to

@@ -14,7 +14,9 @@ Docs to keep at hand (not duplicated here):
   was skipped.
 - `claude_navfx_context.md` — the menu effect, shared by all pages.
 - The doc of whichever experiment you copy the mechanics from (`claude_globe_context.md`,
-  `claude_datacore_context.md`).
+  `claude_datacore_context.md`, `claude_3dbook_context.md`).
+- Shared libraries live in `lib/` (three.min.js, three-post.js, sprite.js, Poppins):
+  load them as `../lib/...`, never copy them into the experiment folder.
 
 ---
 
@@ -56,8 +58,21 @@ folder to `original/`. For new experiments, use `original/`.
 
 ## 3. Anti-phishing cleanup — BEFORE the first push
 
-Apply **all** of section 2 of `claude_antiphishing_context.md`. The most frequently
-forgotten items, in order of risk:
+Apply **all** of section 2 of `claude_antiphishing_context.md`. Since 2026-09-04 there
+is a script that does it in one go — run it first, then check the list below:
+
+```bash
+cd experiments/<name>
+python3 ../clean-saved-page.py original.html "<Page name>_files" original \
+  "Vibecoding prototype - <what it is> (unofficial)" --report
+```
+
+`--report` prints the files in `original/` that the page no longer references: that
+list goes into `.gitignore` with the `/experiments/<name>/original/` prefix. The script
+also resets the nav to its resting state (a page saved while scrolled carries
+`nav-hidden` + a cloned CTA) and removes the widget styles/DOM (Qualified, OneTrust).
+Details in `claude_3dbook_context.md` §7. The most frequently forgotten items, in
+order of risk:
 
 1. The `<script type="application/ld+json">` blocks (they declare the brand identity).
 2. `<link rel="canonical">` and the `<meta property="og:*">` / `<meta name="twitter:*">` tags.

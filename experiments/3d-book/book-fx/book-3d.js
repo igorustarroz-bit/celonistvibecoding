@@ -162,13 +162,13 @@
   var coverTex = makeTex(coverCanvas);
 
   function drawCover() {
-    if (TUNE.coverSource === 'photo' && photos.cover) {   // the original artwork, unwarped from the product shot
-      var gc = coverCanvas.getContext('2d');
-      gc.drawImage(photos.cover, 0, 0, COVER_W, COVER_H);
+    var g = coverCanvas.getContext('2d');
+    if (TUNE.coverSource === 'photo') {        // the original artwork, unwarped from the product shot
+      if (photos.cover) g.drawImage(photos.cover, 0, 0, COVER_W, COVER_H);
+      else { g.fillStyle = TUNE.coverColor; g.fillRect(0, 0, COVER_W, COVER_H); }   // plain black until the JPG arrives — never the drawn replica
       coverTex.needsUpdate = true;
       return;
     }
-    var g = coverCanvas.getContext('2d');
     g.clearRect(0, 0, COVER_W, COVER_H);
     g.fillStyle = TUNE.coverColor; g.fillRect(0, 0, COVER_W, COVER_H);
     var grain = g.createLinearGradient(0, 0, COVER_W, COVER_H);

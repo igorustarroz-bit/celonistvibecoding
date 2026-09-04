@@ -8,11 +8,30 @@
 > This document lives in `experiments/` alongside the other `claude_*_context.md`
 > files. **Paths in this doc are relative to `experiments/`.**
 
-Status: v1, published 2026-09-04 (commit `ec88f1a`). Awaiting Igor's visual tuning.
+Status: v2, 2026-09-04. v1 (`ec88f1a`) was reviewed by Igor the same day and changed in
+three ways (§0). Awaiting his visual tuning of v2.
 
 Igor's rule for the whole project: everything is delivered in English — the
 experiments' UI, the context files and the comments inside the code. Orders may
 come in Spanish; the output does not.
+
+## 0. v1 → v2 — Igor's review (2026-09-04), CLOSED decisions
+
+- **No pill label.** The "EBOOK · ENGLISH" sprite is gone (code removed, not hidden).
+- **Not the isometric Data Core angle.** The book must respect the point of view of the
+  original product shot: a perspective camera placed where the photographer was —
+  on the book's lower-left, high up (`TUNE.camera = {az: -50, el: 50, fov: 24}`;
+  az measured from +z toward +x, so negative = the spine side). The spine sits
+  lower-left, the bottom edge runs up-right, the title reads rising to the right, the
+  near corner is the biggest. The Data Core look stays in the MATERIALS and effects
+  (softbox environment, light edges, floor line, bloom), not in the camera.
+- **The book only opens on CLICK** (and closes on the next click; Enter/Space on the
+  focused canvas do the same). No loop. Hover only lifts the cover 5° as an
+  affordance (`hoverLift`, set to 0 to remove it).
+- **The forms come back as inert replicas** (page-level decision, see the anti-phishing
+  doc rule 9 and `lib/inert-form.*`): the gated download form in the `.pnf` block and
+  the footer newsletter, typable but with no `<form>`, no action, no names, no
+  email/password types; the button shows a "disabled in this prototype" note.
 
 ## 1. What it is
 
@@ -35,9 +54,10 @@ the Data Core, applied to a content asset.
 
 ## 2. The scene (technology-agnostic)
 
-Black background. A closed paperback lying flat, seen from the **same isometric camera
-as the Data Core** (orthographic, azimuth 45°, elevation 31.3°). Orientation copied from
-the product shot: the spine sits lower-left, the title reads rising to the right.
+Black background. A closed paperback lying flat, seen from a **perspective camera
+placed like the product shot's photographer** (see §0; v1 used the Data Core isometric
+camera and Igor rejected it). Orientation copied from the product shot: the spine sits
+lower-left, the title reads rising to the right, the near corner is the biggest.
 
 - Book: width 1.0 × height 1.38 (portrait, like the printed guide), page block 0.062
   thick with a 0.012 inset, covers 0.009 thick, spine wraps the left side.
@@ -56,56 +76,58 @@ the product shot: the spine sits lower-left, the title reads rising to the right
   subtle bloom (0.16 / 0.26 / threshold 0.72), MSAA 4 through the composer's render
   targets (WebGL2), dpr capped at 2, mouse parallax (root ±0.22 rad Y, ±0.05 X, lerp
   0.055), the crosshair cursor, pop-in scale 0.75→1 over 600 ms.
-- Sizing: pixels-per-world-unit = min(W/2.05, H/1.85) · fit (0.96); the view is shifted
-  up 0.14 units so the open cover and its label have headroom.
+- Sizing (`fitCamera`): the camera sits on the az/el direction and its distance is
+  solved iteratively (4 passes) so the CLOSED book + floor line fill `fit` (0.86) of the
+  stage; if the open cover would not fit, the union rules; the target is recentred on
+  the union of both states so nothing clips when it opens. Refit on resize and whenever
+  a camera/fit/openAngle/floorMargin knob changes.
 
-### The cycle (11.5 s loop, inOutQuart — same timing as the Data Core)
+### Motion
 
-- 600→3000 ms: cover opens 0→48°. The first 6 loose leaves follow it, each with 95 ms
-  more lag than the previous one and a smaller share of the angle
-  (0.74 − 0.105·i), so they fan.
-- 1900→2600 ms: the pill label "EBOOK · ENGLISH" (mirrors the two labels on the page)
-  fades in above the lifted fore-edge; 7600→8100 ms it fades out BEFORE the cover
-  closes (same rule as the Data Core labels).
-- 7900→10100 ms: cover closes. Hold closed until 11500.
+- Click on the book (raycast on cover/pages/back/spine) toggles open ↔ closed:
+  the cover goes 0→62° over 1100 ms (inOutQuart), the first 6 loose leaves follow it,
+  each with 95 ms more lag than the previous one and a smaller share of the angle
+  (0.74 − 0.105·i), so they fan. Closing reverses it from wherever it is.
 - While open: a slow wobble of the cover (±0.025 rad, 1.4 s) and a float of the whole
-  book (amplitude 0.012), common phase.
-- Hover over the book (raycast, 60 ms throttle): the cover lifts an extra 9°, also when
-  closed ("peek").
-- `prefers-reduced-motion`: static, cover at 55%, label on, no parallax.
+  book (amplitude 0.010), common phase.
+- Hover (raycast, 60 ms throttle) lifts the cover an extra 5° — the only motion
+  before the click. Mouse parallax and the pop-in are kept.
+- `prefers-reduced-motion`: no parallax, no wobble/float, no pop-in; the click still
+  works.
 
 ## 3. Live knobs — `window.BOOK` (edit in the DevTools console)
 
 Applied every frame, Igor's workflow (tune live, then paste the values as the new
 defaults in `book-fx/book-3d.js`):
 
-`openAngle 48 · hoverLift 9 · leaves 6 · leafFollow 0.74 · leafStep 0.105 · leafLag 95 ·
-loop 11500 · bob 0.012 · edgeOpacity 0.34 · floorOpacity 0.30 · floorMargin 0.16 ·
-coverColor #0d0d0f · pageColor #d9d9d9 · accent #0f5bff · clearcoat 0.45 · roughness
-0.52 · envIntensity 0.65 · keyLight 0.55 · ambient 0.10 · bloom {strength 0.16, radius
-0.26, threshold 0.72} · fit 0.96 · label true · labelText 'EBOOK  ·  ENGLISH' · quality
-{msaa 4, dprMax 2}`
+`openAngle 62 · openMs 1100 · hoverLift 5 · leaves 6 · leafFollow 0.74 · leafStep 0.105 ·
+leafLag 95 · bob 0.010 · camera {az −50, el 50, fov 24} · target {x 0, y 0.06, z 0} ·
+edgeOpacity 0.34 · floorOpacity 0.30 · floorMargin 0.16 · coverColor #0d0d0f ·
+pageColor #d9d9d9 · accent #0f5bff · clearcoat 0.45 · roughness 0.52 · envIntensity
+0.65 · keyLight 0.55 · ambient 0.10 · bloom {strength 0.16, radius 0.26, threshold 0.72}
+· fit 0.86 · quality {msaa 4, dprMax 2}`
 
 Changing `coverColor`/`accent` redraws the cover texture; `floorMargin` rebuilds the
-floor line; `labelText` rebuilds the pill. There is no tuner panel (unlike the Data
-Core) — add one only if Igor asks.
+floor line; `camera.*`, `target.*`, `fit`, `openAngle` refit the camera. The camera is
+the knob to match the photo more closely: `BOOK.camera.az = -45` turns toward the
+bottom edge, `el` raises/lowers the photographer, `fov` changes the perspective
+exaggeration. There is no tuner panel (unlike the Data Core) — add one only if Igor
+asks.
 
 ## 4. Implementation notes (three.js r147)
 
 - Book built in its natural frame (width along X, spine at x = −0.5, top of the cover at
-  z = −0.69, lying on y = 0), then the whole group is turned `rotation.y = π/2`. In this
-  frame the **cover hinges about Z** (`coverPivot.rotation.z`, positive lifts the
-  fore-edge); the first version hinged about X and the cover opened along the wrong
-  edge — do not repeat.
+  z = −0.69, lying on y = 0); the camera, not the book, is turned to get the photo's
+  orientation (v1 rotated the book 90° for the isometric camera). The **cover hinges
+  about Z** (`coverPivot.rotation.z`, positive lifts the fore-edge); the very first
+  build hinged about X and the cover opened along the wrong edge — do not repeat.
 - The cover is a `BoxGeometry` with a material array; only the +y face (index 2)
   carries the artwork (`coverTopMat`, colour white so the texture carries the colour).
 - Leaves are `PlaneGeometry` in their own pivots on the spine, 0.0012 apart.
 - Floor line: `ShapeGeometry` of a rounded rectangle with a rounded-rectangle hole.
-- Label: canvas sprite on layer 1, rendered after the composer with `autoClear=false`
-  + `clearDepth()` so it stays crisp and outside the bloom (same as the Data Core).
-  Same pill recipe: Poppins 500 34 px, letter-spacing 14 %, padding ≥ 1.5·"o", 2.5 px
-  white border, background rgba(2,2,2,.92), height 0.1275 world units.
-- `document.fonts.ready` redraws the cover texture and the label once Poppins is in.
+- The canvas is focusable (`tabindex=0`, `role=button`) so the click can also be a
+  keyboard action.
+- `document.fonts.ready` redraws the cover texture once Poppins is in.
 
 ## 5. Shared libraries — `lib/` (new on 2026-09-04)
 
@@ -115,6 +137,10 @@ level. Moved out of `datacore/anime-datacore/` with `git mv` and re-linked in
 
 - `lib/three.min.js` (r147 UMD), `lib/three-post.js` (composer + passes),
   `lib/sprite.js` (placeholder spritemap; rewrites the `<use>` refs).
+- `lib/inert-form.css` + `lib/inert-form.js` — the inert form replicas (anti-phishing doc
+  rule 9): styles copied from the site's `external-forms-style.css`, scoped under
+  `.inert-form`; the JS strips `name`s, sets `autocomplete=off`, blocks Enter and makes
+  every button show the "disabled" note. Any experiment whose page had a form uses them.
 - `lib/poppins.css` + `lib/fonts/poppins-latin-{400,500,600}-normal.woff2` (OFL, from
   `@fontsource/poppins` 5.x — Google Fonts is blocked from the sandbox, npm is not).
   The site's `fonts.css` points at `/src/assets/fonts/…`, which is never saved offline,
@@ -129,9 +155,11 @@ Cleaned with `clean-saved-page.py` (§7) + the sweep from `claude_antiphishing_c
 §4: 0 canonical/og/twitter/JSON-LD, 0 scripts other than ours, 0 iframes, 0 forms,
 `noindex,nofollow`, 71 outbound `<a>` → `#`, CDN `<source>` srcsets removed, tracking
 pixels saved as extension-less files (`out`, `out(3)`, `0`…) removed from the HTML, the
-Qualified and OneTrust widget styles/DOM removed. Verified in the browser on the
-published page: every request is same-origin (the only 404 is the intentional
-`/dist/assets/spritemap.svg`, which `sprite.js` replaces).
+Qualified and OneTrust widget styles/DOM removed. The two Pardot iframes are replaced by
+inert replicas (`lib/inert-form.*`, §5): 0 `<form>`, 0 email/password inputs, so the
+sweep stays clean. Verified in the browser on the published page: every request is
+same-origin (the only 404 is the intentional `/dist/assets/spritemap.svg`, which
+`sprite.js` replaces).
 
 ## 7. `clean-saved-page.py` — the cleanup as a script
 
@@ -157,8 +185,8 @@ It is applied to `original.html` in place; `index.html` is then derived from it.
 
 ## 8. Open points / ideas for the next pass
 
-- Igor has not tuned the visuals yet: open angle, leaf count, edge/floor opacity,
-  and whether the cover should stay closed longer or open further.
+- Igor has not tuned v2 yet: camera az/el/fov against the photo, open angle, leaf
+  count, edge/floor opacity, whether the hover lift stays.
 - The saved page keeps the "■" square before the description (`.white-square`
   relies on a gif under `/src/assets/images/` that was not saved) — cosmetic, same in
   `original.html`.

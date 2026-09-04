@@ -63,10 +63,26 @@ apply **all** of this before the first push:
 
 ### 2.3 Data capture and third parties
 
-9. Remove the iframes for: the Pardot form (`3nkvm5.html`), the Qualified chat
-   (`messenger.html`, `q-messenger-frame`), CrazyEgg (`saved_resource*.html`), the Vidyard
-   player (`cq3Rs2m6ZoJGv1b3krtPze*.html`). The HTML files behind those iframes are replaced
-   by a `noindex` stub reading "Third-party widget disabled in this unofficial design prototype."
+9. Remove the iframes for: the Pardot forms (`3nkvm5.html`, `3lrqx1.html`), the Qualified
+   chat (`messenger.html`, `q-messenger-frame`), CrazyEgg (`saved_resource*.html`), the
+   Vidyard player (`cq3Rs2m6ZoJGv1b3krtPze*.html`). The HTML files behind those iframes are
+   either gitignored (3d-book) or replaced by a `noindex` stub reading "Third-party widget
+   disabled in this unofficial design prototype."
+   **Forms — Igor's decision (2026-09-04): the form stays visible and interactive, with
+   all its functionality removed.** A prototype without the form cannot be judged, so
+   the iframe is replaced by an INERT VISUAL REPLICA built with the shared
+   `lib/inert-form.css` + `lib/inert-form.js` (first used in `3d-book/`, both pages):
+   - NO `<form>` element, NO `action`, NO `name` attributes, `autocomplete="off"`.
+   - NO `type="email"` / `type="password"` — every field is `type="text"` (the sweep in
+     §4 counts `<form` and email/password inputs as signals; the replica adds none).
+   - The button is `type="button"` and only reveals a note for 3.5 s: "Form disabled in
+     this unofficial design prototype — nothing is sent or stored." Enter does the same.
+   - Labels and layout copied from the site's `external-forms-style.css` (the CSS the
+     iframe loaded); the copy in the consent line says "the company", not the brand.
+   - Markup: `<div class="inert-form form light-base-theme">` with the site's
+     `form-field` / `field-label` / `input.text` / `select.select` classes, placed in the
+     `.pnf` block (it takes the `form` grid area the iframe had); the footer newsletter
+     uses `inert-form form footer-newsletter__form dark-base-theme`.
 10. Remove **all** analytics and advertising scripts and pixels, both the local
     `<script src>` files inside `*_files/` or `original/` and **the inline snippets**:
     Adobe Launch (`_satellite["_runScriptN"]`), Facebook (`fbq`), LinkedIn Insight
@@ -151,6 +167,10 @@ for f in files:
 print("\npublished html: %d | with signals: %d"%(len(files),bad))
 PY
 ```
+
+The inert form replicas (rule 9) must keep the sweep clean: they contain no `<form>` and
+no email/password inputs by design — if the sweep ever flags one, the replica was built
+wrong, not the sweep.
 
 A complementary check, more reliable than reading the HTML: open the published page in the
 browser and look at the network requests. **They must all be same-origin.** If any

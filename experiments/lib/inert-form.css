@@ -1,0 +1,48 @@
+/* inert-form.css — visual replica of the site's Pardot forms, WITHOUT a form.
+   The saved pages embedded the lead-capture forms in iframes (3lrqx1.html,
+   3nkvm5.html); those are removed by the anti-phishing cleanup. This gives the
+   prototype the same look and feel (typable fields, focus states, a button)
+   while nothing can be sent: there is no <form>, no action, no name attributes,
+   no email/password input types, and the button only shows a notice.
+   Styles copied from the site's external-forms-style.css (the stylesheet the
+   iframe loaded), scoped under .inert-form; tokens come from the page's
+   styles.css and the .light-base-theme / .dark-base-theme classes.
+   Shared by every experiment: ../lib/inert-form.css + ../lib/inert-form.js */
+.inert-form{--form-input-size:3rem;
+  --form-icon-chevron-down:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%238E8D8D' d='M17.5 6.65 10 14.148l-.002-.003-.003.003L2.5 6.654l.798-.798 6.7 6.7 6.705-6.704.797.797Z'/%3E%3C/svg%3E");
+  --form-icon-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M4.196 9.5 0 5.234l1.05-1.067 3.146 3.2L10.951.5 12 1.567 4.196 9.5Z'/%3E%3C/svg%3E");
+  --form-icon-arrow-right:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12.194 2.069 22 11.997l-.003.003.003.003-9.806 9.928-.867-.877 8.37-8.475H2v-1.241h17.615l-8.288-8.392.867-.877Z'/%3E%3C/svg%3E");
+  font-size:var(--fnd-typography-paragraph-m-font-size);line-height:var(--fnd-typography-paragraph-m-line-height);letter-spacing:var(--fnd-typography-paragraph-m-letter-spacing);
+  justify-content:space-between;row-gap:var(--fnd-spacing-06);background-color:var(--fnd-color-background-base);color:var(--fnd-color-text-high);flex-wrap:wrap;display:flex;box-sizing:border-box}
+.inert-form *,.inert-form *:before,.inert-form *:after{box-sizing:border-box}
+.inert-form.card{padding:var(--fnd-spacing-08);border-radius:var(--fnd-radius-m)}
+.pnf .inert-form{grid-area:form;width:100%;align-self:start}
+.inert-form .form-field{max-width:calc(100% - 1px);flex-direction:column;flex:0 0 100%;margin:0 0 var(--fnd-spacing-01);display:flex}
+.inert-form .form-field--half-width{max-width:calc(50% - var(--fnd-spacing-03))}
+.inert-form .field-label{font-size:var(--fnd-typography-paragraph-m-font-size);line-height:var(--fnd-typography-paragraph-m-line-height);color:var(--fnd-color-text-mid);text-wrap:pretty;margin:0 0 var(--fnd-spacing-01);display:block}
+.inert-form .required .field-label:after{content:" *"}
+.inert-form .description{font-size:var(--fnd-typography-paragraph-s-font-size);line-height:var(--fnd-typography-paragraph-s-line-height);color:var(--fnd-color-text-mid);margin-block-start:var(--fnd-spacing-01)}
+.inert-form input.text,.inert-form select.select{font:inherit;font-size:var(--fnd-typography-paragraph-l-font-size);line-height:var(--fnd-typography-paragraph-l-line-height);appearance:none;-webkit-appearance:none;width:100%;color:var(--fnd-color-text-high);border-radius:var(--fnd-radius-m);border:1px solid var(--fnd-color-border-mid);background-color:var(--fnd-color-background-base);height:var(--form-input-size);padding:var(--fnd-spacing-01) var(--fnd-spacing-04);margin:0;transition:border-color .3s ease-in-out}
+.inert-form input.text::placeholder{color:var(--fnd-color-text-mid)}
+.inert-form input.text:focus-visible,.inert-form select.select:focus-visible{border-color:var(--fnd-color-border-mid-dark);outline:none}
+.inert-form select.select{--background-size:1.5em;background-image:var(--form-icon-chevron-down);background-repeat:no-repeat;background-size:var(--background-size);background-position:calc(100% - var(--background-size) / 2) 50%;padding-inline-end:calc(var(--background-size) * 2)}
+.inert-form .checkbox-row{column-gap:var(--fnd-spacing-02);display:flex;align-items:flex-start}
+.inert-form input[type=checkbox]{--form-checkbox-size:1.25rem;width:var(--form-checkbox-size);height:var(--form-checkbox-size);appearance:none;-webkit-appearance:none;margin:2px 0 0;border:1px solid var(--fnd-color-border-mid);border-radius:var(--fnd-radius-s);background:transparent;transition:border-color .2s,background-color .2s;flex-shrink:0;position:relative;cursor:pointer}
+.inert-form input[type=checkbox]:after{content:"";position:absolute;inset:0;background-color:var(--fnd-color-text-inverse);-webkit-mask:var(--form-icon-check) 50%/12px 10px no-repeat;mask:var(--form-icon-check) 50%/12px 10px no-repeat;scale:0;transition:scale .2s}
+.inert-form input[type=checkbox]:checked{background-color:var(--fnd-color-background-inverse);border-color:var(--fnd-color-border-high)}
+.inert-form input[type=checkbox]:checked:after{scale:1}
+.inert-form input[type=checkbox]:focus-visible{border-color:var(--fnd-color-border-high);outline:none}
+.inert-form input[type=checkbox]~label{font-size:var(--fnd-typography-paragraph-m-font-size);line-height:var(--fnd-typography-paragraph-m-line-height);color:var(--fnd-color-text-high);text-wrap:pretty;margin:0;cursor:pointer}
+.inert-form .submit-button{font:inherit;font-size:var(--fnd-typography-paragraph-m-font-size);line-height:var(--fnd-typography-paragraph-m-line-height);background-color:var(--fnd-color-background-inverse);color:var(--fnd-color-text-inverse);min-height:var(--form-input-size);min-width:calc(var(--form-input-size) / 3 * 8);cursor:pointer;border-radius:var(--fnd-radius-s);padding:var(--fnd-spacing-01) var(--fnd-spacing-07);justify-content:center;align-items:center;gap:var(--fnd-spacing-02);transition:background-color .3s ease-in-out;border:none;display:inline-flex;margin:0}
+.inert-form .submit-button:hover,.inert-form .submit-button:focus-visible{background-color:color-mix(in srgb,var(--fnd-color-background-inverse) 70%,transparent);outline:none}
+.inert-form .submit{flex:0 0 100%;display:flex;flex-direction:column;align-items:flex-start;gap:var(--fnd-spacing-03)}
+.inert-form .inert-form__note{font-size:var(--fnd-typography-paragraph-s-font-size);line-height:var(--fnd-typography-paragraph-s-line-height);color:var(--fnd-color-text-mid);margin:0;opacity:0;transition:opacity .3s}
+.inert-form .inert-form__note.is-visible{opacity:1}
+/* footer newsletter variant: single email field with the arrow button inside */
+.inert-form.footer-newsletter__form{row-gap:var(--fnd-spacing-04);overflow:hidden}
+.inert-form .footer-newsletter__field{position:relative}
+.inert-form .footer-newsletter__field input.text{padding-inline-end:var(--form-input-size)}
+.inert-form .footer-newsletter__submit{position:absolute;top:0;inset-inline-end:1px;height:var(--form-input-size);width:var(--form-input-size);border:0;padding:0;margin:0;background-color:var(--fnd-color-text-mid);-webkit-mask:var(--form-icon-arrow-right) 50%/var(--fnd-spacing-06) no-repeat;mask:var(--form-icon-arrow-right) 50%/var(--fnd-spacing-06) no-repeat;cursor:pointer}
+.inert-form .footer-newsletter__submit:hover{background-color:var(--fnd-color-text-high)}
+.inert-form .footer-newsletter__field .description a{color:inherit;text-decoration:underline}
+@media (max-width:1199px){.inert-form .form-field--half-width{max-width:calc(100% - 1px)}}

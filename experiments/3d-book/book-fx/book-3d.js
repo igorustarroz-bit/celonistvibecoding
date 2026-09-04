@@ -4,12 +4,14 @@
    (../lib/three-post.js: EffectComposer, UnrealBloomPass, GammaCorrection).
 
    Replaces the flat product shot (a rendered PNG of the eBook) with a real
-   3D book built with the Data Core technology: isometric orthographic camera
-   (azimuth 45°, elevation 31.3°), near-black material lit by the same banded
-   softbox environment, translucent white light edges, a floor frame line,
-   MSAA 4 through the composer, subtle bloom, mouse parallax and the
-   crosshair cursor. The cover opens and closes on a loop, the first leaves
-   follow it with a lag, and a pill label appears while it is open.
+   3D book built with the Data Core technology: near-black material lit by the
+   same banded softbox environment, translucent white light edges, a floor
+   frame line, MSAA 4 through the composer, subtle bloom, mouse parallax and
+   the crosshair cursor. v2 (Igor): the camera is a PERSPECTIVE one placed
+   like the photographer of the original product shot (from the book's
+   lower-left, high up), not the Data Core isometric view; there is no label;
+   and the book only opens when you CLICK it (click again to close) — the
+   first leaves follow the cover with a lag.
 
    Live knobs: window.BOOK (edit in the DevTools console, applied every frame).
    ========================================================================= */
@@ -25,14 +27,16 @@
 
   /* ---------- LIVE KNOBS: window.BOOK ---------- */
   var TUNE = window.BOOK = {
-    openAngle: 48,          // degrees the cover lifts when open
-    hoverLift: 9,           // extra degrees while the pointer is over the book
+    openAngle: 62,          // degrees the cover lifts when open (click)
+    openMs: 1100,           // duration of the open / close transition
+    hoverLift: 5,           // extra degrees while the pointer is over the book (0 = none)
     leaves: 6,              // loose leaves that follow the cover
     leafFollow: 0.74,       // top leaf angle as a fraction of the cover angle
     leafStep: 0.105,        // each leaf below opens this much less
     leafLag: 95,            // ms of lag per leaf
-    loop: 11500,            // ms, whole cycle (same timing as the Data Core)
-    bob: 0.012,             // floating amplitude while open (world units)
+    bob: 0.010,             // floating amplitude while open (world units)
+    camera: { az: -50, el: 50, fov: 24 }, // photographer's position: az from +z toward +x (deg), elevation (deg)
+    target: { x: 0, y: 0.06, z: 0 },      // point the camera looks at (world)
     edgeOpacity: 0.34,      // white light edges
     floorOpacity: 0.30,     // floor frame line
     floorMargin: 0.16,      // distance from the book to the frame line
@@ -45,9 +49,7 @@
     keyLight: 0.55,
     ambient: 0.10,
     bloom: { strength: 0.16, radius: 0.26, threshold: 0.72 },
-    fit: 0.96,              // 1 = the book fills the stage
-    label: true,            // pill label while open
-    labelText: 'EBOOK  ·  ENGLISH',
+    fit: 0.86,              // 1 = the book (closed + open cover) fills the stage
     quality: { msaa: 4, dprMax: 2 }
   };
 
@@ -62,10 +64,8 @@
   var root = new THREE.Group();                 // parallax rotates this group
   scene.add(root);
 
-  var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-  var EL = 31.3 * Math.PI / 180, AZ = Math.PI / 4, R = 20;
-  camera.position.set(R * Math.cos(EL) * Math.cos(AZ), R * Math.sin(EL), R * Math.cos(EL) * Math.sin(AZ));
-  camera.lookAt(0, 0, 0);
+  // perspective camera; position and distance are set in resize() (fitCamera)
+  var camera = new THREE.PerspectiveCamera(TUNE.camera.fov, 1.5, 0.1, 100);
 
   /* ---------- environment: banded softboxes (same as the Data Core) ---------- */
   function makeEnvTexture() {
@@ -177,13 +177,12 @@
      Built in the book's natural frame: width along X (spine at x = −W/2,
      fore-edge at +W/2), height along −Z (top of the cover at z = −H/2), lying
      on y = 0. The cover hinges about Z at the spine (+rotation.z lifts the
-     fore-edge). The whole book is then turned 90° about Y so that, seen from
-     the isometric camera, the spine sits lower-left and the title reads rising
-     to the right, like the product shot it replaces. */
+     fore-edge). The camera is placed on the book's lower-left side
+     (TUNE.camera.az < 0), high up, so the spine sits lower-left and the title
+     reads rising to the right, like the product shot it replaces. */
   var BW = 1.0, BH = 1.38, PT = 0.062, CT = 0.009, INSET = 0.012;
 
   var book = new THREE.Group();
-  book.rotation.y = Math.PI / 2;
   root.add(book);
 
   var coverMat = new THREE.MeshPhysicalMaterial({
@@ -273,43 +272,6 @@
   }
   buildFloor();
 
-  /* ---------- pill label (overlay sprite, same style as the Data Core labels) ---------- */
-  var labelSprite = null, labelKey = '';
-  function makeLabel(text) {
-    var fs = 34, c = document.createElement('canvas'), g = c.getContext('2d');
-    var font = '500 ' + fs + 'px Poppins, ui-sans-serif, system-ui, sans-serif';
-    g.font = font;
-    var ls = fs * 0.14;                          // letter-spacing 14%
-    var tw = 0; for (var i = 0; i < text.length; i++) tw += g.measureText(text[i]).width + ls;
-    var pad = Math.ceil(1.5 * g.measureText('o').width), hgt = 64;   // padding ≥ one "o" per side
-    c.width = Math.ceil(tw + pad * 2 + 6); c.height = hgt + 6;
-    g = c.getContext('2d'); g.font = font;
-    var rx = 3, ry = 3, rw = c.width - 6, rh = hgt, rad = hgt / 2;
-    g.beginPath();
-    g.moveTo(rx + rad, ry); g.lineTo(rx + rw - rad, ry); g.arc(rx + rw - rad, ry + rad, rad, -Math.PI / 2, Math.PI / 2);
-    g.lineTo(rx + rad, ry + rh); g.arc(rx + rad, ry + rad, rad, Math.PI / 2, Math.PI * 1.5); g.closePath();
-    g.fillStyle = 'rgba(2,2,2,0.92)'; g.fill();
-    g.lineWidth = 2.5; g.strokeStyle = '#ffffff'; g.stroke();
-    g.fillStyle = '#ffffff'; g.textBaseline = 'middle';
-    var x = rx + pad + ls / 2;
-    for (var k = 0; k < text.length; k++) { g.fillText(text[k], x, ry + rh / 2 + 1); x += g.measureText(text[k]).width + ls; }
-    var tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.minFilter = THREE.LinearFilter;
-    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-    var H = 0.1275; sp.scale.set(H * c.width / c.height, H, 1);
-    sp.layers.set(1);
-    sp.userData.aspect = c.width / c.height;
-    return sp;
-  }
-  function ensureLabel() {
-    var k = TUNE.labelText;
-    if (labelSprite && labelKey === k) return;
-    if (labelSprite) { scene.remove(labelSprite); labelSprite.material.map.dispose(); labelSprite.material.dispose(); }
-    labelSprite = makeLabel(k); labelKey = k;
-    scene.add(labelSprite);
-  }
-  ensureLabel();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { labelKey = ''; ensureLabel(); });
-
   /* ---------- sizing ---------- */
   var W = 0, H = 0;
   function resize() {
@@ -319,16 +281,64 @@
     var dpr = Math.min(window.devicePixelRatio || 1, TUNE.quality.dprMax || 2);
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
-    // the book (with the cover open and its label) spans ~2.05 world units
-    // on screen horizontally and ~1.85 vertically in this isometric view;
-    // the view is shifted up so the open cover and the label have headroom
-    var PPW = Math.min(W / 2.05, H / 1.85) * TUNE.fit;
-    camera.left = -W / PPW / 2; camera.right = W / PPW / 2;
-    camera.top = H / PPW / 2 + 0.14; camera.bottom = -H / PPW / 2 + 0.14;
-    camera.updateProjectionMatrix();
+    camera.aspect = W / H;
+    fitCamera();
     if (composer) { composer.setPixelRatio(dpr); composer.setSize(W, H); }
   }
   window.addEventListener('resize', resize);
+
+  /* ---------- camera placement ----------
+     The camera sits on the direction given by TUNE.camera (az/el) and its
+     distance is solved so that the closed book, the floor line AND the cover
+     at its open angle all fit inside the stage with the margin TUNE.fit.
+     Three iterations of "project the key points, rescale the distance and
+     recentre the target" converge for a perspective camera. */
+  var _camKey = '';
+  var _pts = [], _v = new THREE.Vector3();
+  function fitPoints() {
+    var m = TUNE.floorMargin, a = TUNE.openAngle * Math.PI / 180;
+    var xs = [-BW / 2 - CT - m, BW / 2 + m], zs = [-BH / 2 - m, BH / 2 + m], top = CT + PT + CT;
+    var closed = [], open = [];
+    xs.forEach(function (x) { zs.forEach(function (z) { closed.push([x, 0, z]); closed.push([x, top, z]); }); });
+    // open cover: fore-edge corners lifted about the spine
+    zs.forEach(function (z) { open.push([-BW / 2 + Math.cos(a) * BW, CT + PT + Math.sin(a) * BW, z * 0.9]); });
+    return { closed: closed, open: open };
+  }
+  function bounds(pts) {
+    var b = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
+    for (var i = 0; i < pts.length; i++) {
+      _v.set(pts[i][0], pts[i][1], pts[i][2]).project(camera);
+      if (_v.x < b.minX) b.minX = _v.x; if (_v.x > b.maxX) b.maxX = _v.x;
+      if (_v.y < b.minY) b.minY = _v.y; if (_v.y > b.maxY) b.maxY = _v.y;
+    }
+    return b;
+  }
+  function fitCamera() {
+    if (!W) return;
+    var c = TUNE.camera, az = c.az * Math.PI / 180, el = c.el * Math.PI / 180;
+    var dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+    var target = new THREE.Vector3(TUNE.target.x, TUNE.target.y, TUNE.target.z);
+    var D = 6, pts = fitPoints(), all = pts.closed.concat(pts.open);
+    camera.fov = c.fov; camera.aspect = W / H;
+    var right = new THREE.Vector3(), up = new THREE.Vector3();
+    for (var it = 0; it < 4; it++) {
+      camera.position.copy(target).addScaledVector(dir, D);
+      camera.lookAt(target); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+      // size: the CLOSED book (+ floor line) fills TUNE.fit of the stage…
+      var bc = bounds(pts.closed);
+      var ext = Math.max(bc.maxX - bc.minX, bc.maxY - bc.minY) / 2;
+      // …unless the OPEN cover would not fit at all: then the union rules
+      var ba = bounds(all);
+      var extAll = Math.max(ba.maxX - ba.minX, ba.maxY - ba.minY) / 2;
+      D *= Math.max(ext / TUNE.fit, extAll / 0.98);
+      // recentre on the union so both states stay inside the stage
+      var halfH = Math.tan(camera.fov * Math.PI / 360) * D, halfW = halfH * camera.aspect;
+      camera.matrixWorld.extractBasis(right, up, _v);
+      target.addScaledVector(right, (ba.minX + ba.maxX) / 2 * halfW).addScaledVector(up, (ba.minY + ba.maxY) / 2 * halfH);
+    }
+    camera.position.copy(target).addScaledVector(dir, D);
+    camera.lookAt(target); camera.updateProjectionMatrix();
+  }
 
   /* ---------- post-processing: RenderPass + bloom + gamma, MSAA on the composer RTs ---------- */
   var composer = null, bloomPass = null;
@@ -356,17 +366,17 @@
     if (t <= a) return from; if (t >= b) return to;
     return from + (to - from) * inOutQuart((t - a) / (b - a));
   }
-  // open 0→1 between 600 and 3000 ms, hold, close between 7900 and 10100 ms
+  // The book opens on CLICK and closes on the next click. `openAt(ms)` gives
+  // the open fraction at time ms: eased from the state before the click to
+  // the state after it, over TUNE.openMs. Leaves ask for earlier times (lag).
+  var isOpen = false, clickAt = -1e9, fromOpen = 0;
   function openAt(ms) {
-    var L = TUNE.loop, t = ((ms % L) + L) % L;
-    if (t < 7900) return seg(t, 600, 3000, 0, 1);
-    return seg(t, 7900, 10100, 1, 0);
+    var to = isOpen ? 1 : 0;
+    return seg(ms, clickAt, clickAt + TUNE.openMs, fromOpen, to);
   }
-  // the label appears once the cover is well up and leaves BEFORE it closes
-  function labelAt(ms) {
-    var L = TUNE.loop, t = ((ms % L) + L) % L;
-    if (t < 7600) return seg(t, 1900, 2600, 0, 1);
-    return seg(t, 7600, 8100, 1, 0);
+  function toggleOpen(now) {
+    fromOpen = openAt(now);
+    isOpen = !isOpen; clickAt = now;
   }
 
   /* ---------- interaction: hovering the book lifts the cover a little ---------- */
@@ -384,6 +394,16 @@
     hoverTarget = raycaster.intersectObjects([cover, pages, back], false).length ? 1 : 0;
   }, { passive: true });
   canvas.addEventListener('pointerleave', function () { hoverTarget = 0; });
+  canvas.addEventListener('click', function (e) {
+    var r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    if (raycaster.intersectObjects([cover, pages, back, spine], false).length) toggleOpen(performance.now() - t0);
+  });
+  canvas.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(performance.now() - t0); } });
+  canvas.setAttribute('tabindex', '0');
+  canvas.setAttribute('role', 'button');
+  canvas.setAttribute('aria-label', 'eBook — click to open the cover');
 
   /* ---------- parallax (same as the Data Core) ---------- */
   window.addEventListener('pointermove', function (e) {
@@ -433,7 +453,8 @@
     var ck = TUNE.coverColor + '|' + TUNE.accent;
     if (ck !== lastCoverKey) { lastCoverKey = ck; drawCover(); }
     if (Math.abs(floorMargin - TUNE.floorMargin) > 1e-6) buildFloor();
-    ensureLabel();
+    var ck2 = [TUNE.camera.az, TUNE.camera.el, TUNE.camera.fov, TUNE.target.x, TUNE.target.y, TUNE.target.z, TUNE.fit, TUNE.openAngle, TUNE.floorMargin].join('|');
+    if (ck2 !== _camKey) { _camKey = ck2; fitCamera(); }
   }
 
   /* ---------- render loop ---------- */
@@ -453,14 +474,14 @@
     }
 
     hover += (hoverTarget - hover) * 0.08;
-    var open = reduced ? 0.55 : openAt(ms);
+    var open = openAt(ms);
     var openAngle = TUNE.openAngle * Math.PI / 180;
     var extra = TUNE.hoverLift * Math.PI / 180 * hover;
     // a slow wobble while it stays open, so the cover never freezes
     var wobble = reduced ? 0 : Math.sin(ms / 1400) * 0.025 * open;
     coverPivot.rotation.z = open * openAngle + extra + wobble;     // +z lifts the fore-edge (+x)
     for (var i = 0; i < leaves.length; i++) {
-      var o = reduced ? open : openAt(ms - TUNE.leafLag * (i + 1));
+      var o = reduced ? open : openAt(ms - TUNE.leafLag * (i + 1));   // lag per leaf
       var f = Math.max(0, TUNE.leafFollow - TUNE.leafStep * i);
       leaves[i].rotation.z = o * openAngle * f + extra * f * 0.8;
     }
@@ -472,31 +493,7 @@
     par.y += ((reduced ? 0 : mouse.x) * 0.22 - par.y) * 0.055;
     root.rotation.x = par.x; root.rotation.y = par.y;
 
-    // label: above the lifted fore-edge of the cover
-    var lab = reduced ? 1 : labelAt(ms);
-    if (labelSprite) {
-      labelSprite.visible = TUNE.label && lab > 0.001;
-      if (labelSprite.visible) {
-        var a = coverPivot.rotation.z;
-        _wp.set(-BW / 2 + Math.cos(a) * BW, CT + PT + Math.sin(a) * BW + 0.24, 0);
-        book.localToWorld(_wp);
-        labelSprite.position.copy(_wp);
-        var Hh = 0.1275 * (0.85 + 0.15 * lab);
-        labelSprite.scale.set(Hh * labelSprite.userData.aspect, Hh, 1);
-        labelSprite.material.opacity = lab;
-      }
-    }
-
-    if (composer) {
-      camera.layers.set(0);
-      composer.render();
-      // the label as a crisp overlay, outside the bloom pipeline
-      renderer.autoClear = false; renderer.clearDepth();
-      camera.layers.set(1); renderer.render(scene, camera);
-      camera.layers.set(0); renderer.autoClear = true;
-    } else {
-      camera.layers.enableAll(); renderer.render(scene, camera);
-    }
+    if (composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);
   }
   resize();

@@ -82,7 +82,10 @@ order of risk:
    **login and signup ones first** (copied branding + login link = textbook phishing).
 5. Remove form and chat iframes, and **all** analytics scripts and pixels, including
    inline snippets. Keep `aem.js`, `scripts.js`, `main.*.js`, `*.chunk.js` (layout,
-   not tracking).
+   not tracking). Where the page had a form, put back an **inert visual replica**
+   (`../lib/inert-form.css` + `../lib/inert-form.js`, markup as in `3d-book/`): the
+   form must look and feel real but have no `<form>`, no `action`, no `name`s, no
+   email/password types — Igor's rule, details in the anti-phishing doc rule 9.
 6. Tracking files are NOT deleted from disk: `git rm --cached` + an explicit rule in
    `.gitignore` (the `.gitignore` paths carry the prefix
    `/experiments/<name>/...`; renaming or moving a folder means updating them).

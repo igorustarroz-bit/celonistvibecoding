@@ -728,6 +728,9 @@
     mouse.y = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (window.innerHeight / 2))) * 0.6;
   }, { passive: true });
   var par = { x: 0, y: 0 };
+  // on a phone the same parallax comes from the gyroscope (../lib/tilt-parallax.js):
+  // roll/tilt of the device stands in for the pointer position
+  if (window.TiltParallax) TiltParallax.start(function (x, y) { mouse.x = x * 0.6; mouse.y = y * 0.6; });
 
   /* ---------- custom cursor (same crosshair as the globe and the Data Core) ---------- */
   var CURSOR = { color: '#000000', outline: '#ffffff', outlinePx: 1.5, sizePx: 28, strokePx: 3 };

@@ -137,6 +137,21 @@ Add to **all** saved pages in the folder (index and original), right before `</b
 > woff2, `<img>` tags) are NOT affected and need nothing. Before delivering, open the
 > page from `file://` as well as the Pages URL.
 
+> **IGOR'S RULE (2026-09-04) — the hover parallax of the 3D figures must exist on mobile
+> too, driven by the gyroscope.** On desktop the figure turns a little as the pointer
+> moves around it (root ±0.22 rad Y, ±0.05 X, lerp 0.055) — "it heightens the sense of
+> depth". Phones have no hover, so the same input comes from the device orientation
+> sensor through the shared **`lib/tilt-parallax.js`**: `TiltParallax.start(function (x, y)
+> { mouse.x = x * 0.6; mouse.y = y * 0.6; })` — one line after the pointer handler, same
+> range as the pointer. Facts the file works around: only on coarse-pointer devices; the
+> neutral attitude is how the phone is held when readings start and slowly follows the
+> user; landscape swaps the axes via `screen.orientation.angle`; **iOS 13+ needs
+> `DeviceOrientationEvent.requestPermission()` from a user gesture** — the first tap
+> anywhere asks once, silently, and a refusal just leaves the figure still; needs https
+> (Pages) or `file://`. Full deflection at 14° of tilt (`opts.range`). Load it before the
+> experiment's script: `<script src="../lib/tilt-parallax.js?v=N">`. Used by the Data Core
+> (`index3d.html`, datacore-3d v29) and the book (v12).
+
 ## 5. Build the effect
 
 Our own JS goes in the experiment subfolder, loaded from `index.html` with its own
@@ -204,4 +219,6 @@ to `experiments/`.
 - [ ] `.gitignore` rules with the correct prefix for the new folder's tracking files.
 - [ ] The published page opened in the browser and checked at 1440×900 and on mobile.
 - [ ] The page also opened LOCALLY from `file://` — textures visible (data-URI bundle).
+- [ ] On a phone: the figure tilts with the device (`../lib/tilt-parallax.js` loaded; on
+      iPhone the first tap grants the sensor).
 - [ ] `experiments/claude_<topic>_context.md` written.

@@ -51,7 +51,9 @@ DATA INTEGRATION, DATA TRANSFORMATION, PROCESS QUERY ENGINE.
   multiplied by SEPK = 1/(cos 31.3°·√2) to match the elevation of the
   2D variant.
 - Mouse parallax: rotates the root up to ±0.22 rad in Y and ±0.05 in X,
-  smoothed with lerp 0.055/frame.
+  smoothed with lerp 0.055/frame. On phones the same input comes from the
+  gyroscope through the shared `lib/tilt-parallax.js` (v29, 2026-09-04) —
+  see the rule in §12 and `claude_newexperiment_context.md`.
 - Cursor: custom crosshair (4 arms with a central gap, 3px black stroke
   with a 1.5px white border, 28px, SVG data-URI); only with a fine pointer.
 
@@ -315,6 +317,21 @@ plates). NO A↔B switch (removed in v19; navigation is the root index).
 > behaviour: `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()`) and
 > `datacore/anime-datacore/datacore-tuner.js` (+ `DATACORE_INFO()`).
 
+> **IGOR'S RULE (2026-09-04) — the hover parallax of the 3D figures must exist on mobile
+> too, driven by the gyroscope.** On desktop the figure turns a little as the pointer
+> moves around it (root ±0.22 rad Y, ±0.05 X, lerp 0.055) — "it heightens the sense of
+> depth". Phones have no hover, so the same input comes from the device orientation
+> sensor through the shared **`lib/tilt-parallax.js`**: `TiltParallax.start(function (x, y)
+> { mouse.x = x * 0.6; mouse.y = y * 0.6; })` — one line after the pointer handler, same
+> range as the pointer. Facts the file works around: only on coarse-pointer devices; the
+> neutral attitude is how the phone is held when readings start and slowly follows the
+> user; landscape swaps the axes via `screen.orientation.angle`; **iOS 13+ needs
+> `DeviceOrientationEvent.requestPermission()` from a user gesture** — the first tap
+> anywhere asks once, silently, and a refusal just leaves the figure still; needs https
+> (Pages) or `file://`. Full deflection at 14° of tilt (`opts.range`). Load it before the
+> experiment's script: `<script src="../lib/tilt-parallax.js?v=N">`. Used by the Data Core
+> (`index3d.html`, datacore-3d v29) and the book (v12).
+
 ## 12. CLOSED decisions — do not reopen
 
 - Opaque tops in variant A; in B, transmission ALWAYS low
@@ -370,4 +387,5 @@ pixelation resolved · v25 horizontal padding of the pills ≥ one "o" (1.5·oW)
 centering corrected for the letter-spacing · v26 mobile: stage 5/6 and K 0.205
 (figure ×2 in both variants) + nav-fx with a live breakpoint and
 restored in index3d · v27→v28 (2026-09-04) tuner aligned with the book's: hideable (× / T), div header,
-no backdrop-filter, antialias read-out (`DATACORE_INFO`).
+no backdrop-filter, antialias read-out (`DATACORE_INFO`) · v29 gyroscope parallax on phones
+(`lib/tilt-parallax.js`).

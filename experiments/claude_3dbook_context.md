@@ -203,7 +203,8 @@ fails on a real GPU — and is physically wrong anyway (see §0 v5).
 - While open: a slight float of the whole book (amplitude 0.006). The camera pans to
   the open framing.
 - Hover (raycast, 60 ms throttle) lifts the front cover 4° while closed — the only
-  motion before the click. Mouse parallax and the pop-in are kept.
+  motion before the click. Mouse parallax and the pop-in are kept; on phones the
+  parallax comes from the gyroscope (`lib/tilt-parallax.js`, v12 — see the rule in §3).
 - `prefers-reduced-motion`: no parallax, no float, no pop-in, the open/close is
   instant on click.
 
@@ -278,6 +279,21 @@ label, the pull-quote rule and the folio rules).
 > re-run the bundler after replacing one. CSS-loaded assets (stylesheets, `@font-face`
 > woff2, `<img>` tags) are NOT affected and need nothing. Before delivering, open the
 > page from `file://` as well as the Pages URL.
+
+> **IGOR'S RULE (2026-09-04) — the hover parallax of the 3D figures must exist on mobile
+> too, driven by the gyroscope.** On desktop the figure turns a little as the pointer
+> moves around it (root ±0.22 rad Y, ±0.05 X, lerp 0.055) — "it heightens the sense of
+> depth". Phones have no hover, so the same input comes from the device orientation
+> sensor through the shared **`lib/tilt-parallax.js`**: `TiltParallax.start(function (x, y)
+> { mouse.x = x * 0.6; mouse.y = y * 0.6; })` — one line after the pointer handler, same
+> range as the pointer. Facts the file works around: only on coarse-pointer devices; the
+> neutral attitude is how the phone is held when readings start and slowly follows the
+> user; landscape swaps the axes via `screen.orientation.angle`; **iOS 13+ needs
+> `DeviceOrientationEvent.requestPermission()` from a user gesture** — the first tap
+> anywhere asks once, silently, and a refusal just leaves the figure still; needs https
+> (Pages) or `file://`. Full deflection at 14° of tilt (`opts.range`). Load it before the
+> experiment's script: `<script src="../lib/tilt-parallax.js?v=N">`. Used by the Data Core
+> (`index3d.html`, datacore-3d v29) and the book (v12).
 
 ## 3. Live knobs — `window.BOOK` (edit in the DevTools console)
 

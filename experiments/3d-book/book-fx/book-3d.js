@@ -13,8 +13,13 @@
    another click closes it. Near-orthographic perspective camera placed like the
    photographer of the original product shot (from the book's lower-left, high
    up), no floor line, no label. The front cover + the upper half of the page
-   block flip 180° about the spine as one piece; a few loose leaves turn with a
-   lag, always staying between the two halves so nothing pokes through the cover.
+   block flip about the spine as one piece; a few loose leaves turn with a lag,
+   always staying between the two halves so nothing pokes through the cover.
+   v4 (third review): the open book is a slight V, not flat (both halves rise
+   from the spine by TUNE.vAngle); the cover is the ORIGINAL artwork, unwarped
+   from the product shot (spread/cover.jpg), with the drawn cover as fallback;
+   the camera re-fits itself every frame to whatever the book occupies (zooming
+   out while a half stands up mid-flip), so the model is never cut.
 
    Live knobs: window.BOOK (edit in the DevTools console, applied every frame).
    Spread copy: window.BOOK_SPREAD (edit, then BOOK_REDRAW()).
@@ -36,6 +41,8 @@
   /* ---------- LIVE KNOBS: window.BOOK ---------- */
   var TUNE = window.BOOK = {
     openMs: 1400,           // duration of the open / close transition
+    vAngle: 7,              // degrees each half rises from the spine when open (0 = flat)
+    coverSource: 'photo',   // 'photo' = original artwork unwarped from the product shot; 'drawn' = canvas replica
     hoverLift: 4,           // degrees the front cover lifts while the pointer is over the closed book (0 = none)
     leaves: 5,              // loose leaves that turn with the flipping half
     leafLag: 110,           // ms of lag per leaf
@@ -52,9 +59,8 @@
     ambient: 0.12,
     bloom: { strength: 0.14, radius: 0.26, threshold: 0.78 },
     camera: { az: -50, el: 50, fov: 11 },  // photographer's position: az from +z toward +x (deg), elevation (deg); small fov = little perspective
-    target: { x: 0, y: 0.04, z: 0 },       // point the camera looks at (world)
-    fit: 0.90,              // 1 = the closed book fills the stage
-    fitOpen: 0.97,          // the open spread must fit within this
+    fit: 0.90,              // 1 = the book fills the stage (re-fitted live to whatever it occupies)
+    camSmooth: 0.12,        // per-frame lerp of the camera toward its fitted place
     quality: { msaa: 4, dprMax: 2 }
   };
 
@@ -146,6 +152,12 @@
   var coverTex = makeTex(coverCanvas);
 
   function drawCover() {
+    if (TUNE.coverSource === 'photo' && photos.cover) {   // the original artwork, unwarped from the product shot
+      var gc = coverCanvas.getContext('2d');
+      gc.drawImage(photos.cover, 0, 0, COVER_W, COVER_H);
+      coverTex.needsUpdate = true;
+      return;
+    }
     var g = coverCanvas.getContext('2d');
     g.clearRect(0, 0, COVER_W, COVER_H);
     g.fillStyle = TUNE.coverColor; g.fillRect(0, 0, COVER_W, COVER_H);
@@ -191,7 +203,7 @@
   // the LEFT page is the −y face of the flipped half: after the 180° turn that
   // face's u runs along −x and its v along +z, so the texture is turned 180°
   leftTex.center.set(0.5, 0.5); leftTex.rotation = Math.PI;
-  var photos = { containers: null, solar: null };
+  var photos = { containers: null, solar: null, cover: null };
 
   var SPREAD = window.BOOK_SPREAD = {
     runningHead: 'THE REALIST’S GUIDE TO SUSTAINABLE SUPPLY CHAINS',
@@ -289,6 +301,7 @@
   drawAll();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
   loadImg('containers.jpg', function (im) { photos.containers = im; drawLeftPage(); });
+  loadImg('cover.jpg', function (im) { photos.cover = im; drawCover(); });
   loadImg('solar.jpg', function (im) { photos.solar = im; drawRightPage(); });
 
   /* ---------- page-edge texture (the stacked sheets seen on the fore-edge) ---------- */
@@ -323,6 +336,15 @@
 
   var book = new THREE.Group();
   root.add(book);
+  // everything hangs from the RIGHT HALF, hinged at the spine's bottom edge: when
+  // the book opens, the right half rises by vAngle and the flip group (left half)
+  // rotates π − 2·vAngle relative to it, so both halves make a V about the spine
+  var rightHalf = new THREE.Group();
+  rightHalf.position.set(-BW / 2, 0, 0);
+  book.add(rightHalf);
+  var part = new THREE.Group();                 // the old "book" frame, shifted so the spine is at part-x = 0
+  part.position.set(BW / 2, 0, 0);
+  rightHalf.add(part);
 
   var coverMat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(TUNE.coverColor), roughness: TUNE.roughness, metalness: 0.0,
@@ -346,14 +368,14 @@
   var coverGeo = new THREE.BoxGeometry(BW, CT, BH);
   var back = new THREE.Mesh(coverGeo, coverMat);
   back.position.set(0, CT / 2, 0);
-  book.add(back);
-  var e1 = edges(coverGeo, 1); e1.position.copy(back.position); book.add(e1); edgeLines.push(e1);
+  part.add(back);
+  var e1 = edges(coverGeo, 1); e1.position.copy(back.position); part.add(e1); edgeLines.push(e1);
 
   // lower half of the page block (right page on top). Box material order: +x −x +y −y +z −z
   var halfGeo = new THREE.BoxGeometry(PW, HALF, PH);
   var lower = new THREE.Mesh(halfGeo, [edgeMatP, paperMat, rightMat, paperMat, edgeMatP, edgeMatP]);
   lower.position.set(-BW / 2 + PW / 2, CT + HALF / 2, 0);
-  book.add(lower);
+  part.add(lower);
 
   // spine: pivots at its bottom edge by half the opening angle, so it flattens with the book
   var SP_H = PT + CT * 2 + 0.002;
@@ -361,12 +383,12 @@
   var spinePivot = new THREE.Group(); spinePivot.position.set(-BW / 2, 0.001, 0);
   var spine = new THREE.Mesh(spineGeo, coverMat);
   spine.position.set(-CT / 2, SP_H / 2, 0);
-  spinePivot.add(spine); book.add(spinePivot);
+  spinePivot.add(spine); part.add(spinePivot);
 
   // flip group: upper half + front cover
   var flip = new THREE.Group();
   flip.position.set(-BW / 2, CT + HALF, 0);
-  book.add(flip);
+  part.add(flip);
   var upper = new THREE.Mesh(halfGeo, [edgeMatP, paperMat, paperMat, leftMat, edgeMatP, edgeMatP]);
   upper.position.set(PW / 2, HALF / 2, 0);
   flip.add(upper);
@@ -378,7 +400,7 @@
   coverPivot.add(cover);
   var e2 = edges(coverGeo, 1); e2.position.copy(cover.position); coverPivot.add(e2); edgeLines.push(e2);
   var e3 = edges(halfGeo, 0.5); e3.position.copy(upper.position); flip.add(e3); edgeLines.push(e3);
-  var e4 = edges(halfGeo, 0.5); e4.position.copy(lower.position); book.add(e4); edgeLines.push(e4);
+  var e4 = edges(halfGeo, 0.5); e4.position.copy(lower.position); part.add(e4); edgeLines.push(e4);
 
   // loose leaves, hinged at the spine at the split height
   var leaves = [];
@@ -395,15 +417,17 @@
     leaf.position.set(PW / 2, 0.0009 * (li + 1), 0);
     pv.add(leaf);
     pv.visible = li < TUNE.leaves;
-    book.add(pv);
+    part.add(pv);
     leaves.push(pv);
   }
 
   /* ---------- sizing / camera placement ----------
-     The camera sits on the direction given by TUNE.camera (az/el); its distance
-     is solved so that the CLOSED book fills TUNE.fit of the stage, unless the
-     OPEN spread would then not fit within TUNE.fitOpen — then the spread rules.
-     The target is recentred on the union of both states so nothing clips. */
+     The camera sits on the direction given by TUNE.camera (az/el). Every frame
+     the corners of every part of the book (in their CURRENT pose) are projected,
+     and distance + target are re-solved so the book fills TUNE.fit of the stage
+     and is centred; the camera then eases toward that (camSmooth). So it zooms
+     out while a half stands up mid-flip and back in when the book is flat, and
+     the model is never cut whatever the state. */
   var W = 0, H = 0;
   function resize() {
     var r = stage.getBoundingClientRect();
@@ -413,69 +437,68 @@
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, true);
     camera.aspect = W / H;
-    fitCamera();
     if (composer) { composer.setPixelRatio(dpr); composer.setSize(W, H); }
+    fitCamera(true);
   }
   window.addEventListener('resize', resize);
 
-  var _camKey = '', _v = new THREE.Vector3();
-  function fitPoints() {
-    var top = CT + PT + CT, closed = [], open = [];
-    [-BW / 2 - CT, BW / 2].forEach(function (x) { [-BH / 2, BH / 2].forEach(function (z) { closed.push([x, 0, z]); closed.push([x, top, z]); }); });
-    // open: the flipped half lies at x ∈ [−1.5·BW, −0.5·BW]; mid-flip the block stands up to y ≈ BW
-    [-BW * 1.5 - CT, BW / 2].forEach(function (x) { [-BH / 2, BH / 2].forEach(function (z) { open.push([x, 0, z]); }); });
-    [-BH / 2, BH / 2].forEach(function (z) { open.push([-BW / 2, CT + HALF + BW * 0.8, z * 0.85]); });
-    return { closed: closed, open: open };
+  var _v = new THREE.Vector3();
+  var cam = { D: 10, dir: new THREE.Vector3(0, 1, 0), target: new THREE.Vector3(), fitD: 10, fitTarget: new THREE.Vector3() };
+  var fitParts = [back, lower, upper, cover, spine];
+  function fitPoints() {                        // world-space corners of every part, current pose
+    var pts = [];
+    var parts = fitParts.concat(leaves.filter(function (l) { return l.visible; }).map(function (l) { return l.children[0]; }));
+    for (var i = 0; i < parts.length; i++) {
+      var m = parts[i], g = m.geometry;
+      if (!g.boundingBox) g.computeBoundingBox();
+      var bb = g.boundingBox;
+      m.updateWorldMatrix(true, false);
+      for (var k = 0; k < 8; k++) {
+        _v.set(k & 1 ? bb.max.x : bb.min.x, k & 2 ? bb.max.y : bb.min.y, k & 4 ? bb.max.z : bb.min.z);
+        pts.push(_v.applyMatrix4(m.matrixWorld).clone());
+      }
+    }
+    return pts;
   }
   function bounds(pts) {
     var b = { minX: 1e9, maxX: -1e9, minY: 1e9, maxY: -1e9 };
     for (var i = 0; i < pts.length; i++) {
-      _v.set(pts[i][0], pts[i][1], pts[i][2]).project(camera);
+      _v.copy(pts[i]).project(camera);
       if (_v.x < b.minX) b.minX = _v.x; if (_v.x > b.maxX) b.maxX = _v.x;
       if (_v.y < b.minY) b.minY = _v.y; if (_v.y > b.maxY) b.maxY = _v.y;
     }
     return b;
-  }
-  // camera state: distance + two targets (closed / open); per frame the camera
-  // pans between them with the open fraction, so the closed book is centred and
-  // the open spread is centred too
-  var cam = { D: 10, dir: new THREE.Vector3(0, 1, 0), tClosed: new THREE.Vector3(), tOpen: new THREE.Vector3() };
-  function recentre(target, b, D) {
-    var halfH = Math.tan(camera.fov * Math.PI / 360) * D, halfW = halfH * camera.aspect;
-    var right = new THREE.Vector3(), up = new THREE.Vector3();
-    camera.matrixWorld.extractBasis(right, up, _v);
-    target.addScaledVector(right, (b.minX + b.maxX) / 2 * halfW).addScaledVector(up, (b.minY + b.maxY) / 2 * halfH);
   }
   function placeCamera(target, D) {
     camera.position.copy(target).addScaledVector(cam.dir, D);
     // TIGHT near/far: the composer's multisampled render targets get a 16-bit
     // depth renderbuffer, and with a long-lens camera (small fov → distance
     // ~9) a 0.1…200 range cannot separate the 9 mm cover from the page block
-    // under it — the cover z-fights into stripes. ±2.5 units around the book.
-    camera.near = Math.max(0.05, D - 2.5); camera.far = D + 2.5;
+    // under it — the cover z-fights into stripes. ±3 units around the book.
+    camera.near = Math.max(0.05, D - 3); camera.far = D + 3;
     camera.lookAt(target); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
   }
-  function fitCamera() {
+  // solve distance + target for the current pose (3 passes), starting from the current camera
+  function fitCamera(snap) {
     if (!W) return;
     var c = TUNE.camera, az = c.az * Math.PI / 180, el = c.el * Math.PI / 180;
     cam.dir.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
-    var target = new THREE.Vector3(TUNE.target.x, TUNE.target.y, TUNE.target.z);
-    var D = 10, pts = fitPoints(), all = pts.closed.concat(pts.open);
     camera.fov = c.fov; camera.aspect = W / H;
-    for (var it = 0; it < 5; it++) {
+    var pts = fitPoints(), D = cam.fitD, target = cam.fitTarget;
+    var right = new THREE.Vector3(), up = new THREE.Vector3();
+    for (var it = 0; it < 3; it++) {
       placeCamera(target, D);
-      var bc = bounds(pts.closed), ba = bounds(all);
-      var ext = Math.max(bc.maxX - bc.minX, bc.maxY - bc.minY) / 2;
-      var extAll = Math.max(ba.maxX - ba.minX, ba.maxY - ba.minY) / 2;
-      D *= Math.max(ext / TUNE.fit, extAll / TUNE.fitOpen);
-      recentre(target, ba, D);
+      var b = bounds(pts);
+      var ext = Math.max(b.maxX - b.minX, b.maxY - b.minY) / 2;
+      D *= ext / TUNE.fit;
+      var halfH = Math.tan(camera.fov * Math.PI / 360) * D, halfW = halfH * camera.aspect;
+      camera.matrixWorld.extractBasis(right, up, _v);
+      target.addScaledVector(right, (b.minX + b.maxX) / 2 * halfW).addScaledVector(up, (b.minY + b.maxY) / 2 * halfH);
     }
-    cam.D = D;
-    // open target: centred on the union (spread + mid-flip); closed target: centred on the closed book
-    cam.tOpen.copy(target);
-    placeCamera(target, D);
-    cam.tClosed.copy(target); recentre(cam.tClosed, bounds(pts.closed), D);
-    placeCamera(cam.tClosed, D);
+    cam.fitD = D;
+    if (snap) { cam.D = D; cam.target.copy(target); }
+    else { var k = TUNE.camSmooth; cam.D += (D - cam.D) * k; cam.target.lerp(target, k); }
+    placeCamera(cam.target, cam.D);
   }
 
   /* ---------- post-processing: RenderPass + bloom + gamma, MSAA on the composer RTs ---------- */
@@ -505,8 +528,22 @@
     return from + (to - from) * inOutQuart((t - a) / (b - a));
   }
   var isOpen = false, clickAt = -1e9, fromOpen = 0;
-  function openAt(ms) { return seg(ms, clickAt, clickAt + (reduced ? 1 : TUNE.openMs), fromOpen, isOpen ? 1 : 0); }
+  function openAt(ms) {
+    if (frozen) {                                // test hook: leaves get their lag as a fraction of openMs
+      var dt = ms - _frozenNow;
+      return Math.max(0, Math.min(1, frozen.t + (frozen.closing ? -dt : dt) / TUNE.openMs));
+    }
+    return seg(ms, clickAt, clickAt + (reduced ? 1 : TUNE.openMs), fromOpen, isOpen ? 1 : 0);
+  }
+  var _frozenNow = 0;
   function toggleOpen(now) { fromOpen = openAt(now); isOpen = !isOpen; clickAt = now; }
+  // test hook (frame-by-frame checks from a headless browser): freeze the open
+  // fraction at t, in the "opening" (closing=false) or "closing" leaf regime
+  var frozen = null;
+  window.BOOK_SET_OPEN = function (t, closing) {
+    frozen = (t === null || t === undefined) ? null : { t: t, closing: !!closing };
+    if (frozen) { isOpen = !closing; }
+  };
 
   /* ---------- interaction ---------- */
   var mouse = { x: 0, y: 0 }, hover = 0, hoverTarget = 0;
@@ -574,11 +611,9 @@
     if (bloomPass) { bloomPass.strength = TUNE.bloom.strength; bloomPass.radius = TUNE.bloom.radius; bloomPass.threshold = TUNE.bloom.threshold; }
     setMsaa(TUNE.quality.msaa);
     for (i = 0; i < leaves.length; i++) leaves[i].visible = i < TUNE.leaves;
-    var ak = [TUNE.coverColor, TUNE.accent, TUNE.pageColor, TUNE.green].join('|');
+    var ak = [TUNE.coverColor, TUNE.accent, TUNE.pageColor, TUNE.green, TUNE.coverSource].join('|');
     if (lastArtKey && ak !== lastArtKey) drawAll();
     lastArtKey = ak;
-    var ck = [TUNE.camera.az, TUNE.camera.el, TUNE.camera.fov, TUNE.target.x, TUNE.target.y, TUNE.target.z, TUNE.fit, TUNE.fitOpen].join('|');
-    if (ck !== _camKey) { _camKey = ck; fitCamera(); }
   }
 
   /* ---------- render loop ---------- */
@@ -596,9 +631,11 @@
     }
 
     hover += (hoverTarget - hover) * 0.08;
-    var open = openAt(ms);
-    flip.rotation.z = open * Math.PI;                       // +z lifts the fore-edge (+x)
-    spinePivot.rotation.z = open * Math.PI / 2;              // the spine flattens with the book
+    _frozenNow = ms;
+    var open = openAt(ms), vA = TUNE.vAngle * Math.PI / 180;
+    rightHalf.rotation.z = open * vA;                        // right half rises by vAngle…
+    flip.rotation.z = open * (Math.PI - 2 * vA);             // …and the left half ends at π − vAngle: a V about the spine
+    spinePivot.rotation.z = open * (Math.PI / 2 - vA);       // the spine bisects the V
     // hover: the front cover alone lifts a little while the book is closed
     coverPivot.rotation.z = TUNE.hoverLift * Math.PI / 180 * hover * (1 - open);
     // leaves turn with a lag, but NEVER beyond the flipping half: opening they
@@ -607,7 +644,7 @@
     for (var i = 0; i < leaves.length; i++) {
       var lag = TUNE.leafLag * (i + 1);
       var o = reduced ? open : Math.min(open, openAt(isOpen ? ms - lag : ms + lag));
-      leaves[i].rotation.z = o * Math.PI;
+      leaves[i].rotation.z = o * (Math.PI - 2 * vA);          // same frame as the flip group (child of the right half)
     }
     book.position.y = reduced ? 0 : TUNE.bob * Math.sin(ms / 1400) * open;
 
@@ -615,9 +652,7 @@
     par.y += ((reduced ? 0 : mouse.x) * 0.22 - par.y) * 0.055;
     root.rotation.x = par.x; root.rotation.y = par.y;
 
-    // the camera pans from the closed framing to the open framing
-    _v.copy(cam.tClosed).lerp(cam.tOpen, open);
-    placeCamera(_v, cam.D);
+    fitCamera(false);                            // live framing: never cut, zooms out mid-flip
 
     if (composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);

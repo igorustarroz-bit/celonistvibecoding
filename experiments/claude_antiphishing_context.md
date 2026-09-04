@@ -89,8 +89,29 @@ apply **all** of this before the first push:
     (`_linkedin_partner_id`, `lintrk`), Bing UET (`uetq`), AdRoll, RudderStack, StackAdapt,
     Oktopost, HockeyStack, Qualtrics, factors.ai, OneTrust/Optanon, `<img>` pixels pointing to
     `px.ads.linkedin.com` and the like.
-11. Only these are **kept**: `aem.js`, `scripts.js`, `main.*.js` and `*.chunk.js` — they are the
-    site's layout code, not tracking.
+11. Only these are **kept**: `aem.js` and `scripts.js` — they are the site's layout code.
+    **Correction 2026-09-04:** this rule used to keep `main.*.js` and `*.chunk.js` too. That
+    was wrong. `main.<hash>.js` (loaded with a `data-id="CUHH…"` attribute) is the **TikTok
+    Pixel SDK** (`analytics.tiktok.com/i18n/pixel/static/main.*.js`; it defines
+    `TiktokAnalyticsObject` and throws `Object._ttq_create is not a function` in the console),
+    and `10.*.chunk.js` / `11.*.chunk.js` are the **Qualtrics** site-intercept bundle (their
+    header says so). Both had been published in `Concept-Video-Scroll/` for months; removed
+    from the four pages there and gitignored. Rule of thumb: if a script is not one of the two
+    AEM files or ours, open it and read its first lines before keeping it.
+11b. Two more things the first cleanup left behind, found the same day, both in the
+    third-party category rather than the identity one:
+    - **`<picture><source srcset="https://delivery-…adobeaemcloud.com/…">`** — the CDN
+      candidates the browser keeps when it saves the page. They are the only remaining
+      *third-party network requests* on the page (Chromium picks the `<source>` over the local
+      `<img>`). Delete every `<source>` whose `srcset` points off-site; the local `<img>`
+      fallback stays. `clean-saved-page.py` already does this for new pages. Still present in
+      `3d-globe/` and `datacore/` (plus one `<video src="https://www.celonis.com/…mp4">`
+      each) as of 2026-09-04 — pending.
+    - **Tracking pixels saved as extension-less files**: `<img src="./…_files/out">`,
+      `out-1` … `out-12`, and the Bing UET `<div id="batBeacon…">` with its two `<img
+      src="./…_files/0">` / `0-1`. Zero-byte or 1×1 files; remove the tags and gitignore the
+      files. The GTM container saved as a file literally named `js` (340 KB) and AdRoll's
+      `sendrolling.js` were also still published, unreferenced: gitignore them too.
 12. The tracking files are not deleted from disk, they just stop being published:
     `git rm --cached` + an explicit list in `.gitignore`. In the original cleanup there were 184.
 
@@ -167,6 +188,29 @@ for f in files:
 print("\npublished html: %d | with signals: %d"%(len(files),bad))
 PY
 ```
+
+The sweep above only looks at identity tags, iframes, forms and `<a href>`. It is **blind**
+to the leftovers of rules 11/11b, so run this second pass as well; it must print nothing:
+
+```bash
+cd ~/repo/celonistvibecoding && python3 - <<'PYCHECK'
+import subprocess,re,io
+files=[f for f in subprocess.check_output(["git","ls-files","-z"]).decode().split("\0") if f.lower().endswith(".html")]
+for f in files:
+    h=io.open(f,encoding="utf-8",errors="surrogateescape").read()
+    scripts=sorted(set(re.findall(r'<script[^>]*\bsrc="([^"]+)"',h,re.I)))
+    saved=[s for s in scripts if ('_files/' in s or '/original/' in s) and not re.search(r'/(aem|scripts)\.js$',s)]
+    ext=re.findall(r'<(?!a\b|use\b)[a-z]+ [^>]*(?:src|srcset|poster)="((?:https?:)?//[^"]+)"',h,re.I)
+    pix=re.findall(r'<img[^>]*src="[^"]*/(?:out(?:-\d+)?|\d+(?:-\d+)?)"',h,re.I)
+    if saved or ext or pix:
+        print(f); print('   saved-page scripts:',saved); print('   external src/srcset:',len(ext),ext[:2]); print('   pixels:',len(pix))
+PYCHECK
+```
+
+(`<use href="https://www.celonis.com/…spritemap.svg#…">` is deliberately excluded: browsers
+do not fetch cross-origin `<use>` targets, and `lib/sprite.js` rewrites them anyway.)
+Then the browser check: open the published page with the Network panel open — **every request
+must be same-origin**. On 2026-09-04 that check is what exposed the `<source>` CDN requests.
 
 The inert form replicas (rule 9) must keep the sweep clean: they contain no `<form>` and
 no email/password inputs by design — if the sweep ever flags one, the replica was built

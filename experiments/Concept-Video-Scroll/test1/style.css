@@ -28,3 +28,25 @@
   padding: 0;
 }
 
+/* ── Scrub progress bar ──
+   Sits on the bottom edge of the site header. --nav-h is measured from .nav-wrapper
+   by script.js (88px on desktop, 64px on phones). The fill is a transform, so it never
+   reflows. margin: 0 guards against the site's own `main > div { margin: 40px 16px }`. */
+#scrub-progress {
+  position: fixed;
+  top: var(--nav-h, 88px);
+  left: 0;
+  right: 0;
+  height: 1px;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.4);
+  z-index: 100;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  opacity: 1;
+  transition: opacity 0.4s;
+}
+#scrub-progress.idle { opacity: 0; }
+@media (max-width: 767px) {
+  #scrub-progress { height: 2px; background: rgba(255, 255, 255, 0.6); }
+}

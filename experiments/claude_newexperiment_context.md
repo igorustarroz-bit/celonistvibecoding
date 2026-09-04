@@ -14,9 +14,11 @@ Docs to keep at hand (not duplicated here):
   was skipped.
 - `claude_navfx_context.md` — the menu effect, shared by all pages.
 - The doc of whichever experiment you copy the mechanics from (`claude_globe_context.md`,
-  `claude_datacore_context.md`, `claude_3dbook_context.md`).
-- Shared libraries live in `lib/` (three.min.js, three-post.js, sprite.js, Poppins):
-  load them as `../lib/...`, never copy them into the experiment folder.
+  `claude_datacore_context.md`, `claude_3dbook_context.md`, `claude_videoscroll_context.md`).
+- Shared libraries live in `lib/` (three.min.js, three-post.js, sprite.js, Poppins,
+  gsap.min.js + ScrollTrigger.min.js 3.5.1, tilt-parallax.js, inert-form.*): load them as
+  `../lib/...`, never copy them into the experiment folder and never load them from a CDN
+  (every request must be same-origin, and the pages must work from `file://`).
 
 ---
 

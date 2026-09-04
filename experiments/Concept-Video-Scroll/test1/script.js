@@ -28,13 +28,32 @@ once(document.documentElement, "touchstart", function (e) {
 
 gsap.registerPlugin(ScrollTrigger);
 
+/* Progress bar on the bottom edge of the site header (see style.css) */
+const progressBar = document.getElementById("scrub-progress");
+const navWrapper = document.querySelector(".nav-wrapper");
+function measureNav() {
+  const h = navWrapper ? navWrapper.getBoundingClientRect().height : 0;
+  document.documentElement.style.setProperty("--nav-h", (h || 88) + "px");
+}
+measureNav();
+window.addEventListener("resize", measureNav);
+window.addEventListener("load", measureNav);
+
+/* The trigger is the video block itself (#gaita: sticky video + 500vh spacer).
+   It used to be "#container", an element that does not exist, so GSAP fell back to
+   the whole page and the video kept scrubbing long after it had scrolled out of view. */
 let tl = gsap.timeline({
   defaults: { duration: 1 },
   scrollTrigger: {
-    trigger: "#container",
+    trigger: "#gaita",
     start: "top top",
     end: "bottom bottom",
-    scrub: true
+    scrub: true,
+    onUpdate: (self) => {
+      progressBar.style.transform = "scaleX(" + self.progress + ")";
+    },
+    onLeave: () => progressBar.classList.add("idle"),
+    onEnterBack: () => progressBar.classList.remove("idle")
   }
 });
 

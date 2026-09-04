@@ -71,7 +71,12 @@ been evaluating; change it only if asked.
 - **GSAP moved from cdnjs to `lib/`**: `lib/gsap.min.js` + `lib/ScrollTrigger.min.js`
   (3.5.1, taken from the npm package `gsap@3.5.1`, `dist/`). Same-origin requests only, and
   the page now works from `file://`. Loaded as `../../lib/...` from `test1/`.
-- Cache-busting: `style.css?v=2`, `script.js?v=2`.
+- The scrub tween keeps GSAP's **default ease (`power1.out`)** — inherited from the original
+  code, so scroll position and video time are not linear (at 50 % of the block the video is
+  at 75 %). Left as is: it is the feel Igor has been looking at. The bar therefore reports
+  `video.currentTime / video.duration`, not the scroll fraction, so it always matches what is
+  on screen. If a linear scrub is ever wanted, add `ease: "none"` to the `tl.fromTo`.
+- Cache-busting: `style.css?v=2`, `script.js?v=3`.
 
 ## 4. Anti-phishing leftovers found in these pages (and fixed)
 

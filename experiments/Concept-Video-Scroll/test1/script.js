@@ -50,7 +50,11 @@ let tl = gsap.timeline({
     end: "bottom bottom",
     scrub: true,
     onUpdate: (self) => {
-      progressBar.style.transform = "scaleX(" + self.progress + ")";
+      // The bar shows the VIDEO's progress (currentTime / duration), not the raw scroll
+      // fraction: the scrub tween below keeps GSAP's default ease (power1.out), so the two
+      // are not the same thing. Falls back to the scroll fraction until metadata is loaded.
+      const d = video.duration;
+      progressBar.style.transform = "scaleX(" + (d ? video.currentTime / d : self.progress) + ")";
     },
     onLeave: () => progressBar.classList.add("idle"),
     onEnterBack: () => progressBar.classList.remove("idle")

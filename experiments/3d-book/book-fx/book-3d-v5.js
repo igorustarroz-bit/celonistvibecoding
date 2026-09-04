@@ -21,11 +21,6 @@
    the camera re-fits itself every frame to whatever the book occupies (zooming
    out while a half stands up mid-flip), so the model is never cut.
 
-   v6 (final test): while it opens, the whole book RISES and turns to face the
-   camera — the open spread is presented frontally as a wide V (spine at the
-   back, both pages angled toward the viewer), the camera zooming in on it —
-   to sell the 3D turn. TUNE.present 0 → v5 behaviour (stays flat on the table).
-
    Live knobs: window.BOOK (edit in the DevTools console, applied every frame).
    Spread copy: window.BOOK_SPREAD (edit, then BOOK_REDRAW()).
    ========================================================================= */
@@ -46,11 +41,7 @@
   /* ---------- LIVE KNOBS: window.BOOK ---------- */
   var TUNE = window.BOOK = {
     openMs: 1400,           // duration of the open / close transition
-    vAngle: 7,              // degrees each half rises from the spine when open on the table (0 = flat)
-    present: 1,             // 0 = opens flat on the table (v5); 1 = rises and faces the camera while opening (v6)
-    presentV: 34,           // degrees each half angles toward the viewer in the presented pose (the wide V)
-    presentTilt: 12,        // degrees the presented spread leans back (top away from the viewer); negative = leans forward
-    presentEase: 1.0,       // 1 = rise in step with the flip; >1 = the rise lags (starts flatter, ends together)
+    vAngle: 7,              // degrees each half rises from the spine when open (0 = flat)
     coverSource: 'photo',   // 'photo' = original artwork unwarped from the product shot; 'drawn' = canvas replica
     hoverLift: 4,           // degrees the front cover lifts while the pointer is over the closed book (0 = none)
     leaves: 5,              // loose leaves that turn with the flipping half
@@ -658,8 +649,6 @@
   /* ---------- render loop ---------- */
   var t0 = performance.now();
   var popDone = false;
-  var _up = new THREE.Vector3(), _right = new THREE.Vector3(), _fwd = new THREE.Vector3(), _camUp = new THREE.Vector3();
-  var _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _qId = new THREE.Quaternion(), _m = new THREE.Matrix4();
   function render(now) {
     var ms = now - t0;
     applyTune();
@@ -673,10 +662,7 @@
 
     hover += (hoverTarget - hover) * 0.08;
     _frozenNow = ms;
-    var open = openAt(ms);
-    // presentation: how far the book has risen toward the camera (0 = on the table)
-    var pres = TUNE.present * Math.pow(open, TUNE.presentEase);
-    var vA = (TUNE.vAngle + (TUNE.presentV - TUNE.vAngle) * pres) * Math.PI / 180;
+    var open = openAt(ms), vA = TUNE.vAngle * Math.PI / 180;
     rightHalf.rotation.z = open * vA;                        // right half rises by vAngle…
     flip.rotation.z = open * (Math.PI - 2 * vA);             // …and the left half ends at π − vAngle: a V about the spine
     spinePivot.rotation.z = open * (Math.PI / 2 - vA);       // the spine bisects the V
@@ -695,25 +681,6 @@
       leaves[i].children[1].position.y = ey - 0.0002;
     }
     book.position.y = reduced ? 0 : TUNE.bob * Math.sin(ms / 1400) * open;
-    // rise and face the camera: book +y (the spread's normal) → the camera direction,
-    // book −z (top of the pages) → the camera's up, leaning back by presentTilt
-    if (pres > 0) {
-      _up.set(0, 1, 0);
-      _right.crossVectors(_up, cam.dir).normalize();           // screen-right on the table plane
-      _fwd.copy(cam.dir);
-      var tilt = TUNE.presentTilt * Math.PI / 180;             // lean: rotate the target normal about screen-right
-      _q1.setFromAxisAngle(_right, -tilt); _fwd.applyQuaternion(_q1);
-      // third axis = X × Y so the basis stays right-handed (a left-handed one is
-      // not a rotation and setFromRotationMatrix turns it into a 45° mess).
-      // right × fwd points DOWN the screen, which is where book +z must go so
-      // that −z — the top of the pages — points up
-      _camUp.crossVectors(_right, _fwd).normalize();
-      _m.makeBasis(_right, _fwd, _camUp);
-      _q2.setFromRotationMatrix(_m);
-      book.quaternion.slerpQuaternions(_qId, _q2, pres);
-    } else {
-      book.quaternion.copy(_qId);
-    }
 
     par.x += ((reduced ? 0 : mouse.y) * 0.05 - par.x) * 0.055;
     par.y += ((reduced ? 0 : mouse.x) * 0.22 - par.y) * 0.055;

@@ -8,15 +8,34 @@
 > This document lives in `experiments/` alongside the other `claude_*_context.md`
 > files. **Paths in this doc are relative to `experiments/`.**
 
-Status: v5, 2026-09-04. v1 (`ec88f1a`), v2 (`7c54417`), v3 (`33388d0`) and v4 (`1903e1f`)
-were all reviewed by Igor the same day; §0 lists what he closed. Awaiting his visual
-tuning of v5.
+Status: v6, 2026-09-04 — the "final test" pose. **v5 is the SAVED reference version**
+(Igor: "guarda esta versión para volver a ella"): git tag `3d-book-v5` (commit
+`4c00fc3`), and a frozen copy that still runs on Pages: `3d-book/index-v5.html` +
+`book-fx/book-3d-v5.js` (linked from the root index). v6 is `index.html` +
+`book-fx/book-3d.js`; setting `BOOK.present = 0` in v6 gives the v5 behaviour.
+v1 `ec88f1a`, v2 `7c54417`, v3 `33388d0`, v4 `1903e1f`, v5 `4c00fc3`.
 
 Igor's rule for the whole project: everything is delivered in English — the
 experiments' UI, the context files and the comments inside the code. Orders may
 come in Spanish; the output does not.
 
 ## 0. Igor's reviews (2026-09-04), CLOSED decisions
+
+### v5 → v6 (fifth review) — rise and face the camera ("final test")
+
+Igor's Photoshop sketch: on opening, the book should end up standing, presented
+frontally as a wide V with the spine at the back and both pages angled toward the
+viewer, zoomed in — "to sell the 3D turn and the zoom". Implemented as a rotation of
+the whole `book` group that grows with the open fraction (`pres = present ·
+open^presentEase`): book +y (the spread's normal) → the camera direction leaned back by
+`presentTilt` (12°), book −z (top of the pages) → screen up; quaternion slerp from the
+table pose. The V widens from `vAngle` (7°, table) to `presentV` (34°, presented). The
+live camera fit does the zoom. Knobs: `present` (0 = v5 flat-lay), `presentV`,
+`presentTilt`, `presentEase`.
+Mistake made on the way: building the target basis with the third axis pointing the
+wrong way gives a LEFT-handed matrix; `setFromRotationMatrix` on it yields a ~45°
+skewed pose. Third axis = X × Y, always.
+Frame check redone in this pose (13 + 13 frames): nothing crosses.
 
 ### v4 → v5 (fourth review) — the left page must be the LAST sheet to land
 
@@ -218,7 +237,8 @@ label, the pull-quote rule and the folio rules).
 Applied every frame, Igor's workflow (tune live, then paste the values as the new
 defaults in `book-fx/book-3d.js`):
 
-`openMs 1400 · vAngle 7 · coverSource 'photo' · hoverLift 4 · leaves 5 · leafLag 110 ·
+`openMs 1400 · vAngle 7 · present 1 · presentV 34 · presentTilt 12 · presentEase 1 ·
+coverSource 'photo' · hoverLift 4 · leaves 5 · leafLag 110 ·
 bob 0.006 · edgeOpacity 0.30 ·
 coverColor #0d0d0f · pageColor #e6e4df · accent #0f5bff · green #5cfe50 · clearcoat
 0.45 · roughness 0.52 · envIntensity 0.65 · keyLight 0.55 · ambient 0.12 · bloom
@@ -303,7 +323,9 @@ It is applied to `original.html` in place; `index.html` is then derived from it.
 
 ## 8. Open points / ideas for the next pass
 
-- Igor has not tuned v4 yet: `vAngle`, camera az/el/fov against the photo, leaf count,
+- Igor has not tuned v6 yet: `presentV`/`presentTilt` against his sketch (it also has
+  a slight roll and a view from a bit higher — `camera.el`), `vAngle`, camera az/el/fov
+  against the photo for the closed state, leaf count,
   edge opacity, whether the hover lift stays, and the spread's copy/photos (both
   editable without touching the geometry: `BOOK_SPREAD` and `book-fx/spread/*.jpg`).
 - The unwarped cover is ~400 source pixels wide stretched to 1024: soft up close. A

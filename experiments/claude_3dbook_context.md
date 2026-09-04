@@ -232,18 +232,30 @@ label, the pull-quote rule and the folio rules).
   No real customer, person or figure is quoted.
 - The loose leaves carry a generic "text lines" texture on both sides.
 
+> **IGOR'S RULE (2026-09-04) — the definitive version ALWAYS ships with tuning handles,
+> and ALWAYS with the antialiasing controls.** Every experiment's final page carries a
+> tuner panel like the Data Core's glass tuner (bottom-right, collapsed pill, expands
+> upwards, sliders wired to the `window.<KNOBS>` object the render loop reads every
+> frame, Copy settings / Reset), and that panel always includes the antialias section:
+> MSAA samples (0/2/4/8 on the composer's render targets, WebGL2), FXAA 0/1, max pixel
+> ratio — plus a read-out of what is REALLY in effect (WebGL2 or not, samples, FXAA,
+> dpr), because Igor cannot tell from the picture whether it is applied. Reference
+> implementations: `datacore/anime-datacore/datacore-tuner.js` and
+> `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()` for the read-out).
+
 ## 3. Live knobs — `window.BOOK` (edit in the DevTools console)
 
 Applied every frame, Igor's workflow (tune live, then paste the values as the new
 defaults in `book-fx/book-3d.js`):
 
-`openMs 1400 · vAngle 7 · present 1 · presentV 34 · presentTilt 12 · presentEase 1 ·
+`openMs 1400 · vAngle 7 · present 1 · presentV 16.5 (book opening 147°, Igor's value via
+the tuner, 2026-09-04) · presentTilt 12 · presentEase 1 ·
 coverSource 'photo' · hoverLift 4 · leaves 5 · leafLag 110 ·
 bob 0.006 · edgeOpacity 0.30 ·
 coverColor #0d0d0f · pageColor #e6e4df · accent #0f5bff · green #5cfe50 · clearcoat
 0.45 · roughness 0.52 · envIntensity 0.65 · keyLight 0.55 · ambient 0.12 · bloom
 {strength 0.14, radius 0.26, threshold 0.78} · camera {az −50, el 50, fov 11} · fit 0.90 ·
-camSmooth 0.12 · quality {msaa 4, dprMax 2}`
+camSmooth 0.12 · quality {msaa 4, fxaa 0, dprMax 2}`
 
 Changing `coverColor`/`accent`/`pageColor`/`green` redraws the cover and the spread;
 `camera.*`, `fit` take effect on the next frame (the camera re-fits itself live). The camera is the knob to
@@ -254,7 +266,10 @@ The spread copy is `window.BOOK_SPREAD` + `BOOK_REDRAW()`.
 **Book tuner (v7, Igor asked for it):** `book-fx/book-tuner.js`, same recipe as the Data
 Core's glass tuner — fixed bottom-right, starts collapsed as "● BOOK TUNER", expands
 upwards, sliders wired to `window.BOOK`, Copy settings (JSON to paste as defaults) and
-Reset. Sections: Presented pose (rise to camera, **book opening in degrees** — the total
+Reset. v8 adds the antialias controls (MSAA samples, FXAA 0/1, max pixel ratio) and an
+"in effect" read-out (WebGL2, samples, FXAA, dpr) fed by `window.BOOK_INFO()`; FXAA is a
+real pass now (after the gamma pass, off by default), and changing max pixel ratio
+re-sizes live. Sections: Presented pose (rise to camera, **book opening in degrees** — the total
 angle between the two pages, 180° = flat, stored as `presentV = (180 − opening)/2` —,
 lean back, rise lag), Table pose (V per half), Camera (azimuth, elevation, focal, fit,
 smoothing), Motion (open time, leaves, leaf lag, hover lift, float), Look (edges,

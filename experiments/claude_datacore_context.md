@@ -294,6 +294,17 @@ https://www.celonis.com/...); `original.html` (untouched copy with the video);
 `Data Core _ Celonis_files/` (assets, video, still and the SVG of the
 plates). NO A↔B switch (removed in v19; navigation is the root index).
 
+> **IGOR'S RULE (2026-09-04) — the definitive version ALWAYS ships with tuning handles,
+> and ALWAYS with the antialiasing controls.** Every experiment's final page carries a
+> tuner panel like the Data Core's glass tuner (bottom-right, collapsed pill, expands
+> upwards, sliders wired to the `window.<KNOBS>` object the render loop reads every
+> frame, Copy settings / Reset), and that panel always includes the antialias section:
+> MSAA samples (0/2/4/8 on the composer's render targets, WebGL2), FXAA 0/1, max pixel
+> ratio — plus a read-out of what is REALLY in effect (WebGL2 or not, samples, FXAA,
+> dpr), because Igor cannot tell from the picture whether it is applied. Reference
+> implementations: `datacore/anime-datacore/datacore-tuner.js` and
+> `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()` for the read-out).
+
 ## 12. CLOSED decisions — do not reopen
 
 - Opaque tops in variant A; in B, transmission ALWAYS low
@@ -311,6 +322,10 @@ plates). NO A↔B switch (removed in v19; navigation is the root index).
 - No central box on the bottom floor (removed in v16).
 - No permanent labels (since v16).
 - Refraction lives off the frost, not off the displacement (low refract, 0.13).
+- The glass tuner stays in the definitive page, with its Sharpness section (MSAA,
+  FXAA, pixel ratio, pre-pass res) — Igor's rule above. It does not yet show an
+  "in effect" read-out like the book tuner's `BOOK_INFO()`; add one when the panel is
+  next touched.
 
 ## 13. Performance and publishing
 

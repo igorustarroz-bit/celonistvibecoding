@@ -109,6 +109,17 @@ Add to **all** saved pages in the folder (index and original), right before `</b
 - When you touch the JS you must **bump the `?v=`** on all 6+ pages: Pages caches for
   about 10 min.
 
+> **IGOR'S RULE (2026-09-04) — the definitive version ALWAYS ships with tuning handles,
+> and ALWAYS with the antialiasing controls.** Every experiment's final page carries a
+> tuner panel like the Data Core's glass tuner (bottom-right, collapsed pill, expands
+> upwards, sliders wired to the `window.<KNOBS>` object the render loop reads every
+> frame, Copy settings / Reset), and that panel always includes the antialias section:
+> MSAA samples (0/2/4/8 on the composer's render targets, WebGL2), FXAA 0/1, max pixel
+> ratio — plus a read-out of what is REALLY in effect (WebGL2 or not, samples, FXAA,
+> dpr), because Igor cannot tell from the picture whether it is applied. Reference
+> implementations: `datacore/anime-datacore/datacore-tuner.js` and
+> `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()` for the read-out).
+
 ## 5. Build the effect
 
 Our own JS goes in the experiment subfolder, loaded from `index.html` with its own

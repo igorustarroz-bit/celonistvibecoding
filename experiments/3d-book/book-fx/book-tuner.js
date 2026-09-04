@@ -145,7 +145,20 @@
     slider('bloom radius', 'bloom.radius', 0, 1);
     slider('bloom threshold', 'bloom.threshold', 0, 1);
     slider('MSAA samples', 'quality.msaa', 0, 8, { step: 2 });
+    slider('FXAA (0/1)', 'quality.fxaa', 0, 1, { step: 1 });
     slider('max pixel ratio', 'quality.dprMax', 0.5, 3, { step: 0.25 });
+    // what is actually in effect right now (MSAA needs WebGL2; the number is the RT's samples)
+    var info = document.createElement('div');
+    info.className = 'row'; info.style.gridTemplateColumns = '1fr';
+    info.innerHTML = '<label id="bk-info" style="color:#777">…</label>';
+    body.appendChild(info);
+    function refreshInfo() {
+      if (!window.BOOK_INFO) return;
+      var i = window.BOOK_INFO();
+      info.querySelector('#bk-info').textContent = 'in effect: ' + (i.webgl2 ? 'WebGL2, MSAA ' + i.msaaSamples + 'x' : 'WebGL1, no MSAA') +
+        ', FXAA ' + (i.fxaa ? 'on' : 'off') + ', dpr ' + i.pixelRatio.toFixed(2);
+    }
+    setInterval(refreshInfo, 500); refreshInfo();
 
     var btns = document.createElement('div');
     btns.className = 'btns';

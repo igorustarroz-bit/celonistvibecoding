@@ -49,7 +49,7 @@
     openMs: 1400,           // duration of the open / close transition
     vAngle: 7,              // degrees each half rises from the spine when open on the table (0 = flat)
     present: 1,             // 0 = opens flat on the table (v5); 1 = rises and faces the camera while opening (v6)
-    presentV: 34,           // degrees each half angles toward the viewer in the presented pose (the wide V)
+    presentV: 16.5,         // degrees each half angles toward the viewer in the presented pose (Igor, 2026-09-04: book opening 147°)
     presentTilt: 12,        // degrees the presented spread leans back (top away from the viewer); negative = leans forward
     presentEase: 1.0,       // 1 = rise in step with the flip; >1 = the rise lags (starts flatter, ends together)
     coverSource: 'photo',   // 'photo' = original artwork unwarped from the product shot; 'drawn' = canvas replica
@@ -71,7 +71,7 @@
     camera: { az: -50, el: 50, fov: 11 },  // photographer's position: az from +z toward +x (deg), elevation (deg); small fov = little perspective
     fit: 0.90,              // 1 = the book fills the stage (re-fitted live to whatever it occupies)
     camSmooth: 0.12,        // per-frame lerp of the camera toward its fitted place
-    quality: { msaa: 4, dprMax: 2 }
+    quality: { msaa: 4, fxaa: 0, dprMax: 2 }   // antialiasing controls: real MSAA on the composer RTs, optional FXAA pass, pixel-ratio cap
   };
 
   /* ---------- renderer / scene ---------- */
@@ -478,6 +478,7 @@
     renderer.setSize(W, H, true);
     camera.aspect = W / H;
     if (composer) { composer.setPixelRatio(dpr); composer.setSize(W, H); }
+    if (fxaaPass) fxaaPass.material.uniforms.resolution.value.set(1 / (W * dpr), 1 / (H * dpr));
     fitCamera(true);
   }
   window.addEventListener('resize', resize);
@@ -542,15 +543,26 @@
   }
 
   /* ---------- post-processing: RenderPass + bloom + gamma, MSAA on the composer RTs ---------- */
-  var composer = null, bloomPass = null;
+  var composer = null, bloomPass = null, fxaaPass = null;
   if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
     composer = new THREE.EffectComposer(renderer);
     composer.addPass(new THREE.RenderPass(scene, camera));
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), TUNE.bloom.strength, TUNE.bloom.radius, TUNE.bloom.threshold);
     composer.addPass(bloomPass);
     if (THREE.ShaderPass && THREE.GammaCorrectionShader) composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
+    // FXAA after the gamma pass (it expects sRGB input), off by default — same as the Data Core
+    if (THREE.ShaderPass && THREE.FXAAShader) {
+      fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+      fxaaPass.enabled = !!TUNE.quality.fxaa;
+      composer.addPass(fxaaPass);
+    }
     if (renderer.capabilities.isWebGL2) setMsaa(TUNE.quality.msaa);
   }
+  // what is really in effect (the tuner shows it): WebGL2 is required for MSAA on render targets
+  window.BOOK_INFO = function () {
+    return { webgl2: !!renderer.capabilities.isWebGL2, msaaSamples: (composer && renderer.capabilities.isWebGL2) ? composer.renderTarget1.samples : 0,
+             fxaa: !!(fxaaPass && fxaaPass.enabled), pixelRatio: renderer.getPixelRatio() };
+  };
   var msaaNow = -1;
   function setMsaa(n) {
     if (!composer || !renderer.capabilities.isWebGL2) return;
@@ -652,6 +664,8 @@
     for (var i = 0; i < edgeLines.length; i++) edgeLines[i].material.opacity = TUNE.edgeOpacity * edgeLines[i].userData.mul;
     if (bloomPass) { bloomPass.strength = TUNE.bloom.strength; bloomPass.radius = TUNE.bloom.radius; bloomPass.threshold = TUNE.bloom.threshold; }
     setMsaa(TUNE.quality.msaa);
+    if (fxaaPass) fxaaPass.enabled = !!TUNE.quality.fxaa;
+    if (Math.abs((renderer.getPixelRatio()) - Math.min(window.devicePixelRatio || 1, TUNE.quality.dprMax || 2)) > 1e-3) resize();   // dprMax changed live
     layoutLeaves();
     var ak = [TUNE.coverColor, TUNE.accent, TUNE.pageColor, TUNE.green, TUNE.coverSource].join('|');
     if (lastArtKey && ak !== lastArtKey) drawAll();

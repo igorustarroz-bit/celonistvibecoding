@@ -8,7 +8,8 @@
 > This document lives in `experiments/` alongside the other `claude_*_context.md`
 > files. **Paths in this doc are relative to `experiments/`.**
 
-Status: **DEFINITIVE — v8 (2026-09-04, Igor: "esta es la versión definitiva del libro").**
+Status: **DEFINITIVE (2026-09-04, Igor: "esta es la versión definitiva del libro") — now v9:
+editorial interior pages on the turning leaves.**
 `index.html` + `book-fx/book-3d.js` + `book-fx/book-tuner.js`. The other versions were
 removed from the repo on Igor's instruction (the frozen v5 copy `index-v5.html` /
 `book-3d-v5.js` and its link in the root index); history keeps them: git tag
@@ -231,7 +232,18 @@ label, the pull-quote rule and the folio rules).
 - The copy is fictional and deliberately in the register of the real guide
   (process mining, event log, "green line", Scope 3, order-to-cash / procure-to-pay).
   No real customer, person or figure is quoted.
-- The loose leaves carry a generic "text lines" texture on both sides.
+- **Interior pages (v9, Igor: "the pages that turn must have the same column structure
+  and editorial look as the final two, without images").** Each loose leaf carries a
+  real page on each side, drawn with the same grid as the spread (margins, running head
+  + hairline, two columns, folio — even pages left / odd pages right, like 24 / 25) at
+  3/4 resolution (768 × 1060, 10 textures). Four layout variants cycle: subhead across +
+  two columns; body left + pull quote right (like page 25); standfirst across + hairline
+  + two columns; numbered list ("01 02 03" in green) left + body right. Columns are
+  filled with paragraphs down to the folio area (`fillCol`). Copy lives in
+  `BOOK_SPREAD.interior` (subheads, standfirsts, quotes, list, body). Page numbers: leaf i
+  = 15+2i (front) / 16+2i (back), so with 5 leaves the last back is 24 = the left page.
+  Back-side textures are turned 180° like `leftTex`. `BOOK_LEAF_PAGES` exposes the
+  canvases for checking.
 
 > **IGOR'S RULE (2026-09-04) — the definitive version ALWAYS ships with tuning handles,
 > and ALWAYS with the antialiasing controls.** Every experiment's final page carries a

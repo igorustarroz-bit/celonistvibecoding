@@ -231,7 +231,26 @@
     quote: '“We knew our Scope 3 number to two decimals and had no idea which process produced it.”',
     quoteBy: 'Head of Logistics, European consumer goods manufacturer',
     kpis: [['−12%', 'transport emissions in the first two quarters'], ['3.4 days', 'shorter inbound lead time, same fleet'], ['1 process', 'to start with — not a programme']],
-    caption2: 'Sustainability and yield are the same conversation on a plant floor: fewer rushes, fuller loads, fewer touches.'
+    caption2: 'Sustainability and yield are the same conversation on a plant floor: fewer rushes, fuller loads, fewer touches.',
+    // interior pages (the loose leaves that turn): same grid as the spread, no photos
+    interior: {
+      subheads: ['The gap between the target and the order', 'What an event log knows that a report does not', 'Start with one process, not a programme', 'Reading emissions the way you read lead time', 'Where the exceptions live'],
+      standfirsts: ['A sustainability target is a promise made at the top of the organisation. It is kept, or broken, thousands of times a day at the bottom of a purchase order.',
+        'Nobody plans an expedited air shipment. It happens because a plant ran short, a supplier was late, a customer moved a date — and every one of those events is in the log.'],
+      quotes: [['“The emissions were never hidden. We were just not looking where the process actually happened.”', 'Supply chain director, industrial manufacturer'],
+        ['“Once the number sat next to cost and lead time on the same screen, the conversation changed in a week.”', 'Head of Sustainability, retail group']],
+      list: ['Which process produced the emissions this week — and which step inside it?', 'Which exceptions cost the most: rushes, half-empty loads, reroutes, returns?', 'What would the same orders have emitted had the process run as designed?'],
+      body: [
+        'Most organisations can quote their Scope 3 figure. Far fewer can say which order, which route or which supplier produced it, or what it would have been had the process run the way it was designed. That gap is not a data problem — the data exists in every ERP — but a visibility problem.',
+        'Process mining reconstructs the process from the timestamps systems already record: order created, goods issued, shipment booked, invoice posted. Laid end to end they show how work really flows, where it waits and where it takes the long way round.',
+        'Attach an emission factor to each step — a kilometre by road, a pallet by air, a container by sea — and the same reconstruction yields the carbon of every order, not an average per category but an actual per case.',
+        'The pattern repeats across the cases in this guide: the biggest reductions came not from new suppliers or new fleets but from removing the exceptions that nobody had decided to have in the first place.',
+        'A rushed order is rarely a single decision. It is a chain of small ones — a late confirmation, a missing document, a stock transfer that arrived after the truck left — each reasonable on its own.',
+        'This is why the realists in this guide start narrow. One process, one plant, one uncomfortable number. Widen the scope only when the first loop runs by itself.',
+        'The green line, in other words, is not a new report. It is a property of the process, and it improves the way lead time and cost improve: by fixing the flow.',
+        'None of the teams profiled here waited for perfect emission factors. They used what was defensible, made the method explicit, and let the ranking of exceptions guide the work while the factors matured.'
+      ]
+    }
   };
 
   function drawLeftPage() {
@@ -297,16 +316,88 @@
     rightTex.needsUpdate = true;
   }
 
-  // a loose leaf: faint text lines (both sides share the texture)
-  function makeLeafTexture() {
-    var c = document.createElement('canvas'); c.width = 512; c.height = 707;
-    var g = c.getContext('2d');
-    g.fillStyle = TUNE.pageColor; g.fillRect(0, 0, 512, 707);
-    g.fillStyle = 'rgba(0,0,0,0.10)';
-    for (var y = 90; y < 640; y += 14) g.fillRect(44, y, (y % 3 === 0 ? 300 : 420) + (y % 7) * 6, 3);
-    return makeTex(c);
+  // interior pages for the loose leaves: same grid as the spread (margins,
+  // running head + hairline, two columns, pull quote, folio) with no photos.
+  // Igor: the pages that turn must look as editorial as the two final ones.
+  // Four layout variants cycle through the leaves; pages are numbered so the
+  // last leaf's back (the left page, 24) follows on. Drawn at 3/4 of the spread
+  // resolution to keep 10 textures light.
+  var LEAF_W = 768, LEAF_H = 1060, LEAF_SCALE = LEAF_W / PAGE_W;
+  var leafPages = [];                          // { canvas, tex, pageNo }
+  function drawLeafPage(lp) {
+    var g = lp.canvas.getContext('2d'), I = SPREAD.interior, n = lp.pageNo, odd = n % 2 === 1;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = TUNE.pageColor; g.fillRect(0, 0, LEAF_W, LEAF_H);
+    g.scale(LEAF_SCALE, LEAF_SCALE);            // draw in the spread's 1024 × 1414 coordinates
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    var colW = (PAGE_W - 2 * M - 40) / 2, x1 = M, x2 = M + colW + 40, lh = 30;
+    // running head + hairline (odd pages: right-aligned, like page 25)
+    g.fillStyle = 'rgba(0,0,0,0.55)'; g.font = '500 17px ' + FONT;
+    if (odd) { g.textAlign = 'right'; g.fillText(SPREAD.runningHead, PAGE_W - M, 96); g.textAlign = 'left'; }
+    else g.fillText(SPREAD.runningHead, M, 96);
+    g.fillRect(M, 110, PAGE_W - 2 * M, 1.5);
+    var variant = lp.variant, y = 160, k = lp.seed;
+    var B = I.body, pick = function (arr, j) { return arr[(k + j) % arr.length]; };
+    var BOTTOM = PAGE_H - 150;                  // keep clear of the folio
+    // fill a column with body paragraphs (from index j on) while they fit
+    function fillCol(x, y0, j) {
+      g.fillStyle = '#1a1a1a'; g.font = '400 21px ' + FONT;
+      var y = y0, tries = 0;
+      while (tries < B.length) {
+        var t = pick(B, j + tries), lines = 0, words = t.split(' '), line = '';
+        for (var w = 0; w < words.length; w++) { var test = line ? line + ' ' + words[w] : words[w]; if (g.measureText(test).width > colW && line) { lines++; line = words[w]; } else line = test; }
+        lines++;
+        if (y + lines * lh > BOTTOM) break;
+        y = para(g, t, x, y, colW, lh) + 14; tries++;
+      }
+      return y;
+    }
+    if (variant === 0) {                        // subhead across, then two columns
+      g.fillStyle = '#111'; g.font = '600 34px ' + FONT;
+      y = para(g, pick(I.subheads, 0), M, y + 20, PAGE_W - 2 * M, 42) + 26;
+      fillCol(x1, y, 0); fillCol(x2, y, 3);
+    } else if (variant === 1) {                 // body left, pull quote + body right (like page 25)
+      fillCol(x1, y, 0);
+      var q = pick(I.quotes, 0);
+      g.fillStyle = TUNE.green; g.fillRect(x2, y - 4, 4, 190);
+      g.fillStyle = '#111'; g.font = '500 30px ' + FONT;
+      var a2 = para(g, q[0], x2 + 28, y + 26, colW - 28, 38);
+      g.fillStyle = '#5c5a55'; g.font = '400 17px ' + FONT;
+      a2 = para(g, q[1], x2 + 28, a2 + 6, colW - 28, 22);
+      fillCol(x2, a2 + 34, 3);
+    } else if (variant === 2) {                 // standfirst across, hairline, two columns
+      g.fillStyle = '#111'; g.font = '500 30px ' + FONT;
+      y = para(g, pick(I.standfirsts, 0), M, y + 14, PAGE_W - 2 * M, 40) + 18;
+      g.fillStyle = '#111'; g.fillRect(M, y, PAGE_W - 2 * M, 1.5); y += 40;
+      fillCol(x1, y, 1); fillCol(x2, y, 5);
+    } else {                                    // numbered list left, body right
+      g.fillStyle = '#111'; g.font = '600 26px ' + FONT;
+      var d1 = para(g, pick(I.subheads, 1), x1, y + 10, colW, 34) + 18;
+      for (var li2 = 0; li2 < I.list.length; li2++) {
+        g.fillStyle = TUNE.green; g.font = '600 44px ' + FONT; g.fillText('0' + (li2 + 1), x1, d1 + 36);
+        g.fillStyle = '#1a1a1a'; g.font = '400 20px ' + FONT;
+        d1 = para(g, I.list[li2], x1 + 64, d1 + 8, colW - 64, 27) + 30;
+      }
+      fillCol(x1, d1 + 10, 2); fillCol(x2, y, 5);
+    }
+    // folio: even pages left, odd pages right (book convention, as in 24 / 25)
+    g.fillStyle = TUNE.green;
+    if (odd) { g.fillRect(PAGE_W - M - 46, PAGE_H - 96, 46, 4); g.fillStyle = '#111'; g.font = '500 20px ' + FONT; g.textAlign = 'right'; g.fillText(String(n), PAGE_W - M, PAGE_H - 56); g.textAlign = 'left'; }
+    else { g.fillRect(M, PAGE_H - 96, 46, 4); g.fillStyle = '#111'; g.font = '500 20px ' + FONT; g.fillText(String(n), M, PAGE_H - 56); }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    lp.tex.needsUpdate = true;
   }
-  function drawAll() { drawCover(); drawLeftPage(); drawRightPage(); }
+  function makeLeafPage(pageNo, variant, seed, isBack) {
+    var c = document.createElement('canvas'); c.width = LEAF_W; c.height = LEAF_H;
+    var lp = { canvas: c, tex: makeTex(c), pageNo: pageNo, variant: variant, seed: seed };
+    if (isBack) { lp.tex.center.set(0.5, 0.5); lp.tex.rotation = Math.PI; }   // back planes read upright after the turn (see leftTex)
+    drawLeafPage(lp);
+    leafPages.push(lp);
+    return lp;
+  }
+  function drawLeafPages() { leafPages.forEach(drawLeafPage); }
+  window.BOOK_LEAF_PAGES = leafPages;           // debug: the interior page canvases
+  function drawAll() { drawCover(); drawLeftPage(); drawRightPage(); drawLeafPages(); }
   window.BOOK_REDRAW = drawAll;
   drawAll();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
@@ -365,7 +456,6 @@
   var edgeMatP = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
   var leftMat = new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.9, metalness: 0, envMapIntensity: 0.25 });
   var rightMat = new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.9, metalness: 0, envMapIntensity: 0.25 });
-  var leafMat = new THREE.MeshStandardMaterial({ map: makeLeafTexture(), roughness: 0.92, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.25 });
   var edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: TUNE.edgeOpacity, blending: THREE.AdditiveBlending, depthWrite: false });
   function edges(geo, opacityMul) {
     var l = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), edgeMat.clone());
@@ -426,18 +516,21 @@
   // upper half), 0 when standing, −ε when landed, which in world terms is ε
   // ABOVE the block's face. That is what a real sheet does when it peels off
   // one stack and lands on the other. Each leaf is two single-sided planes back
-  // to back (front: paper lines; back: paper lines, or the left page on the
-  // last leaf), the back 0.2 mm outward so it is the one you see when landed.
+  // to back (front: an interior page; back: an interior page, or the left page
+  // on the last leaf), the back 0.2 mm outward so it is the one you see when
+  // landed. Page numbers: leaf i is pages 15+2i (front, odd) / 16+2i (back,
+  // even), so with 5 leaves the last back would be 24 — which IS the left page.
   var leaves = [], LEAF_GAP = 0.0022;
   var leafGeo = new THREE.PlaneGeometry(PW, PH);
-  var leafFrontMat = new THREE.MeshStandardMaterial({ map: leafMat.map, roughness: 0.92, metalness: 0, envMapIntensity: 0.25 });
+  function pageMat(lp) { return new THREE.MeshStandardMaterial({ map: lp.tex, roughness: 0.92, metalness: 0, envMapIntensity: 0.25 }); }
   for (var li = 0; li < 8; li++) {
     var pv = new THREE.Group();
     pv.position.set(-BW / 2, CT + HALF, 0);          // hinge exactly at the split
-    var front = new THREE.Mesh(leafGeo, leafFrontMat);   // faces +y (toward the cover while closed)
+    var front = new THREE.Mesh(leafGeo, pageMat(makeLeafPage(15 + 2 * li, li % 4, li, false)));   // faces +y (toward the cover while closed)
     front.rotation.x = -Math.PI / 2;
-    var back = new THREE.Mesh(leafGeo, leafFrontMat);    // faces −y (up, after the turn)
+    var back = new THREE.Mesh(leafGeo, pageMat(makeLeafPage(16 + 2 * li, (li + 2) % 4, li + 3, true)));   // faces −y (up, after the turn)
     back.rotation.x = Math.PI / 2;
+    pv.userData.backPageMat = back.material;
     // the offset lives on the LEAVES, not the pivot: +ε above the split when
     // closed (inside the upper half) becomes −ε after the turn. An offset on
     // the pivot would not mirror.
@@ -456,7 +549,7 @@
     for (var i = 0; i < leaves.length; i++) {
       leaves[i].visible = i < n;
       leaves[i].userData.eps = LEAF_GAP * (i + 1);
-      leaves[i].userData.back.material = (i === n - 1) ? leftMat : leafFrontMat;
+      leaves[i].userData.back.material = (i === n - 1) ? leftMat : leaves[i].userData.backPageMat;
     }
   }
   layoutLeaves();

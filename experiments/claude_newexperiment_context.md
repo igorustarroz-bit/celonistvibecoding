@@ -116,9 +116,12 @@ Add to **all** saved pages in the folder (index and original), right before `</b
 > frame, Copy settings / Reset), and that panel always includes the antialias section:
 > MSAA samples (0/2/4/8 on the composer's render targets, WebGL2), FXAA 0/1, max pixel
 > ratio — plus a read-out of what is REALLY in effect (WebGL2 or not, samples, FXAA,
-> dpr), because Igor cannot tell from the picture whether it is applied. Reference
-> implementations: `datacore/anime-datacore/datacore-tuner.js` and
-> `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()` for the read-out).
+> dpr), because Igor cannot tell from the picture whether it is applied. The panel must
+> be hideable (× in its header; the T key / `<X>_TUNER.show()` brings it back), its
+> header is a `<div>` (the site's CSS makes every `<header>` 88 px) and it uses no
+> `backdrop-filter` (broken corners in Chrome). Reference implementations, identical in
+> behaviour: `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()`) and
+> `datacore/anime-datacore/datacore-tuner.js` (+ `DATACORE_INFO()`).
 
 ## 5. Build the effect
 

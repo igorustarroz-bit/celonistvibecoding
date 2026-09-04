@@ -3,6 +3,9 @@
    Sliders and color pickers wired to window.DATACORE — the render loop
    in datacore-3d.js reads those values every frame, so everything is
    live. "Copy" exports the settings JSON to hand over as-is.
+   2026-09-04: × in the header hides the panel (T key / DATACORE_TUNER.show()
+   restores it); Sharpness section shows what is REALLY in effect
+   (DATACORE_INFO: WebGL2, MSAA samples, FXAA, dpr) — Igor's rule.
    ========================================================================= */
 (function () {
   'use strict';
@@ -22,10 +25,16 @@
       'display:flex;flex-direction:column-reverse;',
       'font-family:Poppins,Arial,sans-serif;font-size:11px;color:#eee;',
       'background:rgba(6,6,8,.92);border:1px solid rgba(255,255,255,.25);',
-      'border-radius:12px;backdrop-filter:blur(6px);user-select:none}',
-      '#dc-tuner header{display:flex;justify-content:space-between;align-items:center;',
-      'padding:9px 12px;cursor:pointer;font-weight:600;letter-spacing:.6px}',
-      '#dc-tuner header span.dot{color:#5cfe50}',
+      // 2026-09-04 (same as the book tuner): no backdrop-filter — with a border + radius
+      // Chrome drew the corners wrong — and a plain <div> as header: the site's CSS
+      // gives every <header> element 88 px, which made the collapsed pill tall
+      'border-radius:12px;overflow:hidden;user-select:none;line-height:1.3}',
+      '#dc-tuner .hd{display:flex;justify-content:space-between;align-items:center;',
+      'padding:9px 12px;cursor:pointer;font-weight:600;letter-spacing:.6px;height:auto;min-height:0}',
+      '#dc-tuner .hd span.dot{color:#5cfe50}',
+      '#dc-tuner .hd .ctl{display:flex;gap:10px;align-items:center}',
+      '#dc-tuner .hd .ctl span{cursor:pointer;padding:0 2px;color:#aaa}',
+      '#dc-tuner .hd .ctl span:hover{color:#5cfe50}',
       '#dc-tuner .body{padding:2px 12px 10px;max-height:70vh;overflow:auto}',
       '#dc-tuner .row{display:grid;grid-template-columns:86px 1fr 34px;gap:6px;',
       'align-items:center;margin:5px 0}',
@@ -49,12 +58,22 @@
     var panel = document.createElement('div');
     panel.id = 'dc-tuner';
     panel.className = 'min';   // v19: starts collapsed
-    panel.innerHTML = '<header><span><span class="dot">●</span> GLASS TUNER</span><span id="dc-tgl">+</span></header><div class="body"></div>';
+    panel.innerHTML = '<div class="hd"><span><span class="dot">●</span> GLASS TUNER</span>' +
+      '<span class="ctl"><span id="dc-tgl" title="Expand / collapse">+</span><span id="dc-hide" title="Hide the panel (press T to bring it back)">×</span></span></div><div class="body"></div>';
     document.body.appendChild(panel);
     var body = panel.querySelector('.body');
-    panel.querySelector('header').addEventListener('click', function () {
+    panel.querySelector('.hd').addEventListener('click', function (e) {
+      if (e.target.id === 'dc-hide') { hide(); return; }
       panel.classList.toggle('min');
       panel.querySelector('#dc-tgl').textContent = panel.classList.contains('min') ? '+' : '—';
+    });
+    // hide / show: the × hides the panel entirely; the T key or DATACORE_TUNER.show() brings it back
+    function hide() { panel.style.display = 'none'; }
+    function show() { panel.style.display = ''; }
+    window.DATACORE_TUNER = { show: show, hide: hide, toggle: function () { panel.style.display === 'none' ? show() : hide(); } };
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey &&
+          !/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) window.DATACORE_TUNER.toggle();
     });
 
     function get(path) {
@@ -128,6 +147,18 @@
     slider('max pixel ratio', 'quality.dprMax', 0.5, 3, 0.25);
     slider('pre-pass res', 'quality.preRes', 0.2, 1, 0.05);
     slider('blur (not labels)', 'blur', 0, 8, 0.1);
+    // what is actually in effect right now (MSAA needs WebGL2; the number is the RT's samples)
+    var info = document.createElement('div');
+    info.className = 'row'; info.style.gridTemplateColumns = '1fr';
+    info.innerHTML = '<label id="dc-info" style="color:#777">…</label>';
+    body.appendChild(info);
+    function refreshInfo() {
+      if (!window.DATACORE_INFO) return;
+      var i = window.DATACORE_INFO();
+      info.querySelector('#dc-info').textContent = 'in effect: ' + (i.webgl2 ? 'WebGL2, MSAA ' + i.msaaSamples + 'x' : 'WebGL1, no MSAA') +
+        ', FXAA ' + (i.fxaa ? 'on' : 'off') + ', dpr ' + i.pixelRatio.toFixed(2);
+    }
+    setInterval(refreshInfo, 500); refreshInfo();
 
     section('Backdrop & bloom');
     color('studio backdrop', 'backdrop');

@@ -256,7 +256,14 @@ ANTIALIASING (v23) — two types, combinable from the tuner:
 `datacore-tuner.js`: tuning panel IN ENGLISH, fixed at bottom-right
 (right/bottom 18px), STARTS COLLAPSED as a "● GLASS TUNER" pill and
 EXPANDS UPWARDS (flex column-reverse: header at the bottom, body
-above, max-height 70vh). Sliders and color pickers hooked to
+above, max-height 70vh). 2026-09-04 (aligned with the book tuner, v25): the
+× in the header HIDES the panel completely, the **T key** or
+`DATACORE_TUNER.show()` brings it back; the header is a `<div class="hd">`,
+not a `<header>` (the site's CSS gives every `<header>` 88 px and the
+collapsed pill came out tall); no `backdrop-filter` (with border + radius
+Chrome drew broken corners); and the Sharpness section ends with an
+"in effect" read-out fed by `window.DATACORE_INFO()` (WebGL2 or not, the
+render targets' MSAA samples, FXAA on/off, pixel ratio) — Igor's rule. Sliders and color pickers hooked to
 window.DATACORE (applied every frame), Copy settings (exports the
 JSON) and Reset buttons. Igor's workflow: tune live, export the JSON and
 paste it as the new defaults in datacore-3d.js. Sharpness section (v21):
@@ -301,9 +308,12 @@ plates). NO A↔B switch (removed in v19; navigation is the root index).
 > frame, Copy settings / Reset), and that panel always includes the antialias section:
 > MSAA samples (0/2/4/8 on the composer's render targets, WebGL2), FXAA 0/1, max pixel
 > ratio — plus a read-out of what is REALLY in effect (WebGL2 or not, samples, FXAA,
-> dpr), because Igor cannot tell from the picture whether it is applied. Reference
-> implementations: `datacore/anime-datacore/datacore-tuner.js` and
-> `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()` for the read-out).
+> dpr), because Igor cannot tell from the picture whether it is applied. The panel must
+> be hideable (× in its header; the T key / `<X>_TUNER.show()` brings it back), its
+> header is a `<div>` (the site's CSS makes every `<header>` 88 px) and it uses no
+> `backdrop-filter` (broken corners in Chrome). Reference implementations, identical in
+> behaviour: `3d-book/book-fx/book-tuner.js` (+ `BOOK_INFO()`) and
+> `datacore/anime-datacore/datacore-tuner.js` (+ `DATACORE_INFO()`).
 
 ## 12. CLOSED decisions — do not reopen
 
@@ -323,9 +333,8 @@ plates). NO A↔B switch (removed in v19; navigation is the root index).
 - No permanent labels (since v16).
 - Refraction lives off the frost, not off the displacement (low refract, 0.13).
 - The glass tuner stays in the definitive page, with its Sharpness section (MSAA,
-  FXAA, pixel ratio, pre-pass res) — Igor's rule above. It does not yet show an
-  "in effect" read-out like the book tuner's `BOOK_INFO()`; add one when the panel is
-  next touched.
+  FXAA, pixel ratio, pre-pass res) and the "in effect" read-out (`DATACORE_INFO()`,
+  added 2026-09-04) — Igor's rule above.
 
 ## 13. Performance and publishing
 
@@ -360,4 +369,5 @@ RTs · v24 Igor's FINAL settings: msaa 4, fxaa 0, preRes 1, blur 0 —
 pixelation resolved · v25 horizontal padding of the pills ≥ one "o" (1.5·oW) and
 centering corrected for the letter-spacing · v26 mobile: stage 5/6 and K 0.205
 (figure ×2 in both variants) + nav-fx with a live breakpoint and
-restored in index3d.
+restored in index3d · v27→v28 (2026-09-04) tuner aligned with the book's: hideable (× / T), div header,
+no backdrop-filter, antialias read-out (`DATACORE_INFO`).

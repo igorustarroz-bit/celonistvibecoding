@@ -814,6 +814,13 @@
     }
   }
 
+  // what is really in effect (the tuner shows it) — Igor's rule: antialias controls
+  // always come with a read-out, because the picture alone does not tell
+  window.DATACORE_INFO = function () {
+    return { webgl2: !!renderer.capabilities.isWebGL2,
+             msaaSamples: (composer && renderer.capabilities.isWebGL2) ? composer.renderTarget1.samples : 0,
+             fxaa: !!(fxaaPass && fxaaPass.enabled), pixelRatio: renderer.getPixelRatio() };
+  };
   function setMsaa(n) {
     if (!composer || !renderer.capabilities.isWebGL2) return;
     n = Math.max(0, Math.min(8, Math.round(n)));

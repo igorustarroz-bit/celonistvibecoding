@@ -8,14 +8,37 @@
 > This document lives in `experiments/` alongside the other `claude_*_context.md`
 > files. **Paths in this doc are relative to `experiments/`.**
 
-Status: v4, 2026-09-04. v1 (`ec88f1a`), v2 (`7c54417`) and v3 (`33388d0`) were all
-reviewed by Igor the same day; §0 lists what he closed. Awaiting his visual tuning of v4.
+Status: v5, 2026-09-04. v1 (`ec88f1a`), v2 (`7c54417`), v3 (`33388d0`) and v4 (`1903e1f`)
+were all reviewed by Igor the same day; §0 lists what he closed. Awaiting his visual
+tuning of v5.
 
 Igor's rule for the whole project: everything is delivered in English — the
 experiments' UI, the context files and the comments inside the code. Orders may
 come in Spanish; the output does not.
 
 ## 0. Igor's reviews (2026-09-04), CLOSED decisions
+
+### v4 → v5 (fourth review) — the left page must be the LAST sheet to land
+
+Igor saw the left page covered by a blank leaf on his machine ("la página final se
+superpone con otra") and diagnosed it himself: the loose leaves were modelled BETWEEN
+the two final pages, when they must be the FIRST sheets to turn and the spread the
+last two. The v4 model had the left page on the flipped block's bottom face and the
+leaves rigidly rotated (+ε inside the upper half → −ε inside the flipped block, hidden);
+on a real GPU with the 16-bit MSAA depth the block face and a leaf 1–4 mm apart
+resolved the wrong way. Fixed by making the model physically right instead of relying
+on depth:
+
+- The upper half's bottom face is BLANK paper. **The left page is the BACK of the last
+  loose leaf to land** (`layoutLeaves()` puts `leftMat` on the back plane of leaf
+  n−1; each leaf is two single-sided planes, back 0.2 mm outward).
+- A leaf's offset from the split is **not rigid: ε·cos(angle)** — +ε inside the upper
+  half when closed, 0 standing, −ε when landed = ε ABOVE the flipped block's face. So
+  the leaves land ON TOP of the left stack in landing order (leaf i lags (i+1)·leafLag
+  and sits (i+1)·LEAF_GAP deep, LEAF_GAP 2.2 mm: deeper sheet = turns later = lands
+  higher), content sheet on top. Closing, the content sheet lifts first, as it should.
+- Frame check redone (13 + 13 frames): nothing crosses, the left face stays blank until
+  the leaves land.
 
 ### v3 → v4 (third review)
 
@@ -136,17 +159,19 @@ rightHalf         hinge at the spine's bottom edge (−BW/2, 0), rotation.z = op
   lower half      y ∈ [CT, CT+PT/2]                        — its TOP face is the RIGHT page
   spine           hinge at its bottom edge, rotation.z = open·(π/2 − v) (bisects the V)
   flip group      pivot (−BW/2, CT+PT/2), rotation.z = open·(π − 2v)
-    upper half    local y ∈ [0, PT/2]                      — its BOTTOM face is the LEFT page
+    upper half    local y ∈ [0, PT/2]                      — bottom face BLANK (v5)
     front cover   local y ∈ [PT/2, PT/2+CT], own hinge for the hover lift
-  leaves (5)      hinge at (−BW/2, CT+PT/2), leaf offset +ε ON THE LEAF (so it mirrors to −ε)
+  leaves (5)      hinge at (−BW/2, CT+PT/2); two planes per leaf at offset ε·cos(angle),
+                  ε = (i+1)·2.2 mm; the back plane of the LAST leaf is the LEFT page (v5)
 ```
 
 With v = 0 the flip puts the front cover face-down at x ∈ [−1.5, −0.5] and the upper
 half on it, both pages at y = CT+PT/2; with v = 7° both halves rise from the spine. The left
 page texture is turned 180° (`leftTex.rotation = π`) because the −y face's u runs along
-−x after the flip. Two mistakes already made: an offset on the leaf PIVOT does not
-mirror (the leaves ended up lying on top of the left page); and a leaf that lags the
-cover on close pokes through it (see §0).
+−x after the flip. Mistakes already made: an offset on the leaf PIVOT does not
+mirror; a leaf that lags the cover on close pokes through it; and putting the left page
+on the block face with the leaves rigidly inside it reads fine in software rendering but
+fails on a real GPU — and is physically wrong anyway (see §0 v5).
 
 ### Motion
 

@@ -389,7 +389,9 @@
   var flip = new THREE.Group();
   flip.position.set(-BW / 2, CT + HALF, 0);
   part.add(flip);
-  var upper = new THREE.Mesh(halfGeo, [edgeMatP, paperMat, paperMat, leftMat, edgeMatP, edgeMatP]);
+  // v5: the upper half's bottom face is BLANK paper — the LEFT page travels on
+  // the back of the last loose leaf to land (see the leaves below)
+  var upper = new THREE.Mesh(halfGeo, [edgeMatP, paperMat, paperMat, paperMat, edgeMatP, edgeMatP]);
   upper.position.set(PW / 2, HALF / 2, 0);
   flip.add(upper);
   var coverPivot = new THREE.Group();                 // hover-lift hinge, at the spine
@@ -402,24 +404,52 @@
   var e3 = edges(halfGeo, 0.5); e3.position.copy(upper.position); flip.add(e3); edgeLines.push(e3);
   var e4 = edges(halfGeo, 0.5); e4.position.copy(lower.position); part.add(e4); edgeLines.push(e4);
 
-  // loose leaves, hinged at the spine at the split height
-  var leaves = [];
+  // loose leaves, hinged at the spine at the split height.
+  // Physically they are the LAST sheets of the upper half: they turn after the
+  // block and land ON TOP of it, one over the other, so whatever lands LAST is
+  // what you read on the left. Hence (Igor, v5): the left page is the BACK of
+  // the last leaf to land; the block's bottom face and the other leaves are
+  // blank. Leaf i lags (i+1)·leafLag and sits (i+1)·LEAF_GAP inside the upper
+  // half while closed (deeper sheet = turns later = lands higher).
+  // A rigid rotation would carry a sheet at +ε INTO the flipped block (−ε), so
+  // the offset is not rigid: it is ε·cos(angle) — +ε when closed (hidden in the
+  // upper half), 0 when standing, −ε when landed, which in world terms is ε
+  // ABOVE the block's face. That is what a real sheet does when it peels off
+  // one stack and lands on the other. Each leaf is two single-sided planes back
+  // to back (front: paper lines; back: paper lines, or the left page on the
+  // last leaf), the back 0.2 mm outward so it is the one you see when landed.
+  var leaves = [], LEAF_GAP = 0.0022;
   var leafGeo = new THREE.PlaneGeometry(PW, PH);
+  var leafFrontMat = new THREE.MeshStandardMaterial({ map: leafMat.map, roughness: 0.92, metalness: 0, envMapIntensity: 0.25 });
   for (var li = 0; li < 8; li++) {
     var pv = new THREE.Group();
     pv.position.set(-BW / 2, CT + HALF, 0);          // hinge exactly at the split
-    var leaf = new THREE.Mesh(leafGeo, leafMat);
-    leaf.rotation.x = -Math.PI / 2;
-    // the offset lives on the LEAF, not the pivot: +ε above the split when
-    // closed (inside the upper half) becomes −ε after the 180° turn (inside the
-    // flipped half). An offset on the pivot would not mirror and the leaves
-    // would end up lying on top of the left page.
-    leaf.position.set(PW / 2, 0.0009 * (li + 1), 0);
-    pv.add(leaf);
+    var front = new THREE.Mesh(leafGeo, leafFrontMat);   // faces +y (toward the cover while closed)
+    front.rotation.x = -Math.PI / 2;
+    var back = new THREE.Mesh(leafGeo, leafFrontMat);    // faces −y (up, after the turn)
+    back.rotation.x = Math.PI / 2;
+    // the offset lives on the LEAVES, not the pivot: +ε above the split when
+    // closed (inside the upper half) becomes −ε after the turn. An offset on
+    // the pivot would not mirror.
+    front.position.set(PW / 2, 0, 0); back.position.set(PW / 2, -0.0002, 0);
+    pv.add(front); pv.add(back);
+    pv.userData.back = back;
     pv.visible = li < TUNE.leaves;
     part.add(pv);
     leaves.push(pv);
   }
+  var leavesNow = -1;
+  function layoutLeaves() {                         // offsets + which leaf carries the left page
+    var n = Math.max(1, Math.min(8, Math.round(TUNE.leaves)));
+    if (n === leavesNow) return;
+    leavesNow = n;
+    for (var i = 0; i < leaves.length; i++) {
+      leaves[i].visible = i < n;
+      leaves[i].userData.eps = LEAF_GAP * (i + 1);
+      leaves[i].userData.back.material = (i === n - 1) ? leftMat : leafFrontMat;
+    }
+  }
+  layoutLeaves();
 
   /* ---------- sizing / camera placement ----------
      The camera sits on the direction given by TUNE.camera (az/el). Every frame
@@ -610,7 +640,7 @@
     for (var i = 0; i < edgeLines.length; i++) edgeLines[i].material.opacity = TUNE.edgeOpacity * edgeLines[i].userData.mul;
     if (bloomPass) { bloomPass.strength = TUNE.bloom.strength; bloomPass.radius = TUNE.bloom.radius; bloomPass.threshold = TUNE.bloom.threshold; }
     setMsaa(TUNE.quality.msaa);
-    for (i = 0; i < leaves.length; i++) leaves[i].visible = i < TUNE.leaves;
+    layoutLeaves();
     var ak = [TUNE.coverColor, TUNE.accent, TUNE.pageColor, TUNE.green, TUNE.coverSource].join('|');
     if (lastArtKey && ak !== lastArtKey) drawAll();
     lastArtKey = ak;
@@ -644,7 +674,11 @@
     for (var i = 0; i < leaves.length; i++) {
       var lag = TUNE.leafLag * (i + 1);
       var o = reduced ? open : Math.min(open, openAt(isOpen ? ms - lag : ms + lag));
-      leaves[i].rotation.z = o * (Math.PI - 2 * vA);          // same frame as the flip group (child of the right half)
+      var la = o * (Math.PI - 2 * vA);                        // same frame as the flip group (child of the right half)
+      leaves[i].rotation.z = la;
+      var ey = leaves[i].userData.eps * Math.cos(la);          // +ε inside the upper half → −ε = on top of the left stack
+      leaves[i].children[0].position.y = ey;
+      leaves[i].children[1].position.y = ey - 0.0002;
     }
     book.position.y = reduced ? 0 : TUNE.bob * Math.sin(ms / 1400) * open;
 

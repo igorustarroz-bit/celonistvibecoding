@@ -1,0 +1,8 @@
+/* Poppins (OFL) for the saved pages — the site's fonts.css points at
+   /src/assets/fonts/*.woff2, which is never saved offline, so the copies fell
+   back to the system font. Latin subset, from @fontsource/poppins 5.x.
+   Shared by every experiment: load it as ../lib/poppins.css AFTER the page's
+   own fonts.css so this @font-face wins. */
+@font-face{font-family:Poppins;font-style:normal;font-weight:400;font-display:swap;src:url(fonts/poppins-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Poppins;font-style:normal;font-weight:500;font-display:swap;src:url(fonts/poppins-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Poppins;font-style:normal;font-weight:600;font-display:swap;src:url(fonts/poppins-latin-600-normal.woff2) format("woff2")}
